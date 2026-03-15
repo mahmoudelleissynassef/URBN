@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Buildings Directory — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w">
+    <div class="flex-b mb48">
+      <div>
+        <span class="eyebrow eyebrow-brass">Verified Inventory</span>
+        <h1 style="font-size:44px;">Buildings Directory</h1>
+        <p style="font-size:14px;color:var(--dim);margin-top:12px;">Grade A and A+ office buildings across 13 markets. All listings directly verified.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select class="fi fi-sel" id="bd-market" onchange="filterBuildings()" style="width:180px;font-size:12px;">
+          <option value="">All Markets</option>
+        </select>
+        <select class="fi fi-sel" id="bd-grade" onchange="filterBuildings()" style="width:130px;font-size:12px;">
+          <option value="">All Grades</option>
+          <option value="A+">Grade A+</option>
+          <option value="A">Grade A</option>
+        </select>
+      </div>
+    </div>
+    <div id="bd-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;"></div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../');
+  injectFooter('../');
+  const sel = document.getElementById('bd-market');
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  filterBuildings();
+});
+function filterBuildings() {
+  let res = [...URBN_DATA.buildings];
+  const m = document.getElementById('bd-market').value;
+  const g = document.getElementById('bd-grade').value;
+  if (m) res = res.filter(b => b.market === m);
+  if (g) res = res.filter(b => b.grade === g);
+  const grid = document.getElementById('bd-grid');
+  grid.innerHTML = res.map(b => renderCard(b, '../')).join('');
+}
+</script>
+</body>
+</html>

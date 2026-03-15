@@ -2,33 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login — URBN</title>
+  <title>Sign In — URBN</title>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
-<div id="navbar-placeholder"></div>
+<div id="nav-placeholder"></div>
 <div class="pt-nav" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px;">
-  <div style="width:100%;max-width:420px;">
-    <div class="text-center mb-32">
-      <div style="width:48px;height:48px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:20px;color:var(--black);border-radius:2px;margin:0 auto 16px;">U</div>
-      <h2 style="font-size:28px;">Welcome Back</h2>
-      <p style="color:var(--text-dim);font-size:13px;margin-top:6px;">Sign in to your URBN account</p>
+  <div style="width:100%;max-width:400px;">
+    <div class="text-center mb32">
+      <div style="width:44px;height:44px;background:var(--brass);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:20px;font-style:italic;color:var(--ink);margin:0 auto 18px;font-weight:500;">U</div>
+      <h2 style="font-size:32px;">Welcome back</h2>
+      <p style="font-size:13px;color:var(--dim);margin-top:8px;">Sign in to your URBN account</p>
     </div>
     <div class="card" style="padding:32px;">
-      <div class="form-group"><label class="form-label">Corporate Email</label><input type="email" class="form-input" placeholder="you@company.com"></div>
-      <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" placeholder="••••••••"></div>
-      <button class="btn btn-primary w-full" style="margin-top:8px;" onclick="window.location.href='../index.html'">Sign In</button>
-      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-dim);">
-        No account? <a href="register.html" style="color:var(--gold);">Register as Corporate Tenant</a>
+      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" placeholder="you@company.com"></div>
+      <div class="fg"><label class="fl">Password</label><input type="password" class="fi" placeholder="••••••••"></div>
+      <button class="btn btn-brass w-full mt16" onclick="window.location.href='../index.html'">Sign In</button>
+      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--dim);">
+        No account? <a href="#" style="color:var(--brass);">Request Access</a>
       </div>
     </div>
-    <div style="margin-top:16px;text-align:center;">
-      <span class="demo-badge">Demo Mode — No login required</span>
+    <div style="text-align:center;margin-top:14px;">
+      <span class="b b-verified" style="font-size:9px;">Demo Mode — access granted</span>
     </div>
   </div>
 </div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
-<script>document.addEventListener("DOMContentLoaded", () => { injectNavbar("../"); });</script>
+<script>document.addEventListener('DOMContentLoaded',()=>{injectNav('../');});</script>
 </body>
 </html>

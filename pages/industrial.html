@@ -6,79 +6,91 @@
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
-<div id="navbar-placeholder"></div>
-<div class="pt-nav" style="display:flex;min-height:calc(100vh - 60px);">
-  <!-- Sidebar -->
-  <div class="search-sidebar" style="width:260px;flex-shrink:0;">
-    <div class="label mb-16">Industrial Filters</div>
-    <div class="filter-section">
-      <div class="filter-title">Asset Type</div>
-      <div class="chip-group">
-        <button class="chip active">Warehouse</button>
-        <button class="chip active">Distribution Centre</button>
-        <button class="chip">Cold Storage</button>
-        <button class="chip">Dark Store/Kitchen</button>
-        <button class="chip">BTS</button>
-        <button class="chip">BTO</button>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="display:flex;min-height:calc(100vh - var(--nav-h));">
+  <!-- Filters -->
+  <div class="fp">
+    <div class="fg-section">
+      <div class="fg-title">Asset Type</div>
+      <div class="chips">
+        <button class="chip on" onclick="this.classList.toggle('on')">Warehouse</button>
+        <button class="chip on" onclick="this.classList.toggle('on')">Distribution Centre</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Cold Storage</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Dark Store / Kitchen</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Build-to-Suit</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Build-to-Own</button>
       </div>
     </div>
-    <div class="filter-section">
-      <div class="filter-title">Clear Height (m)</div>
-      <div class="range-pair">
-        <input type="number" class="form-input" placeholder="Min" style="font-size:12px;">
-        <input type="number" class="form-input" placeholder="Max" style="font-size:12px;">
+    <div class="fg-section">
+      <div class="fg-title">Clear Height (m)</div>
+      <div class="rr">
+        <input type="number" class="fi" placeholder="Min" style="font-size:12px;">
+        <input type="number" class="fi" placeholder="Max" style="font-size:12px;">
       </div>
     </div>
-    <div class="filter-section">
-      <div class="filter-title">Floor Loading (kN/sqm)</div>
-      <input type="number" class="form-input" placeholder="Min floor loading" style="font-size:12px;">
+    <div class="fg-section">
+      <div class="fg-title">Floor Loading (kN/sqm)</div>
+      <input type="number" class="fi" placeholder="Min floor loading" style="font-size:12px;">
     </div>
-    <div class="filter-section">
-      <div class="filter-title">Min Dock Doors</div>
-      <input type="number" class="form-input" placeholder="e.g. 4" style="font-size:12px;">
+    <div class="fg-section">
+      <div class="fg-title">Min Dock Doors</div>
+      <input type="number" class="fi" placeholder="e.g. 4" style="font-size:12px;">
     </div>
-    <div class="filter-section">
-      <div class="filter-title">Power Capacity (kVA)</div>
-      <input type="number" class="form-input" placeholder="Min kVA" style="font-size:12px;">
+    <div class="fg-section">
+      <div class="fg-title">Power (kVA)</div>
+      <input type="number" class="fi" placeholder="Min kVA" style="font-size:12px;">
     </div>
-    <div class="filter-section">
-      <div class="filter-title">Compliance</div>
-      <div class="chip-group">
-        <button class="chip">Food Grade</button>
-        <button class="chip">Pharma Grade</button>
-        <button class="chip">Hazmat</button>
+    <div class="fg-section">
+      <div class="fg-title">Compliance</div>
+      <div class="chips">
+        <button class="chip" onclick="this.classList.toggle('on')">Food Grade</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Pharma Grade</button>
+        <button class="chip" onclick="this.classList.toggle('on')">Cold Chain</button>
       </div>
     </div>
-    <button class="btn btn-primary w-full mt-24">Apply Filters</button>
+    <button class="btn btn-brass w-full" onclick="showToast('Filters applied')">Apply Filters</button>
   </div>
 
   <!-- Main -->
-  <div style="flex:1;padding:24px 32px;">
-    <div class="flex-between mb-24">
+  <div style="flex:1;padding:32px 36px;">
+    <div class="flex-b mb32">
       <div>
-        <h2 style="font-size:24px;">Industrial & Logistics</h2>
-        <p style="font-size:12px;color:var(--text-dim);margin-top:4px;">${len(URBN_DATA["industrial"])} listings available</p>
+        <span class="eyebrow eyebrow-brass">Industrial & Logistics</span>
+        <h2 style="font-size:28px;">Available Units</h2>
       </div>
+      <a href="market-scan.html" class="btn btn-brass btn-sm">Request Industrial Scan →</a>
     </div>
-    <div id="industrialGrid" style="display:flex;flex-direction:column;gap:16px;"></div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;" id="ind-list"></div>
 
     <!-- BTS/BTO Builder -->
-    <div class="market-widget" style="margin-top:40px;">
-      <div class="market-widget-title">BTS/BTO Requirement Builder</div>
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:20px;">Describe your operational needs and get a recommended spec summary.</p>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Operations Type</label>
-          <select class="form-input form-select"><option>E-commerce Fulfillment</option><option>Cold Chain</option><option>Manufacturing</option><option>Dark Kitchen</option></select>
+    <div class="card" style="padding:36px;margin-top:40px;">
+      <span class="eyebrow eyebrow-brass" style="margin-bottom:10px;">Build-to-Suit / Build-to-Own</span>
+      <h3 style="font-size:24px;margin-bottom:8px;">Requirement Builder</h3>
+      <p style="font-size:13px;color:var(--dim);margin-bottom:24px;line-height:1.75;">Describe your operational requirements and URBN will match you to available sites, developers, or land parcels across our markets.</p>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Operations Type</label>
+          <select class="fi fi-sel">
+            <option>E-commerce Fulfilment</option><option>Cold Chain / Temperature-Controlled</option>
+            <option>FMCG Distribution</option><option>Dark Kitchen / Ghost Kitchen</option>
+            <option>Pharmaceutical</option><option>Manufacturing</option>
+          </select>
         </div>
-        <div class="form-group"><label class="form-label">Pallet Positions Required</label><input type="number" class="form-input" placeholder="e.g. 5000"></div>
+        <div class="fg"><label class="fl">Pallet Positions</label><input type="number" class="fi" placeholder="e.g. 5,000"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Daily Throughput (pallets)</label><input type="number" class="form-input" placeholder="e.g. 200"></div>
-        <div class="form-group"><label class="form-label">Delivery Timeline</label>
-          <select class="form-input form-select"><option>Immediately</option><option>3-6 months</option><option>6-12 months</option><option>12+ months (BTS/BTO)</option></select>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Required Clear Height (m)</label><input type="number" class="fi" placeholder="e.g. 12"></div>
+        <div class="fg"><label class="fl">Dock Doors Required</label><input type="number" class="fi" placeholder="e.g. 8"></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Power Requirement (kVA)</label><input type="number" class="fi" placeholder="e.g. 2,000"></div>
+        <div class="fg"><label class="fl">Delivery Timeline</label>
+          <select class="fi fi-sel">
+            <option>Immediate (existing)</option><option>3–6 months</option><option>6–12 months</option><option>12–24 months (BTS/BTO)</option>
+          </select>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="showToast('BTS/BTO spec generated — contact URBN for full analysis')">Generate Spec Summary</button>
+      <button class="btn btn-brass" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
     </div>
   </div>
 </div>
@@ -86,29 +98,34 @@
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  injectNavbar("../");
-  injectFooter("../");
-  const grid = document.getElementById("industrialGrid");
-  URBN_DATA.industrial.forEach(unit => {
-    const market = URBN_DATA.markets.find(m => m.id === unit.market);
-    grid.innerHTML += `<div class="card card-hover" style="padding:24px;">
-      <div class="flex-between mb-16">
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../'); injectFooter('../');
+  const list = document.getElementById('ind-list');
+  URBN_DATA.industrial.forEach(u => {
+    const mkt = URBN_DATA.markets.find(m => m.id === u.market);
+    list.innerHTML += `<div class="card card-lift" style="padding:24px;">
+      <div class="flex-b mb16">
         <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--white);">${unit.anonName}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:4px;">${unit.submarket} · ${market?.country} · ${unit.type.toUpperCase()}</div>
+          <div style="font-family:var(--fd);font-size:20px;color:var(--white);">${u.anonName}</div>
+          <div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);text-transform:uppercase;margin-top:3px;letter-spacing:.1em;">${u.submarket} · ${mkt?.country||''} · ${u.type.toUpperCase().replace('-',' ')}</div>
         </div>
-        <span class="badge badge-available">Available</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${u.compliance.map(c=>`<span class="b b-verified">${c}</span>`).join('')}
+          <span class="b b-available">Available</span>
+        </div>
       </div>
-      <div class="industrial-spec-grid">
-        <div class="ind-spec"><div class="ind-spec-val">${unit.size.toLocaleString()} sqm</div><div class="ind-spec-label">GLA</div></div>
-        <div class="ind-spec"><div class="ind-spec-val">${unit.clearHeight}m</div><div class="ind-spec-label">Clear Height</div></div>
-        <div class="ind-spec"><div class="ind-spec-val">${unit.dockDoors}</div><div class="ind-spec-label">Dock Doors</div></div>
-        <div class="ind-spec"><div class="ind-spec-val">${unit.power.toLocaleString()} kVA</div><div class="ind-spec-label">Power</div></div>
-        <div class="ind-spec"><div class="ind-spec-val">${unit.floorLoading} kN/sqm</div><div class="ind-spec-label">Floor Loading</div></div>
-        <div class="ind-spec"><div class="ind-spec-val text-gold">${unit.rentCurrency} ${unit.rent}/sqm</div><div class="ind-spec-label">Asking Rent</div></div>
+      <div class="ind-grid mb16">
+        <div class="ind-c"><div class="ind-cv">${u.size.toLocaleString()} sqm</div><div class="ind-ck">GLA</div></div>
+        <div class="ind-c"><div class="ind-cv">${u.clearHeight}m</div><div class="ind-ck">Clear Height</div></div>
+        <div class="ind-c"><div class="ind-cv">${u.dockDoors}</div><div class="ind-ck">Dock Doors</div></div>
+        <div class="ind-c"><div class="ind-cv">${u.power.toLocaleString()} kVA</div><div class="ind-ck">Power</div></div>
+        <div class="ind-c"><div class="ind-cv">${u.floorLoading} kN/sqm</div><div class="ind-ck">Floor Loading</div></div>
+        <div class="ind-c"><div class="ind-cv" style="color:var(--brass);">${u.rentCurrency} ${u.rent}/sqm</div><div class="ind-ck">Asking Rent</div></div>
       </div>
-      ${unit.compliance.length > 0 ? `<div style="margin-top:14px;display:flex;gap:6px;">${unit.compliance.map(c => `<span class="chip active" style="cursor:default;font-size:10px;">${c}</span>`).join("")}</div>` : ""}
+      <div class="flex-b">
+        <div style="font-size:12px;color:var(--dim);">${u.hasColdStorage?'Cold storage available':'Ambient temperature'}</div>
+        <button class="btn btn-brass btn-sm" onclick="showToast('Introduction request submitted')">Request Introduction</button>
+      </div>
     </div>`;
   });
 });

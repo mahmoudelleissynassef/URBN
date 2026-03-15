@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Office Districts — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w">
+    <div class="mb48">
+      <span class="eyebrow eyebrow-brass">Location Intelligence</span>
+      <h1 style="font-size:44px;">Office Districts</h1>
+      <p style="font-size:15px;color:var(--dim);margin-top:14px;max-width:480px;line-height:1.8;">Understand where to search before you engage a broker. Key office districts across Africa & MENA, with verified availability and indicative rents.</p>
+    </div>
+    <div id="dist-list"></div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+const DISTS = [
+  {name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'The dominant Grade A office submarket in Cairo. Home to modern towers with generous floor plates and strong parking ratios. Preferred by multinationals requiring corporate-grade infrastructure.',rent:'EGP 950–1,400 / sqm / month',connect:'Ring Road access · No metro direct',bcount:2},
+  {name:'CBD (Downtown)',city:'Cairo',country:'Egypt',market:'cairo',desc:'Cairo\'s central business district. Historic prestige address with iconic towers including Nile-front buildings. Preferred by financial institutions and regional HQs.',rent:'EGP 1,100–1,600 / sqm / month',connect:'Metro Lines 1 & 2 · Central Cairo',bcount:1},
+  {name:'6th of October',city:'Cairo',country:'Egypt',market:'cairo',desc:'Emerging office location with lower rents and campus-style developments. Suitable for back-office, tech, and light industrial operations.',rent:'EGP 600–900 / sqm / month',connect:'6 October Highway · 35 min from CBD',bcount:1},
+  {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',desc:'Dubai International Financial Centre — the Gulf\'s premier financial district. Regulated jurisdiction, premium address, WELL and LEED certified towers. Commands the highest rents in Dubai.',rent:'AED 2,200–3,500 / sqm / year',connect:'Metro Red Line (Financial Centre) · Central location',bcount:1},
+  {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',desc:'Dense commercial district adjacent to Downtown Dubai. Good value relative to DIFC with strong transport links and abundant F&B. Popular with mid-market corporate occupiers.',rent:'AED 1,600–2,400 / sqm / year',connect:'Metro Red Line (Business Bay) · Canal views',bcount:1},
+  {name:'Downtown Dubai',city:'Dubai',country:'UAE',market:'dubai',desc:'Iconic address anchored by Burj Khalifa. Prestigious for client-facing operations. Premium rents reflect the address value.',rent:'AED 2,800–4,200 / sqm / year',connect:'Metro Red Line (Burj Khalifa/Dubai Mall)',bcount:1},
+  {name:'KAFD',city:'Riyadh',country:'Saudi Arabia',market:'riyadh',desc:'King Abdullah Financial District — the Kingdom\'s flagship CBD. New infrastructure, metro access, and modern Grade A+ towers. Preferred for Vision 2030-aligned corporate relocations.',rent:'SAR 1,800–2,800 / sqm / year',connect:'Riyadh Metro (KAFD Station) · North Riyadh',bcount:1},
+  {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',desc:'Lagos\'s prime corporate address. Waterfront peninsula with premium office towers, financial institutions, and embassies. Requires backup power and security planning.',rent:'NGN 45,000–75,000 / sqm / year',connect:'Road only · Lekki-Epe Expressway proximity',bcount:1},
+  {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',desc:'Nairobi\'s most developed commercial suburb. Concentration of Grade A offices, hotels, and corporate services. Strong infrastructure compared to CBD.',rent:'KES 1,200–1,800 / sqm / month',connect:'Major road junctions · 15 min to JKIA',bcount:1},
+  {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',desc:'Southern Africa\'s premier CBD. Gautrain access, luxury hotels, and Grade A+ towers. Africa\'s most sophisticated corporate office market.',rent:'ZAR 220–380 / sqm / month',connect:'Gautrain Sandton Station · N1/N3 highways',bcount:1},
+  {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',desc:'Morocco\'s purpose-built financial hub. Tax-advantaged zone, modern LEED-certified towers, bilingual workforce. Gateway to Francophone Africa.',rent:'MAD 1,800–2,800 / sqm / year',connect:'Casablanca Tramway · Mohammed V Airport 30 min',bcount:1},
+  {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman\'s modern CBD — master-planned mixed-use district with Grade A towers, retail, and hotels. Preferred address for regional HQs and NGOs.',rent:'JOD 14–22 / sqm / month',connect:'Key junction · Accessible from all districts',bcount:1},
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../');
+  injectFooter('../');
+  const list = document.getElementById('dist-list');
+  DISTS.forEach(d => {
+    const bcount = URBN_DATA.buildings.filter(b => b.market === d.market && b.submarket === d.name).length || d.bcount;
+    list.innerHTML += `
+    <div style="padding:28px 0;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;align-items:start;">
+      <div>
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">${d.city} · ${d.country}</div>
+        <h3 style="font-size:26px;margin-bottom:14px;">${d.name}</h3>
+        <p style="font-size:13.5px;color:var(--dim);line-height:1.78;">${d.desc}</p>
+      </div>
+      <div>
+        <div style="margin-bottom:14px;">
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Indicative Rent</div>
+          <div style="font-family:var(--fm);font-size:13px;color:var(--brass);">${d.rent}</div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Connectivity</div>
+          <div style="font-size:12.5px;color:var(--dim);">${d.connect}</div>
+        </div>
+        <div>
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Listed Buildings</div>
+          <div style="font-family:var(--fm);font-size:13px;color:var(--light);">${bcount} verified building${bcount!==1?'s':''}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <a href="search.html?m=${d.market}" class="btn btn-brass btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
+        <a href="market-scan.html" class="btn btn-ghost btn-sm w-full" style="text-align:center;justify-content:center;">Request Market Scan</a>
+      </div>
+    </div>`;
+  });
+});
+</script>
+</body>
+</html>

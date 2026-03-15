@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Request Market Scan — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w-sm">
+    <div class="mb48">
+      <span class="eyebrow eyebrow-brass">Premium Service</span>
+      <h1 style="font-size:44px;">Request a<br><em>Market Scan</em></h1>
+      <p style="font-size:15px;color:var(--dim);margin-top:16px;max-width:480px;line-height:1.8;">For corporate occupiers who prefer a managed approach. Describe your requirements and URBN will deliver a curated shortlist of verified buildings within 48 hours.</p>
+    </div>
+
+    <div style="background:var(--ink2);border:1px solid var(--rule);padding:40px;">
+      <div class="fr2">
+        <div class="fg"><label class="fl">Target Market</label>
+          <select class="fi fi-sel" id="sc-market">
+            <option value="">Select market...</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Industry / Sector</label>
+          <select class="fi fi-sel">
+            <option>Banking & Financial Services</option>
+            <option>Technology</option>
+            <option>Professional Services</option>
+            <option>FMCG / Consumer Goods</option>
+            <option>Energy / Resources</option>
+            <option>Manufacturing</option>
+            <option>Healthcare / Pharma</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" placeholder="e.g. 1,200"></div>
+        <div class="fg"><label class="fl">Target Commencement</label>
+          <select class="fi fi-sel">
+            <option>Immediately (0–3 months)</option>
+            <option>3–6 months</option>
+            <option>6–12 months</option>
+            <option>12+ months</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr3">
+        <div class="fg"><label class="fl">Min Desks Required</label><input type="number" class="fi" placeholder="e.g. 80"></div>
+        <div class="fg"><label class="fl">Min Meeting Rooms</label><input type="number" class="fi" placeholder="e.g. 4"></div>
+        <div class="fg"><label class="fl">Parking Spaces</label><input type="number" class="fi" placeholder="e.g. 20"></div>
+      </div>
+      <div class="fg"><label class="fl">Fit-Out Requirement</label>
+        <div class="chips" style="margin-top:4px;">
+          <button class="chip on" onclick="this.classList.toggle('on')">Shell & Core</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Category A (Fitted)</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Turnkey / Furnished</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Flexible</button>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Preferred Districts (optional)</label><input type="text" class="fi" placeholder="e.g. New Cairo, CBD — or leave blank for all"></div>
+      <div class="fg"><label class="fl">Power / Connectivity Requirements</label>
+        <div class="chips" style="margin-top:4px;">
+          <button class="chip" onclick="this.classList.toggle('on')">Backup Generator</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Fibre Connectivity</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Dual Power Feed</button>
+          <button class="chip" onclick="this.classList.toggle('on')">Data Centre Adjacent</button>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Additional Notes</label><textarea class="fi" placeholder="Any specific requirements, deal-breakers, or context about your company's needs in this market..."></textarea></div>
+      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" placeholder="you@company.com"></div>
+      <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" placeholder="Your company"></div>
+      <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--rule);">
+        <button class="btn btn-brass btn-lg" onclick="submitScan()">Submit Market Scan Request</button>
+        <p style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.65;">URBN will respond within 48 business hours with a curated shortlist. By submitting, you accept the platform Terms of Use.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../');
+  injectFooter('../');
+  const sel = document.getElementById('sc-market');
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+});
+function submitScan() {
+  toast('Market Scan request submitted. You will receive a curated shortlist within 48 hours.');
+}
+</script>
+</body>
+</html>

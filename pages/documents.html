@@ -6,44 +6,39 @@
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
-<div id="navbar-placeholder"></div>
+<div id="nav-placeholder"></div>
 <div class="pt-nav" style="padding:60px 0 80px;">
-  <div class="container-sm">
-    <div class="mb-48">
-      <div class="label label-gold mb-8">Legal Framework</div>
-      <h1 style="font-size:32px;">Platform Documents</h1>
-      <p style="color:var(--text-dim);margin-top:12px;">All legal agreements governing platform usage. Acceptance is timestamped and version-controlled.</p>
+  <div class="w-sm">
+    <div class="mb48">
+      <span class="eyebrow eyebrow-brass">Legal Framework</span>
+      <h1 style="font-size:44px;">Platform Documents</h1>
+      <p style="font-size:14px;color:var(--dim);margin-top:12px;line-height:1.8;">All legal agreements governing URBN platform usage. Acceptance is timestamped and version-controlled per user.</p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:16px;">
+    <div style="display:flex;flex-direction:column;gap:0;" class="card">
       ${[
-        ["Terms of Use","For all users","v2.1","Accepted Mar 1, 2026","Governs platform access, information gating, and user conduct."],
-        ["Tenant Commission Agreement","For Corporate Tenants","v1.3","Accepted Mar 1, 2026","States that a success fee is payable for any transaction introduced via the platform, within 24 months."],
-        ["Non-Circumvention Agreement","For Corporate Tenants","v1.1","Accepted per introduction","Prevents direct contact with landlords introduced through the platform."],
-        ["Landlord Referral Agreement","For Landlords","v1.0","—","Recognition of introduction, fee protection, and bi-weekly update obligations."],
-        ["Privacy Policy","For all users","v1.2","Accepted Mar 1, 2026","Data protection, analytics consent, and user rights."],
-      ].map(([title, for_, version, accepted, desc]) => `
-      <div class="card" style="padding:24px;">
-        <div class="flex-between mb-12">
-          <div>
-            <div style="font-size:15px;font-weight:600;color:var(--white);margin-bottom:2px;">${title}</div>
-            <div style="font-size:12px;color:var(--text-dim);">${for_} · ${version}</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            ${accepted !== "—" ? '<span class="badge badge-available">✓ Accepted</span>' : '<span class="badge badge-grade-a">Pending</span>'}
-            <button class="btn btn-ghost btn-sm" onclick="showToast('Download not available in demo mode')">Download</button>
-          </div>
+        ['Terms of Use','All users','v2.1','Accepted Mar 1, 2026','Governs platform access, information architecture, and user conduct.'],
+        ['Commission & Success Fee Agreement','Corporate Tenants','v1.3','Accepted Mar 1, 2026','States that a success fee is payable for any transaction closed for a property introduced via the platform, within 24 months of introduction.'],
+        ['Non-Circumvention Agreement','Corporate Tenants','v1.1','Accepted per introduction','Tenants may not contact landlords introduced through the platform without URBN\'s written involvement.'],
+        ['Landlord Referral Agreement','Landlords & Representatives','v1.0','—','Recognition of introduction, bi-weekly update obligation, fee protection, and non-circumvention clause.'],
+        ['Privacy Policy','All users','v1.2','Accepted Mar 1, 2026','Data handling, analytics consent, and user rights under applicable laws.'],
+      ].map(([t,f,v,a,d]) => `<div style="padding:22px 26px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:500;color:var(--white);margin-bottom:3px;">${t}</div>
+          <div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">${f} · ${v}</div>
+          <p style="font-size:12.5px;color:var(--dim);line-height:1.68;">${d}</p>
+          ${a !== '—' ? `<div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);margin-top:8px;letter-spacing:.08em;">Accepted: ${a}</div>` : ''}
         </div>
-        <p style="font-size:12px;color:var(--text-dim);">${desc}</p>
-        ${accepted !== "—" ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">Accepted: ${accepted}</div>` : ""}
-      </div>`).join("")}
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+          ${a !== '—' ? '<span class="b b-verified">Accepted</span>' : '<span class="b b-gated">Pending</span>'}
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Document download — available in full membership')">Download PDF</button>
+        </div>
+      </div>`).join('')}
     </div>
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", () => { injectNavbar("../"); injectFooter("../"); });
-</script>
+<script>document.addEventListener('DOMContentLoaded',()=>{injectNav('../');injectFooter('../');});</script>
 </body>
 </html>
