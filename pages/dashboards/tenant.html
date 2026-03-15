@@ -9,11 +9,11 @@
 <div id="nav-placeholder"></div>
 <div class="pt-nav dl">
   <div class="da">
-    <div style="padding:16px 12px 20px;border-bottom:1px solid var(--rule);margin-bottom:12px;">
-      <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Corporate Tenant</div>
-      <div style="font-size:14px;font-weight:500;color:var(--white);">Demo User</div>
-      <div style="font-size:11px;color:var(--dim);">Acme Corporation</div>
-      <div style="margin-top:8px;"><span class="b b-exclusive" style="font-size:8px;">Membership</span></div>
+    <div style="padding:16px 12px 20px;border-bottom:1px solid var(--border);margin-bottom:12px;">
+      <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Corporate Tenant</div>
+      <div style="font-size:14px;font-weight:500;color:var(--text);">Demo User</div>
+      <div style="font-size:11px;color:var(--text-dim);">Acme Corporation</div>
+      <div style="margin-top:8px;"><span class="badge badge-exclusive" style="font-size:8px;">Membership</span></div>
     </div>
     <div class="dn on" onclick="show('overview',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview
@@ -41,7 +41,7 @@
     <div id="s-overview">
       <div class="dash-section-head" style="margin-bottom:28px;">
         <h2 style="font-size:32px;">Good morning, Demo User</h2>
-        <p style="color:var(--dim);margin-top:4px;">Acme Corporation · Membership · All markets active</p>
+        <p style="color:var(--text-dim);margin-top:4px;">Acme Corporation · Membership · All markets active</p>
       </div>
       <div class="ms">
         <div class="mc"><div class="mc-l">Shortlisted</div><div class="mc-v">3</div><div class="mc-s">buildings saved</div></div>
@@ -50,25 +50,25 @@
         <div class="mc"><div class="mc-l">Markets Active</div><div class="mc-v">13</div><div class="mc-s">Membership access</div></div>
       </div>
       <div class="card" style="padding:24px;">
-        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:16px;">Recent Activity</div>
-        ${[['Mar 10','Viewed Nile Business City, Cairo CBD'],['Mar 8','Site visit request submitted — Gate Village 8, DIFC'],['Mar 1','Added KAFD Tower 3 to shortlist'],['Feb 28','Stay vs Go analysis completed — Cairo search']].map(([d,a])=>`<div style="display:flex;gap:20px;padding:10px 0;border-bottom:1px solid var(--rule);"><span style="font-family:var(--fm);font-size:10px;color:var(--muted);width:50px;flex-shrink:0;">${d}</span><span style="font-size:12.5px;color:var(--dim);">${a}</span></div>`).join('')}
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;">Recent Activity</div>
+        ${[['Mar 10','Viewed Nile Business City, Cairo CBD'],['Mar 8','Site visit request submitted — Gate Village 8, DIFC'],['Mar 1','Added KAFD Tower 3 to shortlist'],['Feb 28','Stay vs Go analysis completed — Cairo search']].map(([d,a])=>`<div style="display:flex;gap:20px;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--fm);font-size:10px;color:var(--text-muted);width:50px;flex-shrink:0;">${d}</span><span style="font-size:12.5px;color:var(--text-dim);">${a}</span></div>`).join('')}
       </div>
     </div>
 
     <div id="s-shortlist" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Shortlist</h2><p style="color:var(--dim);margin-top:4px;font-size:13px;">Buildings you have saved for review</p></div>
+      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Shortlist</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Buildings you have saved for review</p></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="shortlist-grid"></div>
     </div>
 
     <div id="s-intros" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Protected Introductions</h2><p style="color:var(--dim);margin-top:4px;font-size:13px;">Formally introduced, timestamped, and commission-protected for 24 months</p></div>
+      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Protected Introductions</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Formally introduced, timestamped, and commission-protected for 24 months</p></div>
       <div id="intros-grid"></div>
     </div>
 
     <div id="s-alerts" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Availability Alerts</h2><p style="color:var(--dim);margin-top:4px;font-size:13px;">Notify me when new space matches my requirements</p></div>
+      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Availability Alerts</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Notify me when new space matches my requirements</p></div>
       <div id="alerts-grid"></div>
-      <button class="btn btn-brass mt24" onclick="showToast('Alert configuration — available in full membership')">+ Add Alert</button>
+      <button class="btn btn-primary mt24" onclick="showToast('Alert configuration — available in full membership')">+ Add Alert</button>
     </div>
   </div>
 </div>
@@ -88,18 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const pDate = new Date(new Date(i.date).setFullYear(new Date(i.date).getFullYear()+2)).toISOString().split('T')[0];
     ig.innerHTML += `<div class="card" style="padding:22px;margin-bottom:10px;">
       <div class="flex-b mb12">
-        <div><div style="font-family:var(--fd);font-size:18px;">${b.name}</div><div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);margin-top:2px;text-transform:uppercase;">${b.submarket} · Introduced ${i.date}</div></div>
-        <span class="b b-protected">Protected · 24mo</span>
+        <div><div style="font-family:var(--fd);font-size:18px;">${b.name}</div><div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;">${b.submarket} · Introduced ${i.date}</div></div>
+        <span class="badge badge-protected">Protected · 24mo</span>
       </div>
-      <p style="font-size:12.5px;color:var(--dim);">Commission protection active until ${pDate}. Any transaction signed before this date is subject to URBN's commission agreement.</p>
+      <p style="font-size:12.5px;color:var(--text-dim);">Commission protection active until ${pDate}. Any transaction signed before this date is subject to URBN's commission agreement.</p>
     </div>`;
   });
   const ag = document.getElementById('alerts-grid');
   USER.alerts.forEach(a => {
     ag.innerHTML += `<div class="card" style="padding:20px;margin-bottom:10px;">
       <div class="flex-b">
-        <div><div style="font-size:14px;font-weight:500;">${a.sub}, ${a.market}</div><div style="font-size:12px;color:var(--dim);margin-top:3px;">Min ${a.minSz} sqm · Max rent ${a.maxRent.toLocaleString()}</div></div>
-        <span class="b b-available">Active</span>
+        <div><div style="font-size:14px;font-weight:500;">${a.sub}, ${a.market}</div><div style="font-size:12px;color:var(--text-dim);margin-top:3px;">Min ${a.minSz} sqm · Max rent ${a.maxRent.toLocaleString()}</div></div>
+        <span class="badge badge-available">Active</span>
       </div>
     </div>`;
   });

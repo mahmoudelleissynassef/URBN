@@ -10,25 +10,25 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w">
     <div class="mb48">
-      <span class="eyebrow eyebrow-brass">Office Market Context</span>
+      <span class="overline overline-gold">Office Market Context</span>
       <h1 style="font-size:44px;">Market Snapshot</h1>
-      <p style="font-size:14px;color:var(--dim);margin-top:12px;max-width:480px;line-height:1.8;">Summary market context for URBN-covered cities. Data is derived from URBN's verified inventory and is updated as listings are refreshed. Full analysis is available via a Market Scan request.</p>
+      <p style="font-size:14px;color:var(--text-dim);margin-top:12px;max-width:480px;line-height:1.8;">Summary market context for URBN-covered cities. Data is derived from URBN's verified inventory and is updated as listings are refreshed. Full analysis is available via a Market Scan request.</p>
     </div>
 
     <!-- Markets overview table -->
     <div class="card mb48">
-      <div style="padding:20px 24px;border-bottom:1px solid var(--rule);">
-        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;">Active Markets Overview</div>
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-muted);text-transform:uppercase;">Active Markets Overview</div>
       </div>
       <div id="mkt-table"></div>
     </div>
 
     <!-- CTA -->
-    <div style="background:var(--ink2);border:1px solid var(--rule);padding:40px;text-align:center;">
+    <div style="background:var(--bg-surface);border:1px solid var(--border);padding:40px;text-align:center;">
       <span class="eyebrow eyebrow-brass text-center" style="display:block;">Need Deeper Context?</span>
       <h3 style="font-size:26px;margin-bottom:12px;">Request a Market Scan</h3>
-      <p style="font-size:13.5px;color:var(--dim);max-width:400px;margin:0 auto 24px;line-height:1.75;">URBN will deliver a curated shortlist and market context note for your target market within 48 hours.</p>
-      <a href="market-scan.html" class="btn btn-brass btn-lg">Request Market Scan</a>
+      <p style="font-size:13.5px;color:var(--text-dim);max-width:400px;margin:0 auto 24px;line-height:1.75;">URBN will deliver a curated shortlist and market context note for your target market within 48 hours.</p>
+      <a href="market-scan.html" class="btn btn-primary btn-lg">Request Market Scan</a>
     </div>
   </div>
 </div>
@@ -42,15 +42,15 @@ document.addEventListener('DOMContentLoaded', () => {
   URBN_DATA.markets.forEach(m => {
     const s = URBN_DATA.marketStats[m.id];
     const bcount = URBN_DATA.buildings.filter(b=>b.market===m.id).length;
-    t.innerHTML += `<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 120px;gap:16px;padding:16px 24px;border-bottom:1px solid var(--rule);align-items:center;">
+    t.innerHTML += `<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 120px;gap:16px;padding:16px 24px;border-bottom:1px solid var(--border);align-items:center;">
       <div>
-        <div style="font-family:var(--fd);font-size:16px;color:var(--white);">${m.name}</div>
-        <div style="font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;">${m.country} · ${m.region}</div>
+        <div style="font-family:var(--fd);font-size:16px;color:var(--text);">${m.name}</div>
+        <div style="font-family:var(--fm);font-size:9px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;">${m.country} · ${m.region}</div>
       </div>
-      <div><div style="font-family:var(--fm);font-size:12px;color:var(--light);">${bcount} building${bcount!==1?'s':''}</div><div style="font-size:10px;color:var(--muted);">Listed</div></div>
-      <div><div style="font-family:var(--fm);font-size:12px;color:var(--brass);">${s?s.avgRent.toLocaleString()+' '+m.currency:'—'}</div><div style="font-size:10px;color:var(--muted);">Avg Rent</div></div>
-      <div><div style="font-family:var(--fm);font-size:12px;color:var(--light);">${s?s.vacancyRate+'%':'—'}</div><div style="font-size:10px;color:var(--muted);">Vacancy</div></div>
-      <div><div style="font-family:var(--fm);font-size:12px;color:var(--light);">${s?s.trend.toUpperCase():'—'}</div><div style="font-size:10px;color:var(--muted);">Trend</div></div>
+      <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${bcount} building${bcount!==1?'s':''}</div><div style="font-size:10px;color:var(--text-muted);">Listed</div></div>
+      <div><div style="font-family:var(--fm);font-size:12px;color:var(--gold);">${s?s.avgRent.toLocaleString()+' '+m.currency:'—'}</div><div style="font-size:10px;color:var(--text-muted);">Avg Rent</div></div>
+      <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${s?s.vacancyRate+'%':'—'}</div><div style="font-size:10px;color:var(--text-muted);">Vacancy</div></div>
+      <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${s?s.trend.toUpperCase():'—'}</div><div style="font-size:10px;color:var(--text-muted);">Trend</div></div>
       <div><a href="search.html?m=${m.id}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">Browse →</a></div>
     </div>`;
   });

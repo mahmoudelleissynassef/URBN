@@ -10,9 +10,9 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w-sm">
     <div class="mb48">
-      <span class="eyebrow eyebrow-brass">Legal Framework</span>
+      <span class="overline overline-gold">Legal Framework</span>
       <h1 style="font-size:44px;">Platform Documents</h1>
-      <p style="font-size:14px;color:var(--dim);margin-top:12px;line-height:1.8;">All legal agreements governing URBN platform usage. Acceptance is timestamped and version-controlled per user.</p>
+      <p style="font-size:14px;color:var(--text-dim);margin-top:12px;line-height:1.8;">All legal agreements governing URBN platform usage. Acceptance is timestamped and version-controlled per user.</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:0;" class="card">
       ${[
@@ -21,15 +21,15 @@
         ['Non-Circumvention Agreement','Corporate Tenants','v1.1','Accepted per introduction','Tenants may not contact landlords introduced through the platform without URBN\'s written involvement.'],
         ['Landlord Referral Agreement','Landlords & Representatives','v1.0','—','Recognition of introduction, bi-weekly update obligation, fee protection, and non-circumvention clause.'],
         ['Privacy Policy','All users','v1.2','Accepted Mar 1, 2026','Data handling, analytics consent, and user rights under applicable laws.'],
-      ].map(([t,f,v,a,d]) => `<div style="padding:22px 26px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;">
+      ].map(([t,f,v,a,d]) => `<div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;">
         <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;color:var(--white);margin-bottom:3px;">${t}</div>
-          <div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">${f} · ${v}</div>
-          <p style="font-size:12.5px;color:var(--dim);line-height:1.68;">${d}</p>
-          ${a !== '—' ? `<div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);margin-top:8px;letter-spacing:.08em;">Accepted: ${a}</div>` : ''}
+          <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;">${t}</div>
+          <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">${f} · ${v}</div>
+          <p style="font-size:12.5px;color:var(--text-dim);line-height:1.68;">${d}</p>
+          ${a !== '—' ? `<div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);margin-top:8px;letter-spacing:.08em;">Accepted: ${a}</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-          ${a !== '—' ? '<span class="b b-verified">Accepted</span>' : '<span class="b b-gated">Pending</span>'}
+          ${a !== '—' ? '<span class="badge badge-verified">Accepted</span>' : '<span class="badge badge-gated">Pending</span>'}
           <button class="btn btn-ghost btn-sm" onclick="showToast('Document download — available in full membership')">Download PDF</button>
         </div>
       </div>`).join('')}

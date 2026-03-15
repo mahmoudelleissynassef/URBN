@@ -10,9 +10,9 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w-sm">
     <div class="text-center mb48">
-      <span class="eyebrow eyebrow-brass">Lease Decision Tool</span>
+      <span class="overline overline-gold">Lease Decision Tool</span>
       <h1 style="font-size:44px;">Stay vs Go<br><em>Analysis</em></h1>
-      <p style="font-size:14px;color:var(--dim);margin-top:14px;line-height:1.8;max-width:440px;margin-left:auto;margin-right:auto;">Model the full cost of renewing your current lease versus relocating, including fit-out investment, incentives, and total occupancy cost.</p>
+      <p style="font-size:14px;color:var(--text-dim);margin-top:14px;line-height:1.8;max-width:440px;margin-left:auto;margin-right:auto;">Model the full cost of renewing your current lease versus relocating, including fit-out investment, incentives, and total occupancy cost.</p>
     </div>
 
     <div class="svgo-step">
@@ -68,12 +68,12 @@
     </div>
 
     <div style="text-align:center;margin-bottom:32px;">
-      <button class="btn btn-brass btn-xl" onclick="calc()">Run Analysis</button>
+      <button class="btn btn-primary btn-xl" onclick="calc()">Run Analysis</button>
     </div>
 
     <div id="sv-results" class="hidden">
       <div class="mb24">
-        <span class="eyebrow eyebrow-brass">Results</span>
+        <span class="overline overline-gold">Results</span>
         <h3 style="font-size:26px;">Total Occupancy Cost Comparison</h3>
       </div>
       <div class="rg">
@@ -90,9 +90,9 @@
           <div class="rb" id="r-go-break"></div>
         </div>
       </div>
-      <div id="r-verdict" style="background:var(--ink2);border:1px solid var(--rule);padding:22px;margin-bottom:24px;"></div>
+      <div id="r-verdict" style="background:var(--bg-surface);border:1px solid var(--border);padding:22px;margin-bottom:24px;"></div>
       <div style="text-align:center;">
-        <a href="../search.html" class="btn btn-brass btn-lg">Browse Available Offices →</a>
+        <a href="../search.html" class="btn btn-primary btn-lg">Browse Available Offices →</a>
       </div>
     </div>
   </div>
@@ -130,7 +130,7 @@ function calc() {
   document.getElementById('r-stay-break').innerHTML=`<div class="rb-row"><span>Monthly cost</span><span>${fmt2((rent+sc)*sz*(1+tax))}</span></div><div class="rb-row"><span>Annual cost</span><span>${fmt2(stayAnn)}</span></div><div class="rb-row"><span>Fit-out investment</span><span>${ccy} 0</span></div>`;
   document.getElementById('r-go').textContent=fmt2(goTotal);
   document.getElementById('r-go-break').innerHTML=`<div class="rb-row"><span>Fit-out</span><span>${fmt2(foCost)}</span></div><div class="rb-row"><span>Year 1 occupancy</span><span>${fmt2(goY1)}</span></div><div class="rb-row"><span>3-year total</span><span>${fmt2(go3y)}</span></div>`;
-  document.getElementById('r-verdict').innerHTML=`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;"><div style="font-family:var(--fd);font-size:20px;">${savings>0?'Relocating may save '+fmt2(Math.abs(savings))+' over 3 years':'Staying is more cost-effective by '+fmt2(Math.abs(savings))}</div></div><p style="font-size:12.5px;color:var(--dim);margin-top:10px;line-height:1.7;">Based on ${term}-month stay vs 3-year relocation scenario including ${ccy} ${fo.toLocaleString()}/sqm fit-out. This is indicative — contact URBN for a detailed review.</p>`;
+  document.getElementById('r-verdict').innerHTML=`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;"><div style="font-family:var(--fd);font-size:20px;">${savings>0?'Relocating may save '+fmt2(Math.abs(savings))+' over 3 years':'Staying is more cost-effective by '+fmt2(Math.abs(savings))}</div></div><p style="font-size:12.5px;color:var(--text-dim);margin-top:10px;line-height:1.7;">Based on ${term}-month stay vs 3-year relocation scenario including ${ccy} ${fo.toLocaleString()}/sqm fit-out. This is indicative — contact URBN for a detailed review.</p>`;
   document.getElementById('sv-results').classList.remove('hidden');
   document.getElementById('sv-results').scrollIntoView({behavior:'smooth'});
 }

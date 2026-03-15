@@ -10,9 +10,9 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w">
     <div class="mb48">
-      <span class="eyebrow eyebrow-brass">Location Intelligence</span>
+      <span class="overline overline-gold">Location Intelligence</span>
       <h1 style="font-size:44px;">Office Districts</h1>
-      <p style="font-size:15px;color:var(--dim);margin-top:14px;max-width:480px;line-height:1.8;">Understand where to search before you engage a broker. Key office districts across Africa & MENA, with verified availability and indicative rents.</p>
+      <p style="font-size:15px;color:var(--text-dim);margin-top:14px;max-width:480px;line-height:1.8;">Understand where to search before you engage a broker. Key office districts across Africa & MENA, with verified availability and indicative rents.</p>
     </div>
     <div id="dist-list"></div>
   </div>
@@ -43,28 +43,28 @@ document.addEventListener('DOMContentLoaded', () => {
   DISTS.forEach(d => {
     const bcount = URBN_DATA.buildings.filter(b => b.market === d.market && b.submarket === d.name).length || d.bcount;
     list.innerHTML += `
-    <div style="padding:28px 0;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;align-items:start;">
+    <div style="padding:28px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;align-items:start;">
       <div>
-        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">${d.city} · ${d.country}</div>
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">${d.city} · ${d.country}</div>
         <h3 style="font-size:26px;margin-bottom:14px;">${d.name}</h3>
-        <p style="font-size:13.5px;color:var(--dim);line-height:1.78;">${d.desc}</p>
+        <p style="font-size:13.5px;color:var(--text-dim);line-height:1.78;">${d.desc}</p>
       </div>
       <div>
         <div style="margin-bottom:14px;">
-          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Indicative Rent</div>
-          <div style="font-family:var(--fm);font-size:13px;color:var(--brass);">${d.rent}</div>
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Indicative Rent</div>
+          <div style="font-family:var(--fm);font-size:13px;color:var(--gold);">${d.rent}</div>
         </div>
         <div style="margin-bottom:14px;">
-          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Connectivity</div>
-          <div style="font-size:12.5px;color:var(--dim);">${d.connect}</div>
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Connectivity</div>
+          <div style="font-size:12.5px;color:var(--text-dim);">${d.connect}</div>
         </div>
         <div>
-          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Listed Buildings</div>
-          <div style="font-family:var(--fm);font-size:13px;color:var(--light);">${bcount} verified building${bcount!==1?'s':''}</div>
+          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Listed Buildings</div>
+          <div style="font-family:var(--fm);font-size:13px;color:var(--text);">${bcount} verified building${bcount!==1?'s':''}</div>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <a href="search.html?m=${d.market}" class="btn btn-brass btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
+        <a href="search.html?m=${d.market}" class="btn btn-primary btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
         <a href="market-scan.html" class="btn btn-ghost btn-sm w-full" style="text-align:center;justify-content:center;">Request Market Scan</a>
       </div>
     </div>`;

@@ -48,26 +48,26 @@
         <button class="chip" onclick="this.classList.toggle('on')">Cold Chain</button>
       </div>
     </div>
-    <button class="btn btn-brass w-full" onclick="showToast('Filters applied')">Apply Filters</button>
+    <button class="btn btn-primary w-full" onclick="showToast('Filters applied')">Apply Filters</button>
   </div>
 
   <!-- Main -->
   <div style="flex:1;padding:32px 36px;">
     <div class="flex-b mb32">
       <div>
-        <span class="eyebrow eyebrow-brass">Industrial & Logistics</span>
+        <span class="overline overline-gold">Industrial & Logistics</span>
         <h2 style="font-size:28px;">Available Units</h2>
       </div>
-      <a href="market-scan.html" class="btn btn-brass btn-sm">Request Industrial Scan →</a>
+      <a href="market-scan.html" class="btn btn-primary btn-sm">Request Industrial Scan →</a>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px;" id="ind-list"></div>
 
     <!-- BTS/BTO Builder -->
     <div class="card" style="padding:36px;margin-top:40px;">
-      <span class="eyebrow eyebrow-brass" style="margin-bottom:10px;">Build-to-Suit / Build-to-Own</span>
+      <span class="overline overline-gold" style="margin-bottom:10px;">Build-to-Suit / Build-to-Own</span>
       <h3 style="font-size:24px;margin-bottom:8px;">Requirement Builder</h3>
-      <p style="font-size:13px;color:var(--dim);margin-bottom:24px;line-height:1.75;">Describe your operational requirements and URBN will match you to available sites, developers, or land parcels across our markets.</p>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px;line-height:1.75;">Describe your operational requirements and URBN will match you to available sites, developers, or land parcels across our markets.</p>
       <div class="fr2">
         <div class="fg"><label class="fl">Operations Type</label>
           <select class="fi fi-sel">
@@ -90,7 +90,7 @@
           </select>
         </div>
       </div>
-      <button class="btn btn-brass" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
+      <button class="btn btn-primary" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
     </div>
   </div>
 </div>
@@ -106,12 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
     list.innerHTML += `<div class="card card-lift" style="padding:24px;">
       <div class="flex-b mb16">
         <div>
-          <div style="font-family:var(--fd);font-size:20px;color:var(--white);">${u.anonName}</div>
-          <div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);text-transform:uppercase;margin-top:3px;letter-spacing:.1em;">${u.submarket} · ${mkt?.country||''} · ${u.type.toUpperCase().replace('-',' ')}</div>
+          <div style="font-family:var(--fd);font-size:20px;color:var(--text);">${u.anonName}</div>
+          <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);text-transform:uppercase;margin-top:3px;letter-spacing:.1em;">${u.submarket} · ${mkt?.country||''} · ${u.type.toUpperCase().replace('-',' ')}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          ${u.compliance.map(c=>`<span class="b b-verified">${c}</span>`).join('')}
-          <span class="b b-available">Available</span>
+          ${u.compliance.map(c=>`<span class="badge badge-verified">${c}</span>`).join('')}
+          <span class="badge badge-available">Available</span>
         </div>
       </div>
       <div class="ind-grid mb16">
@@ -120,11 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ind-c"><div class="ind-cv">${u.dockDoors}</div><div class="ind-ck">Dock Doors</div></div>
         <div class="ind-c"><div class="ind-cv">${u.power.toLocaleString()} kVA</div><div class="ind-ck">Power</div></div>
         <div class="ind-c"><div class="ind-cv">${u.floorLoading} kN/sqm</div><div class="ind-ck">Floor Loading</div></div>
-        <div class="ind-c"><div class="ind-cv" style="color:var(--brass);">${u.rentCurrency} ${u.rent}/sqm</div><div class="ind-ck">Asking Rent</div></div>
+        <div class="ind-c"><div class="ind-cv" style="color:var(--gold);">${u.rentCurrency} ${u.rent}/sqm</div><div class="ind-ck">Asking Rent</div></div>
       </div>
       <div class="flex-b">
-        <div style="font-size:12px;color:var(--dim);">${u.hasColdStorage?'Cold storage available':'Ambient temperature'}</div>
-        <button class="btn btn-brass btn-sm" onclick="showToast('Introduction request submitted')">Request Introduction</button>
+        <div style="font-size:12px;color:var(--text-dim);">${u.hasColdStorage?'Cold storage available':'Ambient temperature'}</div>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Introduction request submitted')">Request Introduction</button>
       </div>
     </div>`;
   });

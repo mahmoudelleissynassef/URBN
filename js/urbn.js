@@ -180,7 +180,7 @@ function initTabs(wrap) {
 function p(n) { return new URLSearchParams(window.location.search).get(n); }
 function fmt(n) { return n?.toLocaleString() || '—'; }
 function gradeB(g) {
-  return g === 'A+' ? '<span class="b b-aplus">Grade A+</span>' : '<span class="b b-a">Grade A</span>';
+  return g === 'A+' ? '<span class="badge badge-grade-aplus">Grade A+</span>' : '<span class="badge badge-grade-a">Grade A</span>';
 }
 function getImg(market) { return IMG[market] || IMG.cairo; }
 
@@ -195,8 +195,8 @@ function renderCard(b, base = '') {
       <div class="lc-img-grad"></div>
       <div class="lc-badges">
         ${gradeB(b.grade)}
-        <span class="b b-verified">Verified</span>
-        ${b.availMin <= 500 ? '<span class="b b-immediate">Available Now</span>' : ''}
+        <span class="badge badge-verified">Verified</span>
+        ${b.availMin <= 500 ? '<span class="badge badge-immediate">Available Now</span>' : ''}
       </div>
       <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
     </div>
@@ -234,7 +234,7 @@ function renderAnonCard(b, base = '') {
       <div class="lc-img-grad"></div>
       <div class="lc-badges">
         ${gradeB(b.grade)}
-        <span class="b b-gated">Register to Unlock</span>
+        <span class="badge badge-gated">Register to Unlock</span>
       </div>
     </div>
     <div class="lc-body">
@@ -261,3 +261,82 @@ function renderAnonCard(b, base = '') {
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-tabs]').forEach(initTabs);
 });
+
+// Badge shorthand aliases for v3 compatibility
+function gradeB(g) {
+  return g === 'A+' 
+    ? '<span class="badge badge-grade-aplus"><span class="badge-dot"></span>Grade A+</span>'
+    : '<span class="badge badge-grade-a"><span class="badge-dot"></span>Grade A</span>';
+}
+
+// Override renderCard with v3 design
+function renderCard(b, base = '') {
+  const saved = USER.saved.includes(b.id);
+  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
+  return `
+  <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
+    <div class="lc-img">
+      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
+      <div class="lc-img-overlay"></div>
+      <div class="lc-badges">
+        ${gradeB(b.grade)}
+        <span class="badge badge-verified"><span class="badge-dot"></span>Verified</span>
+        ${b.availMin <= 500 ? '<span class="badge badge-immediate"><span class="badge-dot"></span>Available Now</span>' : ''}
+      </div>
+      <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
+    </div>
+    <div class="lc-body">
+      <div class="lc-name">${b.name}</div>
+      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-specs">
+        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Area</div></div>
+        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Floor Plate</div></div>
+        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
+        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking</div></div>
+      </div>
+      <div class="lc-foot">
+        <div>
+          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
+          <div class="lc-rent-label">per ${b.rentUnit}</div>
+        </div>
+        <span class="btn btn-ghost btn-sm">View →</span>
+      </div>
+      <div class="lc-feats">
+        ${b.amenities.slice(0,3).map(a=>`<span class="lc-feat">${a}</span>`).join('')}
+        ${b.sustainability.slice(0,1).map(s=>`<span class="lc-feat">${s}</span>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAnonCard(b, base = '') {
+  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
+  return `
+  <div class="lc" onclick="openModal('register-modal')">
+    <div class="lc-img">
+      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
+      <div class="lc-img-overlay"></div>
+      <div class="lc-badges">
+        ${gradeB(b.grade)}
+        <span class="badge badge-gated"><span class="badge-dot"></span>Register to Unlock</span>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-name">${b.anonName}</div>
+      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-specs">
+        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Range</div></div>
+        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Floor Plate</div></div>
+        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
+        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking</div></div>
+      </div>
+      <div class="lc-foot">
+        <div>
+          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
+          <div class="lc-rent-label">indicative / ${b.rentUnit}</div>
+        </div>
+        <span class="btn btn-outline btn-sm">Register →</span>
+      </div>
+    </div>
+  </div>`;
+}

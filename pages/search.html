@@ -12,7 +12,7 @@
   <!-- Filter Panel -->
   <div class="fp">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <span style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;">Filters</span>
+      <span style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;color:var(--text-muted);text-transform:uppercase;">Filters</span>
       <button onclick="resetFilters()" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:10px;">Reset</button>
     </div>
 
@@ -31,7 +31,7 @@
 
     <div class="fg-section">
       <div class="fg-title">District</div>
-      <div class="chips" id="district-chips"><span style="font-size:11px;color:var(--muted);">Select market first</span></div>
+      <div class="chips" id="district-chips"><span style="font-size:11px;color:var(--text-muted);">Select market first</span></div>
     </div>
 
     <div class="fg-section">
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <button onclick="applyFilters()" class="btn btn-brass w-full" style="margin-top:8px;">Apply Filters</button>
+    <button onclick="applyFilters()" class="btn btn-primary w-full" style="margin-top:8px;">Apply Filters</button>
   </div>
 
   <!-- Main -->
@@ -90,7 +90,7 @@
     <div class="flex-b mb32">
       <div>
         <h2 style="font-size:28px;" id="search-title">All Markets</h2>
-        <p style="font-size:12px;color:var(--muted);margin-top:4px;" id="search-count">Loading...</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="search-count">Loading...</p>
       </div>
       <select class="fi fi-sel" id="sort-sel" onchange="applyFilters()" style="width:170px;font-size:12px;">
         <option value="">Sort: Default</option>
@@ -101,7 +101,7 @@
       </select>
     </div>
     <div id="results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;"></div>
-    <div id="no-results" class="hidden" style="text-align:center;padding:80px 0;color:var(--muted);">
+    <div id="no-results" class="hidden" style="text-align:center;padding:80px 0;color:var(--text-muted);">
       <div style="font-family:var(--fd);font-size:28px;margin-bottom:8px;">No Offices Found</div>
       <p>Try adjusting your filters.</p>
     </div>
@@ -155,7 +155,7 @@ function toggleMarket(id, btn) {
   i > -1 ? F.market.splice(i,1) : F.market.push(id);
 
   const dc = document.getElementById('district-chips');
-  if (F.market.length === 0) { dc.innerHTML = '<span style="font-size:11px;color:var(--muted);">Select market first</span>'; }
+  if (F.market.length === 0) { dc.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">Select market first</span>'; }
   else {
     dc.innerHTML = '';
     F.market.forEach(mid => {
@@ -183,7 +183,7 @@ function resetFilters() {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   ['minArea','maxArea','minDesks','maxDesks','minMR'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   document.getElementById('sort-sel').value = '';
-  document.getElementById('district-chips').innerHTML = '<span style="font-size:11px;color:var(--muted);">Select market first</span>';
+  document.getElementById('district-chips').innerHTML = '<span style="font-size:11px;color:var(--text-muted);">Select market first</span>';
   applyFilters();
 }
 
@@ -226,20 +226,20 @@ function applyFilters() {
       return `<div class="card card-lift" style="padding:22px;cursor:pointer;" onclick="window.location.href='building.html?id=${b.id}'">
         <div class="flex-b mb16">
           <div>
-            <div style="font-family:var(--fd);font-size:18px;color:var(--white);">${b.name}</div>
-            <div style="font-family:var(--fm);font-size:9.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;">${b.submarket} · ${mkt?.country} · Floor ${u.floor}</div>
+            <div style="font-family:var(--fd);font-size:18px;color:var(--text);">${b.name}</div>
+            <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;">${b.submarket} · ${mkt?.country} · Floor ${u.floor}</div>
           </div>
           ${gradeB(b.grade)}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);">
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--light);">${u.size} sqm</div><div style="font-size:10px;color:var(--muted);">Area</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--light);">${u.desks}</div><div style="font-size:10px;color:var(--muted);">Desks</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--light);">${u.meetingRooms}</div><div style="font-size:10px;color:var(--muted);">Mtg Rooms</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--brass);">${b.rentCurrency} ${u.rent.toLocaleString()}</div><div style="font-size:10px;color:var(--muted);">per sqm/mo</div></div>
-          <div><span class="b b-available">Available</span></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.size} sqm</div><div style="font-size:10px;color:var(--text-muted);">Area</div></div>
+          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.desks}</div><div style="font-size:10px;color:var(--text-muted);">Desks</div></div>
+          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.meetingRooms}</div><div style="font-size:10px;color:var(--text-muted);">Mtg Rooms</div></div>
+          <div><div style="font-family:var(--fm);font-size:14px;color:var(--gold);">${b.rentCurrency} ${u.rent.toLocaleString()}</div><div style="font-size:10px;color:var(--text-muted);">per sqm/mo</div></div>
+          <div><span class="badge badge-available">Available</span></div>
         </div>
         <div class="flex-b mt16">
-          <span style="font-size:12px;color:var(--dim);">Floor ${u.floor} · ${u.type}</span>
+          <span style="font-size:12px;color:var(--text-dim);">Floor ${u.floor} · ${u.type}</span>
           <span class="btn btn-dark btn-sm">View Building →</span>
         </div>
       </div>`;
