@@ -3,205 +3,132 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>URBN — Corporate Office Discovery for Africa & MENA</title>
-  <meta name="description" content="Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings, curated buildings, protected introductions."/>
+  <title>URBN — Corporate Office Intelligence · Africa & MENA</title>
   <link rel="stylesheet" href="css/urbn.css"/>
 </head>
 <body>
-
 <div id="nav-placeholder"></div>
 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-bg">
-    <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1800&q=85" alt="Corporate office tower" loading="eager">
+    <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85" alt="Corporate office tower" loading="eager">
     <div class="hero-overlay"></div>
   </div>
   <div class="w hero-c">
-    <span class="overline" style="color:rgba(194,163,107,0.85);margin-bottom:16px;">Corporate Office Discovery · Africa & MENA</span>
+    <div class="hero-eyebrow">
+      <div class="hero-rule"></div>
+      <span class="hero-eyebrow-text">Corporate Office Intelligence · Africa & MENA</span>
+    </div>
     <h1>Find Office Space in<br><em>Opaque Markets</em><br>Before You Land.</h1>
-    <p class="hero-sub">Verified Grade A office options for corporate occupiers, multinationals, and expansion teams. Curated buildings. Protected introductions.</p>
-    <div class="hero-btns">
+    <p class="hero-sub">Verified Grade A office options for corporate occupiers, multinationals, and expansion teams across Africa and MENA.</p>
+    <div class="hero-actions">
       <a href="pages/search.html" class="btn btn-inv btn-xl">Browse Offices</a>
-      <a href="pages/market-scan.html" class="btn btn-xl" style="background:rgba(255,255,255,0.12);color:#fff;border:1.5px solid rgba(255,255,255,0.25);">Request Market Scan</a>
+      <a href="pages/market-scan.html" class="btn btn-inv-o btn-xl">Request Market Scan</a>
     </div>
   </div>
 </section>
 
-<!-- TICKER -->
-<div class="ticker-wrap">
-  <div class="ticker-inner" id="ticker"></div>
-</div>
-
-<!-- TRUST BAR -->
-<div class="trust-bar">
-  <div class="w">
-    <div class="trust-items">
-      <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.591 21 9c0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span>Verified Listings Only</span>
-      </div>
-      <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span>Protected Introductions</span>
-      </div>
-      <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        <span>13 Markets Covered</span>
-      </div>
-      <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        <span>Corporate Occupiers Only</span>
-      </div>
-      <div class="trust-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Direct Source · No Broker Chains</span>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- MARKET TICKER -->
+<div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
 
 <!-- FEATURED OFFICES -->
-<section class="section bg-white">
+<section class="section" style="background:var(--bg-white);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
-      <div>
-        <span class="overline">Featured Offices</span>
-        <h2>Available Now</h2>
-      </div>
-      <a href="pages/search.html" class="btn btn-ghost">Browse All Offices →</a>
+      <div><div class="section-rule"></div><h2>Available Offices</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Verified Grade A and A+ buildings across 13 markets.</p></div>
+      <a href="pages/search.html" class="btn btn-ghost">Browse All →</a>
     </div>
     <div class="g3" id="featured-grid"></div>
   </div>
 </section>
 
-<!-- BROWSE BY MARKET -->
-<section class="section bordered-section" style="background:var(--bg);">
+<!-- MARKETS -->
+<section class="section" style="background:var(--bg);">
   <div class="w">
     <div class="section-head-row">
-      <div>
-        <span class="overline">Coverage</span>
-        <h2>Browse by Market</h2>
-      </div>
+      <div><div class="section-rule"></div><h2>Markets</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">13 cities across Africa and MENA. Grade A office inventory verified directly.</p></div>
       <a href="pages/search.html" class="btn btn-ghost">All Markets →</a>
     </div>
     <div class="g4c" id="markets-grid"></div>
   </div>
 </section>
 
-<!-- BROWSE BY DISTRICT -->
-<section class="section bg-white">
+<!-- DISTRICTS -->
+<section class="section" style="background:var(--bg-white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
-      <div>
-        <span class="overline">Prime Locations</span>
-        <h2>Office Districts</h2>
-      </div>
+      <div><div class="section-rule"></div><h2>Prime Office Districts</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Key office locations with indicative rent bands.</p></div>
       <a href="pages/districts.html" class="btn btn-ghost">All Districts →</a>
     </div>
-    <div id="districts-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--gap);"></div>
+    <div class="g5" id="districts-grid"></div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="section bordered-section" style="background:var(--bg);">
+<section class="section" style="background:var(--bg);">
   <div class="w-sm">
-    <div class="text-center mb48">
-      <span class="overline">The Process</span>
-      <h2>How URBN Works</h2>
-    </div>
-    <div>
-      <div class="pstep">
-        <div class="pn">01</div>
-        <div class="pb">
-          <h4>Browse Verified Offices</h4>
-          <p>Access a curated inventory of Grade A and A+ office buildings across 13 markets. Every listing is verified directly against the source — no recycled broker data, no stale availability figures.</p>
-        </div>
-      </div>
-      <div class="pstep">
-        <div class="pn">02</div>
-        <div class="pb">
-          <h4>Shortlist & Compare</h4>
-          <p>Filter by area, district, floor plate, parking, and operational requirements. Save buildings to your shortlist and compare options side by side. Request a managed Market Scan if you prefer a curated approach.</p>
-        </div>
-      </div>
-      <div class="pstep">
-        <div class="pn">03</div>
-        <div class="pb">
-          <h4>Request a Protected Introduction</h4>
-          <p>When you are ready, URBN formally introduces you to the building. The introduction is timestamped, logged, and commission-protected for 24 months. You do not contact the landlord directly — the platform manages the process.</p>
-        </div>
-      </div>
+    <div style="margin-bottom:44px;"><div class="section-rule"></div><h2>How URBN Works</h2></div>
+    <div class="process">
+      <div class="pstep"><div class="pn">01</div><div class="pb"><h4>Browse Verified Offices</h4><p>Access a curated inventory of Grade A and A+ office buildings across 13 markets. Every listing is verified against the source. No recycled broker data. No stale availability.</p></div></div>
+      <div class="pstep"><div class="pn">02</div><div class="pb"><h4>Shortlist Buildings</h4><p>Filter by city, district, floor plate, parking, and fit-out condition. Save buildings to a shortlist and compare options. Or request a managed Market Scan for a curated shortlist within 48 hours.</p></div></div>
+      <div class="pstep"><div class="pn">03</div><div class="pb"><h4>Request a Protected Introduction</h4><p>URBN formally introduces you to the building. The introduction is timestamped, logged, and commission-protected for 24 months. You do not contact the landlord directly.</p></div></div>
     </div>
   </div>
 </section>
 
-<!-- WHY CORPORATES USE URBN -->
-<section class="section bg-white">
+<!-- WHY URBN -->
+<section class="section" style="background:var(--bg-white);border-top:1px solid var(--border);">
   <div class="w">
-    <div class="section-head-row">
-      <div>
-        <span class="overline">Why URBN</span>
-        <h2>Built for Corporate Occupiers</h2>
-      </div>
-    </div>
+    <div style="margin-bottom:44px;"><div class="section-rule"></div><h2>Why Corporate Occupiers Use URBN</h2></div>
     <div class="g4c">
-      <div class="card">
-        <div style="font-family:var(--fd);font-size:48px;font-weight:300;color:var(--border-2);line-height:1;margin-bottom:18px;">01</div>
-        <h4 style="margin-bottom:10px;">Fragmented broker markets</h4>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.75;">In Cairo, Lagos, or Nairobi, quality availability is scattered across dozens of local brokers with no centralised source. URBN consolidates and verifies.</p>
-      </div>
-      <div class="card">
-        <div style="font-family:var(--fd);font-size:48px;font-weight:300;color:var(--border-2);line-height:1;margin-bottom:18px;">02</div>
-        <h4 style="margin-bottom:10px;">Inconsistent listing quality</h4>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.75;">Floor plates, parking ratios, and availability are rarely current in secondary markets. URBN applies a direct verification standard before any building is listed.</p>
-      </div>
-      <div class="card">
-        <div style="font-family:var(--fd);font-size:48px;font-weight:300;color:var(--border-2);line-height:1;margin-bottom:18px;">03</div>
-        <h4 style="margin-bottom:10px;">Opaque access to supply</h4>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.75;">The best buildings in Africa often deal through relationships, not marketing. URBN provides structured access to supply that would otherwise take months to discover.</p>
-      </div>
-      <div class="card">
-        <div style="font-family:var(--fd);font-size:48px;font-weight:300;color:var(--border-2);line-height:1;margin-bottom:18px;">04</div>
-        <h4 style="margin-bottom:10px;">Introductions need protecting</h4>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.75;">Without a formal introduction record, commissions get disputed. URBN's protected introduction system is embedded in the workflow, not added as an afterthought.</p>
-      </div>
+      <div class="reason"><div class="reason-num">01</div><h4>Fragmented broker markets</h4><p>In Cairo, Lagos, or Nairobi, quality availability is dispersed across dozens of local brokers with no centralised source. URBN consolidates and verifies.</p></div>
+      <div class="reason"><div class="reason-num">02</div><h4>Inconsistent listing data</h4><p>Floor plates, parking ratios, and availability are rarely current in secondary markets. URBN applies a direct verification standard before any building is listed.</p></div>
+      <div class="reason"><div class="reason-num">03</div><h4>Opaque access to supply</h4><p>The best buildings in Africa deal through relationships, not marketing. URBN provides structured access to supply that would otherwise take months to discover.</p></div>
+      <div class="reason"><div class="reason-num">04</div><h4>Introductions need protecting</h4><p>Without a formal introduction record, commissions are disputed. URBN's protected introduction system is built into the workflow, not an afterthought.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section style="padding:64px 0;background:var(--bg-navy-d);">
+  <div class="w">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(194,163,107,0.5);">
+      <div style="padding:32px 32px 0 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">13</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Active Markets</div></div>
+      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">200+</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Verified Buildings</div></div>
+      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">A/A+</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Grade Standard Only</div></div>
+      <div style="padding:32px 0 0 32px;"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">24mo</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Introduction Protection</div></div>
     </div>
   </div>
 </section>
 
 <!-- CTA -->
-<section class="section bg-navy">
+<section class="section" style="background:var(--bg-white);border-top:1px solid var(--border);">
   <div class="w-sm text-center">
-    <span class="overline" style="color:rgba(194,163,107,0.8);display:block;text-align:center;">Get Started</span>
-    <h2 style="color:#fff;margin-bottom:16px;">Know Your Options Before You Land.</h2>
-    <p style="font-size:16px;color:rgba(255,255,255,0.55);max-width:460px;margin:0 auto 36px;line-height:1.8;">Access verified office options across Africa & MENA. Request a curated Market Scan and receive a shortlist within 48 hours.</p>
+    <div style="display:flex;justify-content:center;margin-bottom:20px;"><div class="section-rule" style="margin:0 auto;"></div></div>
+    <h2 style="margin-bottom:14px;">Know Your Options Before You Land.</h2>
+    <p style="font-size:16px;color:var(--text-2);max-width:440px;margin:0 auto 36px;line-height:1.78;">Request a curated Market Scan and receive a verified shortlist of buildings within 48 hours.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a href="pages/search.html" class="btn btn-inv btn-xl">Browse Offices</a>
-      <a href="pages/market-scan.html" class="btn btn-xl" style="background:rgba(255,255,255,0.1);color:#fff;border:1.5px solid rgba(255,255,255,0.2);">Request Market Scan</a>
+      <a href="pages/search.html" class="btn btn-navy btn-xl">Browse Offices</a>
+      <a href="pages/market-scan.html" class="btn btn-outline btn-xl">Request Market Scan</a>
     </div>
   </div>
 </section>
 
-<!-- REGISTER MODAL -->
-<div class="mbg" id="register-modal">
+<!-- ACCESS MODAL -->
+<div class="mbg" id="access-modal">
   <div class="modal">
-    <div class="mh">
-      <div><span class="overline" style="margin-bottom:6px;">Access Required</span><h3>Register to Unlock Full Details</h3></div>
-      <div class="mx">✕</div>
-    </div>
+    <div class="mh"><div><div class="label mb12">Restricted Access</div><h3>Request Access</h3></div><div class="mx">X</div></div>
     <div class="mb">
-      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;line-height:1.7;">Full building names, exact rents, floor availability, and introduction requests are available to registered corporate tenants only.</p>
+      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;line-height:1.7;">Full building details and introduction requests are available to registered corporate tenants.</p>
       <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" placeholder="you@company.com"></div>
       <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" placeholder="Your company"></div>
-      <div class="fg"><label class="fl">Target Market</label>
-        <select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select>
-      </div>
+      <div class="fg"><label class="fl">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select></div>
       <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" placeholder="e.g. 800"></div>
     </div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('register-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="showToast('Registration submitted. You will receive access within 24 hours.');closeModal('register-modal')">Request Access</button>
+      <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
+      <button class="btn btn-navy" onclick="showToast('Access request submitted. You will receive credentials within 24 hours.');closeModal('access-modal')">Submit Request</button>
     </div>
   </div>
 </div>
@@ -210,67 +137,62 @@
 <script src="data/data.js"></script>
 <script src="js/urbn.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  injectNav('');
-  injectFooter('');
+document.addEventListener('DOMContentLoaded',()=>{
+  injectNav(''); injectFooter('');
 
   // Ticker
-  const ticker = document.getElementById('ticker');
-  const items = URBN_DATA.markets.map(m => {
-    const s = URBN_DATA.marketStats[m.id];
-    return `<div class="ti">
-      <div class="ti-sep"></div>
-      <span class="ti-mkt">${m.name}</span>
-      <span class="ti-val">${s ? s.avgRent.toLocaleString() + ' ' + m.currency : '—'}</span>
-      ${s ? `<span class="ti-chg ${s.trend==='up'?'up':s.trend==='down'?'dn':''}">${s.trend==='up'?'▲':s.trend==='down'?'▼':'—'}</span>` : ''}
-    </div>`;
+  const ticker=document.getElementById('ticker');
+  const items=URBN_DATA.markets.map(m=>{
+    const s=URBN_DATA.marketStats[m.id];
+    return `<div class="ti"><span class="ti-city">${m.name}</span><span class="ti-val">${s?s.avgRent.toLocaleString()+' '+m.currency:'—'}</span>${s?`<span class="ti-chg ${s.trend==='up'?'ti-up':s.trend==='down'?'ti-dn':''}">${s.trend==='up'?'▲':s.trend==='down'?'▼':'—'}</span>`:''}</div>`;
   }).join('');
-  ticker.innerHTML = items + items;
+  ticker.innerHTML=items+items;
 
-  // Featured listings
-  const fg = document.getElementById('featured-grid');
-  URBN_DATA.buildings.slice(0,6).forEach(b => fg.innerHTML += renderCard(b,''));
+  // Featured
+  const fg=document.getElementById('featured-grid');
+  URBN_DATA.buildings.slice(0,6).forEach(b=>fg.innerHTML+=renderCard(b,''));
 
-  // Markets
-  const mg = document.getElementById('markets-grid');
-  URBN_DATA.markets.slice(0,8).forEach(m => {
-    const s = URBN_DATA.marketStats[m.id];
-    const bc = URBN_DATA.buildings.filter(b=>b.market===m.id).length;
-    mg.innerHTML += `<a href="pages/search.html?m=${m.id}" class="mkc">
-      <div class="mkc-cc">${m.region} · ${m.countryCode}</div>
-      <div class="mkc-city">${m.name}</div>
-      <div style="display:flex;justify-content:space-between;">
-        <div><div class="mkc-val">${bc} listing${bc!==1?'s':''}</div><div class="mkc-key">Available</div></div>
-        ${s?`<div style="text-align:right;"><div class="mkc-val">${s.avgRent.toLocaleString()} ${m.currency}</div><div class="mkc-key">Avg Rent</div></div>`:''}
+  // City cards
+  const mg=document.getElementById('markets-grid');
+  URBN_DATA.markets.slice(0,8).forEach(m=>{
+    const s=URBN_DATA.marketStats[m.id];
+    const bc=URBN_DATA.buildings.filter(b=>b.market===m.id).length;
+    const subs=m.submarkets.slice(0,2).join(', ');
+    mg.innerHTML+=`<a href="pages/search.html?m=${m.id}" class="city-card">
+      <div class="city-card-region">${m.region}</div>
+      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-divider"></div>
+      <div class="city-card-data">
+        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${bc} listed</span></div>
+        <div class="city-card-row"><span class="city-card-label">Districts</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:110px;">${subs}</span></div>
+        ${s?`<div class="city-card-row"><span class="city-card-label">Avg Rent</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>`:''}
       </div>
+      <div class="city-card-footer">View offices →</div>
     </a>`;
   });
 
   // Districts
-  const dg = document.getElementById('districts-grid');
-  const districts = [
-    {name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',rent:'EGP 950–1,400'},
-    {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',rent:'AED 2,200–3,500'},
-    {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',rent:'AED 1,600–2,400'},
-    {name:'KAFD',city:'Riyadh',country:'KSA',market:'riyadh',rent:'SAR 1,800–2,800'},
-    {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',rent:'NGN 45k–75k'},
-    {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',rent:'KES 1,200–1,800'},
-    {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',rent:'ZAR 220–380'},
-    {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',rent:'MAD 1,800–2,800'},
-    {name:'CBD',city:'Cairo',country:'Egypt',market:'cairo',rent:'EGP 1,100–1,600'},
-    {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',rent:'JOD 14–22'},
-  ];
-  districts.forEach(d => {
-    dg.innerHTML += `<a href="pages/districts.html?d=${encodeURIComponent(d.name)}" class="dc">
-      <div class="dc-city">${d.city} · ${d.country}</div>
-      <div class="dc-name">${d.name}</div>
-      <div><div class="dc-stat-val">${d.rent}</div><div class="dc-stat-key">Indicative Rent</div></div>
-    </a>`;
-  });
+  const dg=document.getElementById('districts-grid');
+  [{name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'Dominant Grade A submarket.',rent:'EGP 950–1,400'},
+   {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',desc:'Gulf premier financial district.',rent:'AED 2,200–3,500'},
+   {name:'KAFD',city:'Riyadh',country:'KSA',market:'riyadh',desc:'Kingdom flagship CBD.',rent:'SAR 1,800–2,800'},
+   {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',desc:'Lagos prime corporate address.',rent:'NGN 45k–75k'},
+   {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',desc:'Nairobi top commercial suburb.',rent:'KES 1,200–1,800'},
+   {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',desc:'Africa premier CBD.',rent:'ZAR 220–380'},
+   {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',desc:'Canal district, metro access.',rent:'AED 1,600–2,400'},
+   {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',desc:'Morocco financial hub.',rent:'MAD 1,800–2,800'},
+   {name:'CBD',city:'Cairo',country:'Egypt',market:'cairo',desc:'Historic Nile-front prestige.',rent:'EGP 1,100–1,600'},
+   {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman modern CBD.',rent:'JOD 14–22'},
+  ].forEach(d=>dg.innerHTML+=`<a href="pages/districts.html?d=${encodeURIComponent(d.name)}" class="district-card">
+    <div class="district-city">${d.city} · ${d.country}</div>
+    <div class="district-name">${d.name}</div>
+    <div class="district-desc">${d.desc}</div>
+    <div class="district-rent">${d.rent}</div>
+    <div class="district-rent-label">Indicative rent band</div>
+  </a>`);
 
-  // Register modal market dropdown
-  const sel = document.getElementById('reg-market');
-  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+  const sel=document.getElementById('reg-market');
+  URBN_DATA.markets.forEach(m=>sel.innerHTML+=`<option value="${m.id}">${m.name}, ${m.country}</option>`);
 });
 </script>
 </body>

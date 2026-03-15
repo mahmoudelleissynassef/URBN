@@ -17,12 +17,12 @@
 <div class="mbg" id="sv-modal">
   <div class="modal">
     <div class="mh">
-      <div><span class="overline" style="margin-bottom:6px;">Protected Introduction</span><h3>Request Site Visit</h3></div>
+      <div><span class="label" style="margin-bottom:6px;">Protected Introduction</span><h3>Request Site Visit</h3></div>
       <div class="mx">✕</div>
     </div>
     <div class="mb">
       <div class="intro-notice">
-        <p>By submitting this request, URBN will formally introduce you to the building. This introduction is <strong style="color:var(--accent);">timestamped, logged, and commission-protected for 24 months</strong> — regardless of whether URBN participates further in negotiations.</p>
+        <p>By submitting this request, URBN will formally introduce you to the building. This introduction is <strong style="color:var(--navy);">timestamped, logged, and commission-protected for 24 months</strong> — regardless of whether URBN participates further in negotiations.</p>
       </div>
       <div id="sv-unit-display" style="margin-bottom:18px;"></div>
       <div class="fg"><label class="fl">Intended Commencement Date</label><input type="date" class="fi" id="sv-date"></div>
@@ -34,7 +34,7 @@
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeModal('sv-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="submitSV()">Confirm Introduction Request</button>
+      <button class="btn btn-navy" onclick="submitSV()">Confirm Introduction Request</button>
     </div>
   </div>
 </div>
@@ -43,7 +43,7 @@
 <div class="mbg" id="offer-modal">
   <div class="modal" style="max-width:620px;">
     <div class="mh">
-      <div><span class="overline" style="margin-bottom:6px;">Competitive Offer</span><h3>Submit Offer</h3></div>
+      <div><span class="label" style="margin-bottom:6px;">Competitive Offer</span><h3>Submit Offer</h3></div>
       <div class="mx">✕</div>
     </div>
     <div class="mb">
@@ -67,7 +67,7 @@
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeModal('offer-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="submitOffer()">Submit Offer</button>
+      <button class="btn btn-navy" onclick="submitOffer()">Submit Offer</button>
     </div>
   </div>
 </div>
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
   injectFooter('../');
   const id = p('id');
   B = URBN_DATA.buildings.find(b => b.id === id);
-  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not found</div><a href="search.html" class="btn btn-primary">Back to Search</a></div>'; return; }
+  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not found</div><a href="search.html" class="btn btn-navy">Back to Search</a></div>'; return; }
 
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
   const saved = USER.saved.includes(B.id);
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost btn-sm ${saved?'on':''}" id="save-btn-top" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-main').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
           <button class="btn btn-outline btn-sm" onclick="openModal('offer-modal')">Submit Offer</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>
+          <button class="btn btn-navy btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>
         </div>
       </div>
     </div>
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-top:14px;border-top:1px solid var(--border);">
                 <div><div class="sp-val">${u.desks}</div><div class="sp-key">Desks</div></div>
                 <div><div class="sp-val">${u.meetingRooms}</div><div class="sp-key">Mtg Rooms</div></div>
-                <div><div class="sp-val" style="color:var(--accent);">${B.rentCurrency} ${u.rent.toLocaleString()}</div><div class="sp-key">per sqm/mo</div></div>
+                <div><div class="sp-val" style="color:var(--navy);">${B.rentCurrency} ${u.rent.toLocaleString()}</div><div class="sp-key">per sqm/mo</div></div>
                 <div style="display:flex;gap:6px;">
                   <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();setUnit('${u.id}');openModal('sv-modal')">Site Visit</button>
                   <button class="btn btn-dark btn-sm" onclick="event.stopPropagation();openModal('offer-modal')">Offer</button>
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div>
         <div class="card" style="padding:24px;margin-bottom:14px;">
           <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:12px;">Asking Rent</div>
-          <div style="font-family:var(--fd);font-size:36px;font-weight:300;color:var(--accent);line-height:1;">${B.rentCurrency} ${fmt(B.rentMin)}–${fmt(B.rentMax)}</div>
+          <div style="font-family:var(--fd);font-size:36px;font-weight:300;color:var(--navy);line-height:1;">${B.rentCurrency} ${fmt(B.rentMin)}–${fmt(B.rentMax)}</div>
           <div style="font-size:11px;color:var(--text-2);margin-bottom:18px;">per ${B.rentUnit}</div>
           <div style="font-size:12.5px;color:var(--text-2);padding-top:16px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
@@ -187,13 +187,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-          <button class="btn btn-primary w-full" onclick="openModal('sv-modal')">Request Site Visit</button>
+          <button class="btn btn-navy w-full" onclick="openModal('sv-modal')">Request Site Visit</button>
           <button class="btn btn-outline w-full" onclick="openModal('offer-modal')">Submit Offer</button>
           <button class="btn btn-ghost w-full" id="save-btn-main" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-top').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
         </div>
 
         <div style="background:var(--bg-white);border:1px solid var(--border-2);padding:16px;">
-          <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">Introduction Protection</div>
+          <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--navy);margin-bottom:8px;text-transform:uppercase;">Introduction Protection</div>
           <p style="font-size:12px;color:var(--text-2);line-height:1.7;">All introductions via URBN are formally logged and commission-protected for 24 months from introduction date. Non-circumvention applies.</p>
         </div>
       </div>

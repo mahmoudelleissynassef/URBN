@@ -10,7 +10,7 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w">
     <div class="mb48">
-      <span class="overline overline-accent">Office Market Context</span>
+      <span class="overline label-navy">Office Market Context</span>
       <h1 style="font-size:44px;">Market Snapshot</h1>
       <p style="font-size:14px;color:var(--text-2);margin-top:12px;max-width:480px;line-height:1.8;">Summary market context for URBN-covered cities. Data is derived from URBN's verified inventory and is updated as listings are refreshed. Full analysis is available via a Market Scan request.</p>
     </div>
@@ -28,7 +28,7 @@
       <span class="eyebrow eyebrow-brass text-center" style="display:block;">Need Deeper Context?</span>
       <h3 style="font-size:26px;margin-bottom:12px;">Request a Market Scan</h3>
       <p style="font-size:13.5px;color:var(--text-2);max-width:400px;margin:0 auto 24px;line-height:1.75;">URBN will deliver a curated shortlist and market context note for your target market within 48 hours.</p>
-      <a href="market-scan.html" class="btn btn-primary btn-lg">Request Market Scan</a>
+      <a href="market-scan.html" class="btn btn-navy btn-lg">Request Market Scan</a>
     </div>
   </div>
 </div>
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="font-family:var(--fm);font-size:9px;color:var(--text-2);letter-spacing:.1em;text-transform:uppercase;">${m.country} · ${m.region}</div>
       </div>
       <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${bcount} building${bcount!==1?'s':''}</div><div style="font-size:10px;color:var(--text-2);">Listed</div></div>
-      <div><div style="font-family:var(--fm);font-size:12px;color:var(--accent);">${s?s.avgRent.toLocaleString()+' '+m.currency:'—'}</div><div style="font-size:10px;color:var(--text-2);">Avg Rent</div></div>
+      <div><div style="font-family:var(--fm);font-size:12px;color:var(--navy);">${s?s.avgRent.toLocaleString()+' '+m.currency:'—'}</div><div style="font-size:10px;color:var(--text-2);">Avg Rent</div></div>
       <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${s?s.vacancyRate+'%':'—'}</div><div style="font-size:10px;color:var(--text-2);">Vacancy</div></div>
       <div><div style="font-family:var(--fm);font-size:12px;color:var(--text);">${s?s.trend.toUpperCase():'—'}</div><div style="font-size:10px;color:var(--text-2);">Trend</div></div>
       <div><a href="search.html?m=${m.id}" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">Browse →</a></div>

@@ -48,24 +48,24 @@
         <button class="chip" onclick="this.classList.toggle('on')">Cold Chain</button>
       </div>
     </div>
-    <button class="btn btn-primary w-full" onclick="showToast('Filters applied')">Apply Filters</button>
+    <button class="btn btn-navy w-full" onclick="showToast('Filters applied')">Apply Filters</button>
   </div>
 
   <!-- Main -->
   <div style="flex:1;padding:32px 36px;">
     <div class="flex-b mb32">
       <div>
-        <span class="overline overline-accent">Industrial & Logistics</span>
+        <span class="overline label-navy">Industrial & Logistics</span>
         <h2 style="font-size:28px;">Available Units</h2>
       </div>
-      <a href="market-scan.html" class="btn btn-primary btn-sm">Request Industrial Scan →</a>
+      <a href="market-scan.html" class="btn btn-navy btn-sm">Request Industrial Scan →</a>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px;" id="ind-list"></div>
 
     <!-- BTS/BTO Builder -->
     <div class="card" style="padding:36px;margin-top:40px;">
-      <span class="overline overline-accent" style="margin-bottom:10px;">Build-to-Suit / Build-to-Own</span>
+      <span class="overline label-navy" style="margin-bottom:10px;">Build-to-Suit / Build-to-Own</span>
       <h3 style="font-size:24px;margin-bottom:8px;">Requirement Builder</h3>
       <p style="font-size:13px;color:var(--text-2);margin-bottom:24px;line-height:1.75;">Describe your operational requirements and URBN will match you to available sites, developers, or land parcels across our markets.</p>
       <div class="fr2">
@@ -90,7 +90,7 @@
           </select>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
+      <button class="btn btn-navy" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
     </div>
   </div>
 </div>
@@ -120,11 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ind-c"><div class="ind-cv">${u.dockDoors}</div><div class="ind-ck">Dock Doors</div></div>
         <div class="ind-c"><div class="ind-cv">${u.power.toLocaleString()} kVA</div><div class="ind-ck">Power</div></div>
         <div class="ind-c"><div class="ind-cv">${u.floorLoading} kN/sqm</div><div class="ind-ck">Floor Loading</div></div>
-        <div class="ind-c"><div class="ind-cv" style="color:var(--accent);">${u.rentCurrency} ${u.rent}/sqm</div><div class="ind-ck">Asking Rent</div></div>
+        <div class="ind-c"><div class="ind-cv" style="color:var(--navy);">${u.rentCurrency} ${u.rent}/sqm</div><div class="ind-ck">Asking Rent</div></div>
       </div>
       <div class="flex-b">
         <div style="font-size:12px;color:var(--text-2);">${u.hasColdStorage?'Cold storage available':'Ambient temperature'}</div>
-        <button class="btn btn-primary btn-sm" onclick="showToast('Introduction request submitted')">Request Introduction</button>
+        <button class="btn btn-navy btn-sm" onclick="showToast('Introduction request submitted')">Request Introduction</button>
       </div>
     </div>`;
   });

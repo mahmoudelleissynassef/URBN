@@ -1,35 +1,31 @@
-// URBN Platform v2 — Core JS
+// URBN Platform v5 — FT Editorial × JLL Institutional
 
-// ── Demo State ────────────────────────────────────────
 const USER = {
   id: 'demo', name: 'Demo User', company: 'Acme Corporation',
-  email: 'demo@acmecorp.com', role: 'corporate_tenant',
-  plan: 'membership', saved: ['b001', 'b005', 'b008'],
+  email: 'demo@acmecorp.com', role: 'corporate_tenant', plan: 'membership',
+  saved: ['b001', 'b005', 'b008'],
   intros: [{ bid: 'b001', uid: 'u001a', date: '2026-03-01', status: 'introduced' }],
   alerts: [{ market: 'cairo', sub: 'New Cairo', minSz: 500, maxRent: 1400 }],
 };
 
-// ── Image map ─────────────────────────────────────────
 const IMG = {
-  cairo: 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=600&q=75',
-  dubai: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=75',
-  riyadh: 'https://images.unsplash.com/photo-1586276393635-5ecd8a851acc?w=600&q=75',
-  casablanca: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=75',
-  nairobi: 'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=600&q=75',
-  lagos: 'https://images.unsplash.com/photo-1618523023100-7adc284d4f05?w=600&q=75',
-  johannesburg: 'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=600&q=75',
-  accra: 'https://images.unsplash.com/photo-1554118879-4e3c0b34c2f8?w=600&q=75',
-  addis: 'https://images.unsplash.com/photo-1568385247005-0d371d214e26?w=600&q=75',
-  amman: 'https://images.unsplash.com/photo-1553244977-ef09dd7706aa?w=600&q=75',
-  luanda: 'https://images.unsplash.com/photo-1574515944794-d6dedc7150de?w=600&q=75',
-  tunis: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=75',
-  capetown: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=600&q=75',
-  rabat: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=75',
-  abuja: 'https://images.unsplash.com/photo-1618523023100-7adc284d4f05?w=600&q=75',
+  cairo:'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=600&q=80',
+  dubai:'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=80',
+  riyadh:'https://images.unsplash.com/photo-1586276393635-5ecd8a851acc?w=600&q=80',
+  casablanca:'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  nairobi:'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=600&q=80',
+  lagos:'https://images.unsplash.com/photo-1618523023100-7adc284d4f05?w=600&q=80',
+  johannesburg:'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=600&q=80',
+  accra:'https://images.unsplash.com/photo-1554118879-4e3c0b34c2f8?w=600&q=80',
+  addis:'https://images.unsplash.com/photo-1568385247005-0d371d214e26?w=600&q=80',
+  amman:'https://images.unsplash.com/photo-1553244977-ef09dd7706aa?w=600&q=80',
+  luanda:'https://images.unsplash.com/photo-1574515944794-d6dedc7150de?w=600&q=80',
+  tunis:'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  capetown:'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=600&q=80',
 };
 
-// ── Nav ───────────────────────────────────────────────
-function injectNav(base = '') {
+// ── Nav ─────────────────────────────────────────────────
+function injectNav(base='') {
   const el = document.getElementById('nav-placeholder');
   if (!el) return;
   el.innerHTML = `
@@ -39,7 +35,7 @@ function injectNav(base = '') {
         <div class="logo-mark">U</div>
         <div>
           <span class="logo-text">URBN</span>
-          <span class="logo-sub">Office Discovery Platform</span>
+          <span class="logo-sub">Office Intelligence</span>
         </div>
       </a>
       <div class="nav-links">
@@ -59,19 +55,19 @@ function injectNav(base = '') {
         <a href="${base}pages/buildings.html">Buildings</a>
         <a href="${base}pages/districts.html">Districts</a>
         <a href="${base}pages/industrial.html">Industrial</a>
-        <a href="${base}pages/managers.html">Contacts</a>
+        <div class="nav-sep"></div>
+        <a href="${base}pages/market-scan.html">Contact</a>
       </div>
       <div class="nav-right">
-        <span class="nav-tier">Membership</span>
         <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
-        <a href="${base}pages/market-scan.html" class="btn btn-primary btn-sm">Request Market Scan</a>
+        <a href="${base}pages/market-scan.html" class="btn btn-navy btn-sm">Request Access</a>
       </div>
     </div>
   </nav>`;
 }
 
-// ── Footer ────────────────────────────────────────────
-function injectFooter(base = '') {
+// ── Footer ───────────────────────────────────────────────
+function injectFooter(base='') {
   const el = document.getElementById('footer-placeholder');
   if (!el) return;
   el.innerHTML = `
@@ -80,16 +76,17 @@ function injectFooter(base = '') {
       <div class="footer-grid">
         <div>
           <div class="footer-brand-name">URBN</div>
+          <div class="footer-brand-sub">Corporate Office Intelligence</div>
           <p class="footer-brand-desc">Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings. Protected introductions.</p>
         </div>
         <div class="fc">
           <div class="fc-title">Platform</div>
           <ul>
             <li><a href="${base}pages/search.html">Browse Offices</a></li>
-            <li><a href="${base}pages/buildings.html">Buildings Directory</a></li>
-            <li><a href="${base}pages/districts.html">District Guides</a></li>
+            <li><a href="${base}pages/buildings.html">Buildings</a></li>
+            <li><a href="${base}pages/districts.html">Districts</a></li>
             <li><a href="${base}pages/industrial.html">Industrial</a></li>
-            <li><a href="${base}pages/market-scan.html">Request Market Scan</a></li>
+            <li><a href="${base}pages/market-scan.html">Market Scan</a></li>
           </ul>
         </div>
         <div class="fc">
@@ -104,236 +101,165 @@ function injectFooter(base = '') {
           </ul>
         </div>
         <div class="fc">
-          <div class="fc-title">Tools</div>
-          <ul>
-            <li><a href="${base}pages/tools/stay-vs-go.html">Stay vs Go Analysis</a></li>
-            <li><a href="${base}pages/managers.html">Managers Directory</a></li>
-            <li><a href="${base}pages/subscription.html">Membership</a></li>
-            <li><a href="${base}pages/documents.html">Legal Documents</a></li>
-          </ul>
-        </div>
-        <div class="fc">
           <div class="fc-title">Company</div>
           <ul>
             <li><a href="${base}pages/dashboards/tenant.html">Dashboard</a></li>
+            <li><a href="${base}pages/managers.html">Contacts</a></li>
+            <li><a href="${base}pages/subscription.html">Access & Pricing</a></li>
+            <li><a href="${base}pages/tools/stay-vs-go.html">Stay vs Go</a></li>
+          </ul>
+        </div>
+        <div class="fc">
+          <div class="fc-title">Legal</div>
+          <ul>
+            <li><a href="${base}pages/documents.html">Terms of Use</a></li>
+            <li><a href="${base}pages/documents.html">Commission Agreement</a></li>
+            <li><a href="${base}pages/documents.html">Privacy Policy</a></li>
             <li><a href="${base}pages/login.html">Sign In</a></li>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Terms of Use</a></li>
           </ul>
         </div>
       </div>
+      <div class="footer-rule"></div>
       <div class="footer-bot">
-        <p>© 2026 URBN Office Discovery Platform — All Rights Reserved</p>
-        <p>Dubai, UAE · Demo Mode</p>
+        <p>© 2026 URBN Platform · Corporate Office Intelligence</p>
+        <p>Dubai, UAE · All Rights Reserved</p>
       </div>
     </div>
   </footer>`;
 }
 
-// ── Toast ─────────────────────────────────────────────
-function toast(msg, type = 'ok') {
+// ── Toast ────────────────────────────────────────────────
+function showToast(msg) {
   let tc = document.querySelector('.tc');
-  if (!tc) { tc = document.createElement('div'); tc.className = 'tc'; document.body.appendChild(tc); }
+  if (!tc) { tc = document.createElement('div'); tc.className='tc'; document.body.appendChild(tc); }
   const t = document.createElement('div');
-  t.className = 'toast';
-  t.innerHTML = `<div class="td ${type}"></div><span class="tm">${msg}</span>`;
+  t.className='toast';
+  t.innerHTML=`<span class="tm">${msg}</span>`;
   tc.appendChild(t);
-  setTimeout(() => t.remove(), 3800);
+  setTimeout(()=>t.remove(),3800);
 }
-// Alias
-function showToast(msg, type) { toast(msg, type || 'ok'); }
 
-// ── Save toggle ───────────────────────────────────────
-function toggleSave(id, btn) {
-  const i = USER.saved.indexOf(id);
-  if (i > -1) { USER.saved.splice(i, 1); btn.classList.remove('on'); toast('Removed from shortlist', 'info'); }
-  else { USER.saved.push(id); btn.classList.add('on'); toast('Added to shortlist'); }
-  btn.innerHTML = heartSVG(USER.saved.includes(id));
-}
+// ── Save ─────────────────────────────────────────────────
 function heartSVG(on) {
-  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--brass)':'none'}" stroke="${on?'var(--brass)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+}
+function toggleSave(id,btn) {
+  const i=USER.saved.indexOf(id);
+  if(i>-1){USER.saved.splice(i,1);btn.classList.remove('on');showToast('Removed from shortlist');}
+  else{USER.saved.push(id);btn.classList.add('on');showToast('Added to shortlist');}
+  btn.innerHTML=heartSVG(USER.saved.includes(id));
 }
 
-// ── Modal ─────────────────────────────────────────────
-function openModal(id) { document.getElementById(id)?.classList.add('open'); }
-function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
-document.addEventListener('click', e => {
-  if (e.target.classList.contains('mbg')) e.target.classList.remove('open');
-  if (e.target.classList.contains('mx')) e.target.closest('.mbg')?.classList.remove('open');
+// ── Modal ────────────────────────────────────────────────
+function openModal(id){document.getElementById(id)?.classList.add('open');}
+function closeModal(id){document.getElementById(id)?.classList.remove('open');}
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('mbg'))e.target.classList.remove('open');
+  if(e.target.classList.contains('mx'))e.target.closest('.mbg')?.classList.remove('open');
 });
 
-// ── Tabs ──────────────────────────────────────────────
+// ── Tabs ─────────────────────────────────────────────────
 function initTabs(wrap) {
-  const tabs = wrap.querySelectorAll('.tab');
-  const panels = wrap.querySelectorAll('.tp');
-  tabs.forEach(t => t.addEventListener('click', () => {
-    tabs.forEach(x => x.classList.remove('on'));
-    panels.forEach(x => x.classList.remove('on'));
-    t.classList.add('on');
-    wrap.querySelector('#'+t.dataset.t)?.classList.add('on');
+  const tabs=wrap.querySelectorAll('.tab'),panels=wrap.querySelectorAll('.tp');
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.remove('on'));panels.forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');wrap.querySelector('#'+t.dataset.t)?.classList.add('on');
   }));
 }
 
-// ── Helpers ───────────────────────────────────────────
-function p(n) { return new URLSearchParams(window.location.search).get(n); }
-function fmt(n) { return n?.toLocaleString() || '—'; }
-function gradeB(g) {
-  return g === 'A+' ? '<span class="badge badge-grade-aplus">Grade A+</span>' : '<span class="badge badge-grade-a">Grade A</span>';
+// ── Helpers ──────────────────────────────────────────────
+function p(n){return new URLSearchParams(window.location.search).get(n);}
+function fmt(n){return n?.toLocaleString()||'—';}
+function getImg(m){return IMG[m]||IMG.cairo;}
+function gradeTag(g){
+  return `<span class="lc-grade-tag">${g==='A+'?'Grade A+':'Grade A'}</span>`;
 }
-function getImg(market) { return IMG[market] || IMG.cairo; }
 
-// ── Listing Card ──────────────────────────────────────
-function renderCard(b, base = '') {
-  const saved = USER.saved.includes(b.id);
-  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
+// ── Listing card ─────────────────────────────────────────
+function renderCard(b, base='') {
+  const saved=USER.saved.includes(b.id);
+  const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
   return `
   <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
     <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
+      <img src="${getImg(b.market)}" alt="${b.name}" loading="lazy">
       <div class="lc-img-grad"></div>
-      <div class="lc-badges">
-        ${gradeB(b.grade)}
-        <span class="badge badge-verified">Verified</span>
-        ${b.availMin <= 500 ? '<span class="badge badge-immediate">Available Now</span>' : ''}
-      </div>
+      ${gradeTag(b.grade)}
       <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
     </div>
     <div class="lc-body">
       <div class="lc-name">${b.name}</div>
-      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
-      <div class="lc-specs">
-        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Area</div></div>
-        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Floor Plate</div></div>
-        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
-        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking Ratio</div></div>
-      </div>
-      <div class="lc-foot">
-        <div>
-          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-label">per ${b.rentUnit}</div>
+      <div class="lc-district">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-data">
+        <div class="lc-datum">
+          <div class="lc-d-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div>
+          <div class="lc-d-key">Available Area</div>
         </div>
-        <span class="btn btn-dark btn-sm">View →</span>
-      </div>
-      <div class="lc-feats">
-        ${b.amenities.slice(0,3).map(a=>`<span class="lc-feat">${a}</span>`).join('')}
-        ${b.sustainability.slice(0,1).map(s=>`<span class="lc-feat">${s}</span>`).join('')}
-      </div>
-    </div>
-  </div>`;
-}
-
-// ── Anon card (public) ────────────────────────────────
-function renderAnonCard(b, base = '') {
-  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
-  return `
-  <div class="lc" onclick="openModal('register-modal')">
-    <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
-      <div class="lc-img-grad"></div>
-      <div class="lc-badges">
-        ${gradeB(b.grade)}
-        <span class="badge badge-gated">Register to Unlock</span>
-      </div>
-    </div>
-    <div class="lc-body">
-      <div class="lc-name">${b.anonName}</div>
-      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
-      <div class="lc-specs">
-        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Range</div></div>
-        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Typical Floor Plate</div></div>
-        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
-        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking</div></div>
-      </div>
-      <div class="lc-foot">
-        <div>
-          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-label">indicative range / ${b.rentUnit}</div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${fmt(b.floorplate)} sqm</div>
+          <div class="lc-d-key">Floor Plate</div>
         </div>
-        <span class="btn btn-outline btn-sm">Register to Access →</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ── Init ──────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('[data-tabs]').forEach(initTabs);
-});
-
-function gradeB(g) {
-  return g === 'A+'
-    ? '<span class="badge badge-grade-aplus"><span class="badge-dot"></span>Grade A+</span>'
-    : '<span class="badge badge-grade-a"><span class="badge-dot"></span>Grade A</span>';
-}
-
-// Override renderCard with v3 design
-function renderCard(b, base = '') {
-  const saved = USER.saved.includes(b.id);
-  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
-  return `
-  <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
-    <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
-      <div class="lc-img-overlay"></div>
-      <div class="lc-badges">
-        ${gradeB(b.grade)}
-        <span class="badge badge-verified"><span class="badge-dot"></span>Verified</span>
-        ${b.availMin <= 500 ? '<span class="badge badge-immediate"><span class="badge-dot"></span>Available Now</span>' : ''}
-      </div>
-      <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
-    </div>
-    <div class="lc-body">
-      <div class="lc-name">${b.name}</div>
-      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
-      <div class="lc-specs">
-        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Area</div></div>
-        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Floor Plate</div></div>
-        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
-        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking</div></div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${b.floors}</div>
+          <div class="lc-d-key">Floors</div>
+        </div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${b.parking}:1</div>
+          <div class="lc-d-key">Parking</div>
+        </div>
       </div>
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-label">per ${b.rentUnit}</div>
+          <div class="lc-rent-sub">per ${b.rentUnit}</div>
         </div>
         <span class="btn btn-ghost btn-sm">View →</span>
       </div>
-      <div class="lc-feats">
-        ${b.amenities.slice(0,3).map(a=>`<span class="lc-feat">${a}</span>`).join('')}
-        ${b.sustainability.slice(0,1).map(s=>`<span class="lc-feat">${s}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderAnonCard(b, base='') {
+  const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
+  return `
+  <div class="lc" onclick="openModal('access-modal')">
+    <div class="lc-img">
+      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
+      <div class="lc-img-grad"></div>
+      ${gradeTag(b.grade)}
+    </div>
+    <div class="lc-body">
+      <div class="lc-name">${b.anonName}</div>
+      <div class="lc-district">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-data">
+        <div class="lc-datum">
+          <div class="lc-d-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div>
+          <div class="lc-d-key">Available Range</div>
+        </div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${fmt(b.floorplate)} sqm</div>
+          <div class="lc-d-key">Floor Plate</div>
+        </div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${b.floors}</div>
+          <div class="lc-d-key">Floors</div>
+        </div>
+        <div class="lc-datum">
+          <div class="lc-d-val">${b.parking}:1</div>
+          <div class="lc-d-key">Parking</div>
+        </div>
+      </div>
+      <div class="lc-foot">
+        <div>
+          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
+          <div class="lc-rent-sub">indicative / ${b.rentUnit}</div>
+        </div>
+        <span class="btn btn-outline btn-sm">Request Access →</span>
       </div>
     </div>
   </div>`;
 }
 
-function renderAnonCard(b, base = '') {
-  const mkt = URBN_DATA.markets.find(m => m.id === b.market);
-  return `
-  <div class="lc" onclick="openModal('register-modal')">
-    <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
-      <div class="lc-img-overlay"></div>
-      <div class="lc-badges">
-        ${gradeB(b.grade)}
-        <span class="badge badge-gated"><span class="badge-dot"></span>Register to Unlock</span>
-      </div>
-    </div>
-    <div class="lc-body">
-      <div class="lc-name">${b.anonName}</div>
-      <div class="lc-loc">${b.submarket} · ${mkt?.country||''}</div>
-      <div class="lc-specs">
-        <div><div class="sp-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div><div class="sp-key">Available Range</div></div>
-        <div><div class="sp-val">${fmt(b.floorplate)} sqm</div><div class="sp-key">Floor Plate</div></div>
-        <div><div class="sp-val">${b.floors} floors</div><div class="sp-key">Height</div></div>
-        <div><div class="sp-val">${b.parking}:1</div><div class="sp-key">Parking</div></div>
-      </div>
-      <div class="lc-foot">
-        <div>
-          <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-label">indicative / ${b.rentUnit}</div>
-        </div>
-        <span class="btn btn-outline btn-sm">Register →</span>
-      </div>
-    </div>
-  </div>`;
-}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[data-tabs]').forEach(initTabs);
+});
