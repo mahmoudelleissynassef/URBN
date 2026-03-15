@@ -10,7 +10,7 @@
 <div class="pt-nav" style="display:flex;min-height:calc(100vh - 60px);">
   <div class="dashboard-sidebar">
     <div style="padding:16px 12px;margin-bottom:8px;">
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:4px;">ADMIN CONSOLE</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-2);margin-bottom:4px;">ADMIN CONSOLE</div>
       <div style="font-size:13px;font-weight:600;color:var(--text);">Platform Admin</div>
     </div>
     <div class="dash-nav-item active" onclick="showSection('overview',this)">Overview</div>
@@ -35,11 +35,11 @@
       <div class="dash-section-sub mb-24">Registered users across all roles</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="border-bottom:1px solid var(--border2);">
-          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">USER</th>
-          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">COMPANY</th>
-          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">ROLE</th>
-          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">PLAN</th>
-          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">REGISTERED</th>
+          <th style="padding:10px;text-align:left;color:var(--text-2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">USER</th>
+          <th style="padding:10px;text-align:left;color:var(--text-2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">COMPANY</th>
+          <th style="padding:10px;text-align:left;color:var(--text-2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">ROLE</th>
+          <th style="padding:10px;text-align:left;color:var(--text-2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">PLAN</th>
+          <th style="padding:10px;text-align:left;color:var(--text-2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">REGISTERED</th>
         </tr></thead>
         <tbody>
           ${[
@@ -49,10 +49,10 @@
             ["Khalid Al Rashidi","Saudi Aramco","corporate_tenant","Enterprise","2025-12-01"],
           ].map(([n,c,r,p,d]) => `<tr style="border-bottom:1px solid var(--border);">
             <td style="padding:12px;">${n}</td>
-            <td style="padding:12px;color:var(--text-dim);">${c}</td>
+            <td style="padding:12px;color:var(--text-2);">${c}</td>
             <td style="padding:12px;"><span class="badge ${r === "corporate_tenant" ? "badge-available" : "badge-protected"}">${r}</span></td>
-            <td style="padding:12px;color:var(--gold);font-family:'DM Mono',monospace;font-size:11px;">${p}</td>
-            <td style="padding:12px;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:11px;">${d}</td>
+            <td style="padding:12px;color:var(--accent);font-family:'DM Mono',monospace;font-size:11px;">${p}</td>
+            <td style="padding:12px;color:var(--text-2);font-family:'DM Mono',monospace;font-size:11px;">${d}</td>
           </tr>`).join("")}
         </tbody>
       </table>
@@ -60,7 +60,7 @@
     <div id="section-introductions" class="hidden">
       <div class="dash-section-title mb-4">All Introductions</div>
       <div class="dash-section-sub mb-24">Complete introduction log with protection status</div>
-      <div style="text-align:center;padding:60px;color:var(--text-dim);">Demo data — 34 active introductions tracked</div>
+      <div style="text-align:center;padding:60px;color:var(--text-2);">Demo data — 34 active introductions tracked</div>
     </div>
     <div id="section-audit" class="hidden">
       <div class="dash-section-title mb-4">Audit Trail</div>
@@ -72,9 +72,9 @@
           ["09:30","demo@acmecorp.com","Site visit request","Gate Village 8 · DIFC Dubai"],
           ["08:15","khalid@aramco.com","Offer submitted","Bay Square Tower 7 · Business Bay"],
         ].map(([t,u,a,d]) => `<div style="display:grid;grid-template-columns:80px 1fr 1fr 2fr;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <span style="font-family:'DM Mono',monospace;color:var(--text-dim);">${t}</span>
-          <span style="color:var(--text-dim);">${u}</span>
-          <span style="color:var(--gold);">${a}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--text-2);">${t}</span>
+          <span style="color:var(--text-2);">${u}</span>
+          <span style="color:var(--accent);">${a}</span>
           <span>${d}</span>
         </div>`).join("")}
       </div>
@@ -82,7 +82,7 @@
     <div id="section-compliance" class="hidden">
       <div class="dash-section-title mb-4">Compliance</div>
       <div class="dash-section-sub mb-24">Landlord update compliance and system flags</div>
-      <div style="text-align:center;padding:60px;color:var(--text-dim);">All landlords compliant — no flags</div>
+      <div style="text-align:center;padding:60px;color:var(--text-2);">All landlords compliant — no flags</div>
     </div>
   </div>
 </div>

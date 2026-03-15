@@ -8,12 +8,13 @@
 <body>
 <div id="nav-placeholder"></div>
 <div class="pt-nav dl">
+  <!-- Sidebar -->
   <div class="da">
     <div style="padding:16px 12px 20px;border-bottom:1px solid var(--border);margin-bottom:12px;">
-      <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Corporate Tenant</div>
-      <div style="font-size:14px;font-weight:500;color:var(--text);">Demo User</div>
-      <div style="font-size:11px;color:var(--text-dim);">Acme Corporation</div>
-      <div style="margin-top:8px;"><span class="badge badge-exclusive" style="font-size:8px;">Membership</span></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);margin-bottom:6px;">Corporate Tenant</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);">Demo User</div>
+      <div style="font-size:12px;color:var(--text-2);">Acme Corporation</div>
+      <div style="margin-top:8px;"><span class="badge badge-exclusive" style="font-size:9px;">Membership</span></div>
     </div>
     <div class="dn on" onclick="show('overview',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview
@@ -22,13 +23,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Shortlist
     </div>
     <div class="dn" onclick="show('intros',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/><path d="M2 2l20 20"/></svg>Introductions
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>Introductions
     </div>
     <div class="dn" onclick="show('alerts',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Alerts
-    </div>
-    <div class="dn" onclick="window.location.href='../tools/stay-vs-go.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Stay vs Go
     </div>
     <div class="dn" onclick="window.location.href='../documents.html'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents
@@ -36,40 +34,74 @@
     <div class="dn" onclick="window.location.href='../market-scan.html'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Market Scan
     </div>
+    <div class="dn" onclick="window.location.href='../subscription.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Membership
+    </div>
   </div>
-  <div class="dm">
+
+  <!-- Main -->
+  <div class="dm" style="background:var(--bg);">
+
+    <!-- Overview -->
     <div id="s-overview">
-      <div class="dash-section-head" style="margin-bottom:28px;">
+      <div style="margin-bottom:36px;">
+        <span class="overline">Corporate Tenant Portal</span>
         <h2 style="font-size:32px;">Good morning, Demo User</h2>
-        <p style="color:var(--text-dim);margin-top:4px;">Acme Corporation · Membership · All markets active</p>
+        <p style="color:var(--text-2);margin-top:6px;font-size:14px;">Acme Corporation · Membership · All 13 markets active</p>
       </div>
-      <div class="ms">
+
+      <div class="ms" style="grid-template-columns:repeat(4,1fr);">
         <div class="mc"><div class="mc-l">Shortlisted</div><div class="mc-v">3</div><div class="mc-s">buildings saved</div></div>
-        <div class="mc"><div class="mc-l">Introductions</div><div class="mc-v">1</div><div class="mc-s up">Protected · 24mo</div></div>
+        <div class="mc"><div class="mc-l">Introductions</div><div class="mc-v">1</div><div class="mc-s up">Protected · 24 months</div></div>
         <div class="mc"><div class="mc-l">Active Alerts</div><div class="mc-v">1</div><div class="mc-s">New Cairo</div></div>
-        <div class="mc"><div class="mc-l">Markets Active</div><div class="mc-v">13</div><div class="mc-s">Membership access</div></div>
+        <div class="mc"><div class="mc-l">Markets Active</div><div class="mc-v">13</div><div class="mc-s">Full membership</div></div>
       </div>
-      <div class="card" style="padding:24px;">
-        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;">Recent Activity</div>
-        ${[['Mar 10','Viewed Nile Business City, Cairo CBD'],['Mar 8','Site visit request submitted — Gate Village 8, DIFC'],['Mar 1','Added KAFD Tower 3 to shortlist'],['Feb 28','Stay vs Go analysis completed — Cairo search']].map(([d,a])=>`<div style="display:flex;gap:20px;padding:10px 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--fm);font-size:10px;color:var(--text-muted);width:50px;flex-shrink:0;">${d}</span><span style="font-size:12.5px;color:var(--text-dim);">${a}</span></div>`).join('')}
+
+      <!-- Recent activity table -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:18px 22px;border-bottom:1px solid var(--border);">
+          <span style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);">Recent Activity</span>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Action</th><th>Property</th><th>Market</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--text-2);">Mar 10</td><td>Building viewed</td><td>Nile Business City</td><td>Cairo CBD</td></tr>
+            <tr><td style="color:var(--text-2);">Mar 8</td><td>Site visit requested</td><td>Gate Village 8</td><td>Dubai · DIFC</td></tr>
+            <tr><td style="color:var(--text-2);">Mar 3</td><td>Building shortlisted</td><td>KAFD Tower 3</td><td>Riyadh</td></tr>
+            <tr><td style="color:var(--text-2);">Feb 28</td><td>Market scan requested</td><td>Cairo Office Market</td><td>Cairo</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
+    <!-- Shortlist -->
     <div id="s-shortlist" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Shortlist</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Buildings you have saved for review</p></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="shortlist-grid"></div>
+      <div style="margin-bottom:32px;">
+        <span class="overline">Saved Properties</span>
+        <h2 style="font-size:32px;">Shortlist</h2>
+      </div>
+      <div class="g3" id="shortlist-grid"></div>
     </div>
 
+    <!-- Introductions -->
     <div id="s-intros" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Protected Introductions</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Formally introduced, timestamped, and commission-protected for 24 months</p></div>
-      <div id="intros-grid"></div>
+      <div style="margin-bottom:32px;">
+        <span class="overline">Commission Protected</span>
+        <h2 style="font-size:32px;">Introductions</h2>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;" id="intros-table"></div>
     </div>
 
+    <!-- Alerts -->
     <div id="s-alerts" class="hidden">
-      <div style="margin-bottom:24px;"><h2 style="font-size:28px;">Availability Alerts</h2><p style="color:var(--text-dim);margin-top:4px;font-size:13px;">Notify me when new space matches my requirements</p></div>
+      <div style="margin-bottom:32px;">
+        <span class="overline">Notifications</span>
+        <h2 style="font-size:32px;">Availability Alerts</h2>
+      </div>
       <div id="alerts-grid"></div>
-      <button class="btn btn-primary mt24" onclick="showToast('Alert configuration — available in full membership')">+ Add Alert</button>
+      <button class="btn btn-primary mt24" onclick="showToast('Alert configuration available in full membership')">+ Add Alert</button>
     </div>
+
   </div>
 </div>
 <div id="footer-placeholder"></div>
@@ -79,33 +111,45 @@
 document.addEventListener('DOMContentLoaded', () => {
   injectNav('../../');
   injectFooter('../../');
+
+  // Shortlist
   const sg = document.getElementById('shortlist-grid');
-  USER.saved.forEach(id => { const b = URBN_DATA.buildings.find(x=>x.id===id); if(b) sg.innerHTML += renderCard(b,'../'); });
-  const ig = document.getElementById('intros-grid');
-  USER.intros.forEach(i => {
-    const b = URBN_DATA.buildings.find(x=>x.id===i.bid);
-    if (!b) return;
-    const pDate = new Date(new Date(i.date).setFullYear(new Date(i.date).getFullYear()+2)).toISOString().split('T')[0];
-    ig.innerHTML += `<div class="card" style="padding:22px;margin-bottom:10px;">
-      <div class="flex-b mb12">
-        <div><div style="font-family:var(--fd);font-size:18px;">${b.name}</div><div style="font-family:var(--fm);font-size:9.5px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;">${b.submarket} · Introduced ${i.date}</div></div>
-        <span class="badge badge-protected">Protected · 24mo</span>
-      </div>
-      <p style="font-size:12.5px;color:var(--text-dim);">Commission protection active until ${pDate}. Any transaction signed before this date is subject to URBN's commission agreement.</p>
-    </div>`;
+  USER.saved.forEach(id => {
+    const b = URBN_DATA.buildings.find(x=>x.id===id);
+    if (b) sg.innerHTML += renderCard(b,'../');
   });
+
+  // Introductions table
+  const it = document.getElementById('intros-table');
+  it.innerHTML = `<div style="padding:16px 22px;border-bottom:1px solid var(--border);"><span style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);">Protected Introductions</span></div>
+  <table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Date</th><th>Status</th><th>Protected Until</th></tr></thead><tbody>` +
+    USER.intros.map(i => {
+      const b = URBN_DATA.buildings.find(x=>x.id===i.bid);
+      if (!b) return '';
+      const pDate = new Date(new Date(i.date).setFullYear(new Date(i.date).getFullYear()+2)).toISOString().split('T')[0];
+      const mkt = URBN_DATA.markets.find(m=>m.id===b.market);
+      return `<tr>
+        <td style="font-weight:500;">${b.name}</td>
+        <td style="color:var(--text-2);">${b.submarket} · ${mkt?.country}</td>
+        <td style="color:var(--text-2);">${i.date}</td>
+        <td><span class="badge badge-protected"><span class="badge-dot"></span>Introduced</span></td>
+        <td style="color:var(--text-2);">${pDate}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+
+  // Alerts
   const ag = document.getElementById('alerts-grid');
   USER.alerts.forEach(a => {
-    ag.innerHTML += `<div class="card" style="padding:20px;margin-bottom:10px;">
-      <div class="flex-b">
-        <div><div style="font-size:14px;font-weight:500;">${a.sub}, ${a.market}</div><div style="font-size:12px;color:var(--text-dim);margin-top:3px;">Min ${a.minSz} sqm · Max rent ${a.maxRent.toLocaleString()}</div></div>
-        <span class="badge badge-available">Active</span>
+    ag.innerHTML += `<div class="card mb16" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:600;">${a.sub}, ${a.market}</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Min ${a.minSz} sqm · Max rent ${a.maxRent.toLocaleString()}</div>
       </div>
+      <span class="badge badge-available"><span class="badge-dot"></span>Active</span>
     </div>`;
   });
 });
 
-let activeS = 'overview';
 function show(id, btn) {
   document.querySelectorAll('[id^=s-]').forEach(s => s.classList.add('hidden'));
   document.getElementById('s-'+id)?.classList.remove('hidden');

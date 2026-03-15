@@ -59,13 +59,12 @@ function injectNav(base = '') {
         <a href="${base}pages/buildings.html">Buildings</a>
         <a href="${base}pages/districts.html">Districts</a>
         <a href="${base}pages/industrial.html">Industrial</a>
-        <a href="${base}pages/tools/stay-vs-go.html">Stay vs Go</a>
         <a href="${base}pages/managers.html">Contacts</a>
       </div>
       <div class="nav-right">
         <span class="nav-tier">Membership</span>
         <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
-        <a href="${base}pages/market-scan.html" class="btn btn-brass btn-sm">Request Market Scan</a>
+        <a href="${base}pages/market-scan.html" class="btn btn-primary btn-sm">Request Market Scan</a>
       </div>
     </div>
   </nav>`;
@@ -107,7 +106,7 @@ function injectFooter(base = '') {
         <div class="fc">
           <div class="fc-title">Tools</div>
           <ul>
-            <li><a href="${base}pages/tools/stay-vs-go.html">Stay vs Go</a></li>
+            <li><a href="${base}pages/tools/stay-vs-go.html">Stay vs Go Analysis</a></li>
             <li><a href="${base}pages/managers.html">Managers Directory</a></li>
             <li><a href="${base}pages/subscription.html">Membership</a></li>
             <li><a href="${base}pages/documents.html">Legal Documents</a></li>
@@ -120,13 +119,12 @@ function injectFooter(base = '') {
             <li><a href="${base}pages/login.html">Sign In</a></li>
             <li><a href="#">Privacy Policy</a></li>
             <li><a href="#">Terms of Use</a></li>
-            <li><a href="#">Contact</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-bot">
         <p>© 2026 URBN Office Discovery Platform — All Rights Reserved</p>
-        <p>Dubai, UAE · info@urbn.io · Demo Mode</p>
+        <p>Dubai, UAE · Demo Mode</p>
       </div>
     </div>
   </footer>`;
@@ -262,9 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-tabs]').forEach(initTabs);
 });
 
-// Badge shorthand aliases for v3 compatibility
 function gradeB(g) {
-  return g === 'A+' 
+  return g === 'A+'
     ? '<span class="badge badge-grade-aplus"><span class="badge-dot"></span>Grade A+</span>'
     : '<span class="badge badge-grade-a"><span class="badge-dot"></span>Grade A</span>';
 }

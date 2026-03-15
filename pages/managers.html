@@ -11,9 +11,9 @@
   <div class="w">
     <div class="flex-b mb48">
       <div>
-        <span class="overline overline-gold">Verified Contacts</span>
+        <span class="overline overline-accent">Verified Contacts</span>
         <h1 style="font-size:44px;">Managers Directory</h1>
-        <p style="font-size:14px;color:var(--text-dim);margin-top:12px;">Verified real estate and facilities managers relevant to corporate office leasing across Africa & MENA.</p>
+        <p style="font-size:14px;color:var(--text-2);margin-top:12px;">Verified real estate and facilities managers relevant to corporate office leasing across Africa & MENA.</p>
       </div>
       <div style="display:flex;gap:8px;">
         <input type="text" class="fi" id="mq" placeholder="Search name or firm..." style="width:220px;" oninput="filterMgrs()">
@@ -43,7 +43,7 @@ function filterMgrs() {
 }
 function renderMgrs(list) {
   const el = document.getElementById('mgrs-list');
-  if (!list.length) { el.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted);">No contacts found.</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-2);">No contacts found.</div>'; return; }
   el.innerHTML = list.map(m => {
     const init = m.name.split(' ').map(n=>n[0]).join('').slice(0,2);
     return `<div class="mr">
@@ -54,7 +54,7 @@ function renderMgrs(list) {
         <div class="mr-tags">${m.markets.map(id=>`<span class="badge badge-gated" style="font-size:8px;">${URBN_DATA.markets.find(x=>x.id===id)?.name||id}</span>`).join('')}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-        <div style="font-size:11px;color:var(--text-muted);text-align:right;">${m.areas.join(' · ')}</div>
+        <div style="font-size:11px;color:var(--text-2);text-align:right;">${m.areas.join(' · ')}</div>
         <button class="btn btn-ghost btn-sm" onclick="showToast('Introduction request sent to ${m.name}')">Request Introduction</button>
       </div>
     </div>`;
