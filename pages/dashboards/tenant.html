@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tenant Dashboard — URBN</title>
+  <link rel="stylesheet" href="../../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="display:flex;min-height:calc(100vh - 60px);">
+  <!-- Sidebar -->
+  <div class="dashboard-sidebar">
+    <div style="padding:16px 12px;margin-bottom:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:0.1em;margin-bottom:8px;">TENANT PORTAL</div>
+      <div style="font-size:13px;font-weight:600;color:var(--white);">Demo User</div>
+      <div style="font-size:11px;color:var(--text-dim);">Acme Corp · Professional</div>
+    </div>
+    <div class="dash-nav-item active" onclick="showSection('overview',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </div>
+    <div class="dash-nav-item" onclick="showSection('saved',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Saved Buildings
+    </div>
+    <div class="dash-nav-item" onclick="showSection('introductions',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.49 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.4 1.27h3a2 2 0 0 1 2 1.72"/></svg>
+      Introductions
+    </div>
+    <div class="dash-nav-item" onclick="showSection('alerts',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alerts
+    </div>
+    <div class="dash-nav-item" onclick="showSection('offers',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Offers
+    </div>
+    <div class="dash-nav-item" onclick="window.location.href='../tools/stay-vs-go.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Stay vs Go
+    </div>
+    <div class="dash-nav-item" onclick="window.location.href='../documents.html'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Documents
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="dashboard-main">
+    <!-- Overview -->
+    <div id="section-overview">
+      <div class="dash-section">
+        <div class="dash-section-title">Good morning, Demo User</div>
+        <div class="dash-section-sub">Acme Corp · Professional Plan · 12 credits remaining</div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-card"><div class="m-label">Saved Buildings</div><div class="m-value">3</div><div class="m-sub">across 3 markets</div></div>
+        <div class="metric-card"><div class="m-label">Active Introductions</div><div class="m-value">1</div><div class="m-sub text-green">Protected</div></div>
+        <div class="metric-card"><div class="m-label">Credits Remaining</div><div class="m-value text-gold">12</div><div class="m-sub">Professional Plan</div></div>
+        <div class="metric-card"><div class="m-label">Active Alerts</div><div class="m-value">1</div><div class="m-sub">New Cairo</div></div>
+      </div>
+      <div class="market-widget">
+        <div class="market-widget-title">Recent Activity</div>
+        <div style="display:flex;flex-direction:column;gap:0;">
+          ${[
+            ["Mar 10","Viewed Nile Business City · New Cairo","view"],
+            ["Mar 8","Submitted site visit request · Gate Village 8 DIFC","submit"],
+            ["Mar 1","Saved KAFD Tower 3 · Riyadh","save"],
+          ].map(([d,a,t]) => `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);width:50px;flex-shrink:0;">${d}</div>
+            <div style="font-size:12px;color:var(--text);">${a}</div>
+          </div>`).join("")}
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved -->
+    <div id="section-saved" class="hidden">
+      <div class="dash-section-title mb-4">Saved Buildings</div>
+      <div class="dash-section-sub mb-24">Buildings you have bookmarked for review</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="savedGrid"></div>
+    </div>
+
+    <!-- Introductions -->
+    <div id="section-introductions" class="hidden">
+      <div class="dash-section-title mb-4">Protected Introductions</div>
+      <div class="dash-section-sub mb-24">Each introduction is logged, timestamped, and commission-protected for 24 months</div>
+      <div style="display:flex;flex-direction:column;gap:12px;" id="introGrid"></div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="section-alerts" class="hidden">
+      <div class="dash-section-title mb-4">Availability Alerts</div>
+      <div class="dash-section-sub mb-24">Get notified when new space matches your requirements</div>
+      <div id="alertsGrid"></div>
+      <button class="btn btn-primary mt-24" onclick="showToast('Alert feature in demo mode')">+ Add New Alert</button>
+    </div>
+
+    <!-- Offers -->
+    <div id="section-offers" class="hidden">
+      <div class="dash-section-title mb-4">Offer History</div>
+      <div class="dash-section-sub mb-24">Track submitted offers and counteroffers</div>
+      <div style="text-align:center;padding:60px;color:var(--text-dim);">
+        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:8px;">No Offers Yet</div>
+        <p style="font-size:13px;">Browse available units and submit your first offer.</p>
+        <a href="../search.html" class="btn btn-primary mt-24">Browse Listings</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../../data/data.js"></script>
+<script src="../../js/urbn.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  injectNavbar("../../");
+  injectFooter("../../");
+
+  // Saved buildings
+  const savedGrid = document.getElementById("savedGrid");
+  currentUser.savedBuildings.forEach(id => {
+    const b = URBN_DATA.buildings.find(x => x.id === id);
+    if (b) savedGrid.innerHTML += renderBuildingCard(b);
+  });
+
+  // Introductions
+  const introGrid = document.getElementById("introGrid");
+  currentUser.introductions.forEach(intro => {
+    const b = URBN_DATA.buildings.find(x => x.id === intro.buildingId);
+    if (!b) return;
+    introGrid.innerHTML += `<div class="card" style="padding:20px;">
+      <div class="flex-between mb-12">
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:16px;">${b.name}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:2px;">${b.submarket} · Introduced ${intro.date}</div>
+        </div>
+        <span class="badge badge-protected">Protected · 24mo</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-dim);">This introduction is timestamped and logged. Any lease signed before ${new Date(new Date(intro.date).setFullYear(new Date(intro.date).getFullYear()+2)).toISOString().split("T")[0]} triggers commission entitlement.</p>
+    </div>`;
+  });
+
+  // Alerts
+  const alertsGrid = document.getElementById("alertsGrid");
+  currentUser.alerts.forEach(alert => {
+    alertsGrid.innerHTML += `<div class="card" style="padding:20px;margin-bottom:12px;">
+      <div class="flex-between">
+        <div>
+          <div style="font-size:14px;font-weight:600;">${alert.submarket}, ${alert.market}</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">Min ${alert.minSize} sqm · Max ${alert.maxRent.toLocaleString()} / sqm</div>
+        </div>
+        <span class="badge badge-available">Active</span>
+      </div>
+    </div>`;
+  });
+});
+
+let activeSectionId = "overview";
+function showSection(id, btn) {
+  document.querySelectorAll("[id^=section-]").forEach(s => s.classList.add("hidden"));
+  document.getElementById("section-" + id).classList.remove("hidden");
+  document.querySelectorAll(".dash-nav-item").forEach(n => n.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+}
+</script>
+</body>
+</html>

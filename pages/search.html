@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Search Offices — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+
+<div class="pt-nav" style="display:flex;min-height:calc(100vh - 60px);">
+  <!-- SIDEBAR FILTERS -->
+  <div class="search-sidebar" style="width:280px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <span class="label">Filters</span>
+      <button onclick="resetFilters()" class="btn btn-ghost btn-sm">Reset</button>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="filter-section">
+      <div class="filter-title">View Mode</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <button class="btn btn-dark btn-sm active-view" id="viewBuildings" onclick="setView('buildings')">Buildings</button>
+        <button class="btn btn-ghost btn-sm" id="viewUnits" onclick="setView('units')">Units</button>
+      </div>
+    </div>
+
+    <!-- Asset Type -->
+    <div class="filter-section">
+      <div class="filter-title">Asset Type</div>
+      <div class="chip-group">
+        <button class="chip active" data-filter="type" data-val="office">Office</button>
+        <button class="chip" data-filter="type" data-val="coworking">Co-working</button>
+        <button class="chip" data-filter="type" data-val="serviced">Serviced</button>
+      </div>
+    </div>
+
+    <!-- Market -->
+    <div class="filter-section">
+      <div class="filter-title">Market</div>
+      <div class="chip-group" id="marketChips"></div>
+    </div>
+
+    <!-- Submarket -->
+    <div class="filter-section">
+      <div class="filter-title">Submarket</div>
+      <div class="chip-group" id="submarketChips">
+        <span style="font-size:11px;color:var(--text-dim);">Select a market first</span>
+      </div>
+    </div>
+
+    <!-- Grade -->
+    <div class="filter-section">
+      <div class="filter-title">Building Grade</div>
+      <div class="chip-group">
+        <button class="chip" data-filter="grade" data-val="A+">Grade A+</button>
+        <button class="chip" data-filter="grade" data-val="A">Grade A</button>
+      </div>
+    </div>
+
+    <!-- Area -->
+    <div class="filter-section">
+      <div class="filter-title">Office Size (sqm)</div>
+      <div class="range-pair">
+        <input type="number" class="form-input" id="minArea" placeholder="Min" style="font-size:12px;">
+        <input type="number" class="form-input" id="maxArea" placeholder="Max" style="font-size:12px;">
+      </div>
+    </div>
+
+    <!-- Desks -->
+    <div class="filter-section">
+      <div class="filter-title">Desk Capacity</div>
+      <div class="range-pair">
+        <input type="number" class="form-input" id="minDesks" placeholder="Min" style="font-size:12px;">
+        <input type="number" class="form-input" id="maxDesks" placeholder="Max" style="font-size:12px;">
+      </div>
+    </div>
+
+    <!-- Meeting rooms -->
+    <div class="filter-section">
+      <div class="filter-title">Min Meeting Rooms</div>
+      <input type="number" class="form-input" id="minMeetingRooms" placeholder="e.g. 2" style="font-size:12px;">
+    </div>
+
+    <!-- Sustainability -->
+    <div class="filter-section">
+      <div class="filter-title">Certification</div>
+      <div class="chip-group">
+        <button class="chip" data-filter="cert" data-val="LEED">LEED</button>
+        <button class="chip" data-filter="cert" data-val="BREEAM">BREEAM</button>
+        <button class="chip" data-filter="cert" data-val="Green Star">Green Star</button>
+        <button class="chip" data-filter="cert" data-val="WELL">WELL</button>
+      </div>
+    </div>
+
+    <button onclick="applyFilters()" class="btn btn-primary w-full" style="margin-top:8px;">Apply Filters</button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div style="flex:1;padding:24px 32px;overflow-y:auto;">
+    <!-- Header -->
+    <div class="flex-between mb-24">
+      <div>
+        <h2 style="font-size:24px;" id="searchTitle">All Markets</h2>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:4px;" id="searchCount">Loading...</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select class="form-input form-select" id="sortSelect" onchange="sortListings()" style="width:160px;font-size:12px;">
+          <option value="default">Sort: Default</option>
+          <option value="rent-asc">Rent: Low to High</option>
+          <option value="rent-desc">Rent: High to Low</option>
+          <option value="size-desc">Size: Largest First</option>
+          <option value="grade">Grade: A+ First</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;"></div>
+    <div id="noResults" class="hidden" style="text-align:center;padding:80px 0;">
+      <div style="font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:8px;">No Results</div>
+      <p style="color:var(--text-dim);">Try adjusting your filters.</p>
+    </div>
+  </div>
+</div>
+
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+let activeFilters = { market: [], grade: [], cert: [], type: ['office'] };
+let currentView = 'buildings';
+let allBuildings = [...URBN_DATA.buildings];
+
+document.addEventListener('DOMContentLoaded', () => {
+  injectNavbar('../');
+  injectFooter('../');
+
+  // Populate market chips
+  const mc = document.getElementById('marketChips');
+  URBN_DATA.markets.forEach(m => {
+    mc.innerHTML += `<button class="chip" data-filter="market" data-val="${m.id}" onclick="toggleMarketFilter('${m.id}',this)">${m.name}</button>`;
+  });
+
+  // Handle URL param
+  const marketParam = getParam('market');
+  if (marketParam) {
+    const chip = mc.querySelector(`[data-val="${marketParam}"]`);
+    if (chip) { chip.classList.add('active'); toggleMarketFilter(marketParam, chip); }
+  }
+
+  // Chip toggles
+  document.querySelectorAll('.chip[data-filter]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const filter = chip.dataset.filter;
+      const val = chip.dataset.val;
+      if (filter === 'market') return; // handled separately
+      chip.classList.toggle('active');
+      const arr = activeFilters[filter] || [];
+      const idx = arr.indexOf(val);
+      if (idx > -1) arr.splice(idx, 1);
+      else arr.push(val);
+      activeFilters[filter] = arr;
+      renderResults();
+    });
+  });
+
+  renderResults();
+});
+
+function toggleMarketFilter(marketId, btn) {
+  btn.classList.toggle('active');
+  const idx = activeFilters.market.indexOf(marketId);
+  if (idx > -1) activeFilters.market.splice(idx, 1);
+  else activeFilters.market.push(marketId);
+
+  // Update submarket chips
+  const sc = document.getElementById('submarketChips');
+  if (activeFilters.market.length === 0) {
+    sc.innerHTML = `<span style="font-size:11px;color:var(--text-dim);">Select a market first</span>`;
+  } else {
+    sc.innerHTML = '';
+    activeFilters.market.forEach(mid => {
+      const m = URBN_DATA.markets.find(x => x.id === mid);
+      m?.submarkets.forEach(sm => {
+        sc.innerHTML += `<button class="chip" onclick="this.classList.toggle('active')">${sm}</button>`;
+      });
+    });
+  }
+  renderResults();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('viewBuildings').className = v === 'buildings' ? 'btn btn-dark btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('viewUnits').className = v === 'units' ? 'btn btn-dark btn-sm' : 'btn btn-ghost btn-sm';
+  renderResults();
+}
+
+function applyFilters() { renderResults(); }
+
+function resetFilters() {
+  activeFilters = { market: [], grade: [], cert: [], type: ['office'] };
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('[data-val="office"]')?.classList.add('active');
+  document.getElementById('minArea').value = '';
+  document.getElementById('maxArea').value = '';
+  document.getElementById('minDesks').value = '';
+  document.getElementById('maxDesks').value = '';
+  document.getElementById('minMeetingRooms').value = '';
+  renderResults();
+}
+
+function sortListings() { renderResults(); }
+
+function renderResults() {
+  let results = [...URBN_DATA.buildings];
+
+  // Market filter
+  if (activeFilters.market.length > 0)
+    results = results.filter(b => activeFilters.market.includes(b.market));
+
+  // Grade filter
+  if (activeFilters.grade.length > 0)
+    results = results.filter(b => activeFilters.grade.includes(b.grade));
+
+  // Cert filter
+  if (activeFilters.cert.length > 0)
+    results = results.filter(b => activeFilters.cert.some(c => b.sustainability.some(s => s.includes(c))));
+
+  // Area filter
+  const minA = parseInt(document.getElementById('minArea')?.value);
+  const maxA = parseInt(document.getElementById('maxArea')?.value);
+  if (minA) results = results.filter(b => b.availMax >= minA);
+  if (maxA) results = results.filter(b => b.availMin <= maxA);
+
+  // Desk filter
+  const minD = parseInt(document.getElementById('minDesks')?.value);
+  if (minD) results = results.filter(b => b.units.some(u => u.desks >= minD));
+
+  // Meeting rooms
+  const minMR = parseInt(document.getElementById('minMeetingRooms')?.value);
+  if (minMR) results = results.filter(b => b.units.some(u => u.meetingRooms >= minMR));
+
+  // Sort
+  const sort = document.getElementById('sortSelect')?.value;
+  if (sort === 'rent-asc') results.sort((a,b) => a.rentMin - b.rentMin);
+  if (sort === 'rent-desc') results.sort((a,b) => b.rentMax - a.rentMax);
+  if (sort === 'size-desc') results.sort((a,b) => b.gla - a.gla);
+  if (sort === 'grade') results.sort((a,b) => (a.grade === 'A+' ? -1 : 1));
+
+  // Update count
+  const marketNames = activeFilters.market.length > 0
+    ? activeFilters.market.map(id => URBN_DATA.markets.find(m => m.id === id)?.name).join(', ')
+    : 'All Markets';
+  document.getElementById('searchTitle').textContent = marketNames;
+  document.getElementById('searchCount').textContent = `${results.length} building${results.length !== 1 ? 's' : ''} found`;
+
+  const grid = document.getElementById('resultsGrid');
+  const noResults = document.getElementById('noResults');
+
+  if (results.length === 0) {
+    grid.innerHTML = '';
+    noResults.classList.remove('hidden');
+    return;
+  }
+  noResults.classList.add('hidden');
+
+  if (currentView === 'buildings') {
+    grid.innerHTML = results.map(b => renderBuildingCard(b, false)).join('');
+  } else {
+    // Units view
+    grid.style.gridTemplateColumns = '1fr';
+    let html = '';
+    results.forEach(b => {
+      b.units.forEach(u => {
+        const market = URBN_DATA.markets.find(m => m.id === b.market);
+        html += `
+        <div class="card card-hover" style="padding:20px;cursor:pointer;" onclick="window.location.href='building.html?id=${b.id}&unit=${u.id}'">
+          <div class="flex-between">
+            <div>
+              <div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--white);">${b.name}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);margin-top:2px;">${b.submarket} · ${market?.country} · Floor ${u.floor}</div>
+            </div>
+            ${fmtGrade(b.grade)}
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin:16px 0;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+            <div><div class="text-mono" style="font-size:14px;color:var(--white);">${u.size} sqm</div><div style="font-size:10px;color:var(--text-dim);">Size</div></div>
+            <div><div class="text-mono" style="font-size:14px;color:var(--white);">${u.desks}</div><div style="font-size:10px;color:var(--text-dim);">Desks</div></div>
+            <div><div class="text-mono" style="font-size:14px;color:var(--white);">${u.meetingRooms}</div><div style="font-size:10px;color:var(--text-dim);">Mtg Rooms</div></div>
+            <div><div class="text-mono" style="font-size:14px;color:var(--gold);">${b.rentCurrency} ${u.rent.toLocaleString()}</div><div style="font-size:10px;color:var(--text-dim);">Rent/sqm/mo</div></div>
+            <div><div class="badge badge-available">Available</div></div>
+          </div>
+          <div class="flex-between">
+            <span style="font-size:12px;color:var(--text-dim);">${u.type}</span>
+            <span class="btn btn-dark btn-sm">View Unit →</span>
+          </div>
+        </div>`;
+      });
+    });
+    grid.innerHTML = html;
+  }
+}
+</script>
+</body>
+</html>

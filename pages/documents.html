@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Legal Documents — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="container-sm">
+    <div class="mb-48">
+      <div class="label label-gold mb-8">Legal Framework</div>
+      <h1 style="font-size:32px;">Platform Documents</h1>
+      <p style="color:var(--text-dim);margin-top:12px;">All legal agreements governing platform usage. Acceptance is timestamped and version-controlled.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      ${[
+        ["Terms of Use","For all users","v2.1","Accepted Mar 1, 2026","Governs platform access, information gating, and user conduct."],
+        ["Tenant Commission Agreement","For Corporate Tenants","v1.3","Accepted Mar 1, 2026","States that a success fee is payable for any transaction introduced via the platform, within 24 months."],
+        ["Non-Circumvention Agreement","For Corporate Tenants","v1.1","Accepted per introduction","Prevents direct contact with landlords introduced through the platform."],
+        ["Landlord Referral Agreement","For Landlords","v1.0","—","Recognition of introduction, fee protection, and bi-weekly update obligations."],
+        ["Privacy Policy","For all users","v1.2","Accepted Mar 1, 2026","Data protection, analytics consent, and user rights."],
+      ].map(([title, for_, version, accepted, desc]) => `
+      <div class="card" style="padding:24px;">
+        <div class="flex-between mb-12">
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--white);margin-bottom:2px;">${title}</div>
+            <div style="font-size:12px;color:var(--text-dim);">${for_} · ${version}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            ${accepted !== "—" ? '<span class="badge badge-available">✓ Accepted</span>' : '<span class="badge badge-grade-a">Pending</span>'}
+            <button class="btn btn-ghost btn-sm" onclick="showToast('Download not available in demo mode')">Download</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-dim);">${desc}</p>
+        ${accepted !== "—" ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">Accepted: ${accepted}</div>` : ""}
+      </div>`).join("")}
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => { injectNavbar("../"); injectFooter("../"); });
+</script>
+</body>
+</html>

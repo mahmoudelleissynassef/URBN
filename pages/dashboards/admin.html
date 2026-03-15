@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard — URBN</title>
+  <link rel="stylesheet" href="../../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="display:flex;min-height:calc(100vh - 60px);">
+  <div class="dashboard-sidebar">
+    <div style="padding:16px 12px;margin-bottom:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:4px;">ADMIN CONSOLE</div>
+      <div style="font-size:13px;font-weight:600;color:var(--white);">Platform Admin</div>
+    </div>
+    <div class="dash-nav-item active" onclick="showSection('overview',this)">Overview</div>
+    <div class="dash-nav-item" onclick="showSection('users',this)">All Users</div>
+    <div class="dash-nav-item" onclick="showSection('introductions',this)">Introductions</div>
+    <div class="dash-nav-item" onclick="showSection('audit',this)">Audit Trail</div>
+    <div class="dash-nav-item" onclick="showSection('compliance',this)">Compliance</div>
+  </div>
+  <div class="dashboard-main">
+    <div id="section-overview">
+      <div class="dash-section-title mb-4">Admin Overview</div>
+      <div class="dash-section-sub mb-24">Platform-wide statistics and activity</div>
+      <div class="metrics-row" style="grid-template-columns:repeat(4,1fr);">
+        <div class="metric-card"><div class="m-label">Total Users</div><div class="m-value">247</div><div class="m-sub text-green">+12 this week</div></div>
+        <div class="metric-card"><div class="m-label">Active Introductions</div><div class="m-value">34</div><div class="m-sub text-green">23 protected</div></div>
+        <div class="metric-card"><div class="m-label">Buildings Listed</div><div class="m-value">18</div><div class="m-sub">across 13 markets</div></div>
+        <div class="metric-card"><div class="m-label">Revenue (MRR)</div><div class="m-value text-gold">$28k</div><div class="m-sub text-green">+8% MoM</div></div>
+      </div>
+    </div>
+    <div id="section-users" class="hidden">
+      <div class="dash-section-title mb-4">All Users</div>
+      <div class="dash-section-sub mb-24">Registered users across all roles</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="border-bottom:1px solid var(--border2);">
+          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">USER</th>
+          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">COMPANY</th>
+          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">ROLE</th>
+          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">PLAN</th>
+          <th style="padding:10px;text-align:left;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;">REGISTERED</th>
+        </tr></thead>
+        <tbody>
+          ${[
+            ["Sarah Mitchell","Goldman Sachs MENA","corporate_tenant","Professional","2026-02-15"],
+            ["Ahmed El Sayed","Procter & Gamble","corporate_tenant","Starter","2026-02-20"],
+            ["CBRE Egypt","CBRE","landlord","—","2026-01-10"],
+            ["Khalid Al Rashidi","Saudi Aramco","corporate_tenant","Enterprise","2025-12-01"],
+          ].map(([n,c,r,p,d]) => `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:12px;">${n}</td>
+            <td style="padding:12px;color:var(--text-dim);">${c}</td>
+            <td style="padding:12px;"><span class="badge ${r === "corporate_tenant" ? "badge-available" : "badge-protected"}">${r}</span></td>
+            <td style="padding:12px;color:var(--gold);font-family:'DM Mono',monospace;font-size:11px;">${p}</td>
+            <td style="padding:12px;color:var(--text-dim);font-family:'DM Mono',monospace;font-size:11px;">${d}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div id="section-introductions" class="hidden">
+      <div class="dash-section-title mb-4">All Introductions</div>
+      <div class="dash-section-sub mb-24">Complete introduction log with protection status</div>
+      <div style="text-align:center;padding:60px;color:var(--text-dim);">Demo data — 34 active introductions tracked</div>
+    </div>
+    <div id="section-audit" class="hidden">
+      <div class="dash-section-title mb-4">Audit Trail</div>
+      <div class="dash-section-sub mb-24">All user actions logged for compliance</div>
+      <div style="display:flex;flex-direction:column;gap:0;">
+        ${[
+          ["10:24","sarah@gs.com","Viewed building","Nile City Towers North · Cairo CBD"],
+          ["09:51","ahmed@pg.com","Saved building","KAFD Tower 3 · Riyadh"],
+          ["09:30","demo@acmecorp.com","Site visit request","Gate Village 8 · DIFC Dubai"],
+          ["08:15","khalid@aramco.com","Offer submitted","Bay Square Tower 7 · Business Bay"],
+        ].map(([t,u,a,d]) => `<div style="display:grid;grid-template-columns:80px 1fr 1fr 2fr;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;">
+          <span style="font-family:'DM Mono',monospace;color:var(--text-dim);">${t}</span>
+          <span style="color:var(--text-dim);">${u}</span>
+          <span style="color:var(--gold);">${a}</span>
+          <span>${d}</span>
+        </div>`).join("")}
+      </div>
+    </div>
+    <div id="section-compliance" class="hidden">
+      <div class="dash-section-title mb-4">Compliance</div>
+      <div class="dash-section-sub mb-24">Landlord update compliance and system flags</div>
+      <div style="text-align:center;padding:60px;color:var(--text-dim);">All landlords compliant — no flags</div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../../data/data.js"></script>
+<script src="../../js/urbn.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => { injectNavbar("../../"); injectFooter("../../"); });
+function showSection(id, btn) {
+  document.querySelectorAll("[id^=section-]").forEach(s => s.classList.add("hidden"));
+  document.getElementById("section-" + id)?.classList.remove("hidden");
+  document.querySelectorAll(".dash-nav-item").forEach(n => n.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+}
+</script>
+</body>
+</html>

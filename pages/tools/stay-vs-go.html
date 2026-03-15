@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stay vs Go Analysis — URBN</title>
+  <link rel="stylesheet" href="../../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="padding:40px 0 80px;">
+  <div class="container-sm">
+    <div class="text-center mb-48">
+      <div class="label label-gold mb-8">Lease Decision Tool</div>
+      <h1 style="font-size:36px;">Stay vs Go Analysis</h1>
+      <p style="color:var(--text-dim);margin-top:12px;">Model the full cost of staying in your current space versus relocating, including fitout investment and lease incentives.</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="svgo-step">
+      <div class="svgo-step-header">
+        <div class="svgo-step-num">1</div>
+        <h3 class="svgo-step-title">Current Lease Details</h3>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Current Market</label>
+          <select class="form-input form-select" id="svMarket"><option value="">Select market...</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Office Size (sqm)</label><input type="number" class="form-input" id="svSize" placeholder="e.g. 800" value="800"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Current Rent (per sqm/month)</label><input type="number" class="form-input" id="svRent" placeholder="e.g. 1100" value="1100"></div>
+        <div class="form-group"><label class="form-label">Service Charge (per sqm/month)</label><input type="number" class="form-input" id="svService" placeholder="e.g. 150" value="150"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Applicable Tax Rate (%)</label><input type="number" class="form-input" id="svTax" placeholder="e.g. 14" value="14"></div>
+        <div class="form-group"><label class="form-label">Remaining Lease Term (months)</label><input type="number" class="form-input" id="svTerm" placeholder="e.g. 24" value="24"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Annual Escalation (%)</label><input type="number" class="form-input" id="svEscalation" placeholder="e.g. 5" value="5"></div>
+        <div class="form-group"><label class="form-label">Currency</label>
+          <select class="form-input form-select" id="svCurrency">
+            <option value="EGP">EGP</option><option value="AED">AED</option><option value="SAR">SAR</option>
+            <option value="USD">USD</option><option value="KES">KES</option><option value="ZAR">ZAR</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="svgo-step">
+      <div class="svgo-step-header">
+        <div class="svgo-step-num">2</div>
+        <h3 class="svgo-step-title">Fitout Requirements (for New Space)</h3>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fitout Quality Tranche</label>
+        <div class="chip-group" id="fitoutTranches">
+          <button class="chip" data-cost="800" onclick="selectFitout(this,'800')">Basic (800/sqm)</button>
+          <button class="chip active" data-cost="1500" onclick="selectFitout(this,'1500')">Standard (1,500/sqm)</button>
+          <button class="chip" data-cost="2800" onclick="selectFitout(this,'2800')">Premium (2,800/sqm)</button>
+          <button class="chip" data-cost="4500" onclick="selectFitout(this,'4500')">Ultra Premium (4,500/sqm)</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Specific Assets Needed</label>
+        <div class="chip-group">
+          <button class="chip" onclick="this.classList.toggle('active')">Large Meeting Room (×2)</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Small Meeting Room (×4)</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Executive Office (×3)</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Breakout Area</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Phone Booths (×6)</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Reception Area</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Kitchen/Pantry</button>
+          <button class="chip" onclick="this.classList.toggle('active')">Server Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCULATE -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <button class="btn btn-primary btn-xl" onclick="calculate()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        Run Analysis
+      </button>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="svgoResults" class="hidden">
+      <div style="margin-bottom:20px;">
+        <div class="label label-gold mb-8">Analysis Results</div>
+        <h3 class="text-serif" style="font-size:22px;">Total Cost of Occupancy Comparison</h3>
+      </div>
+      <div class="svgo-results mb-24">
+        <div class="svgo-result-card svgo-result-stay">
+          <div class="result-label">STAY</div>
+          <div class="result-total" id="stayTotal">—</div>
+          <div class="result-period" id="stayPeriod">over lease term</div>
+          <div class="result-breakdown" id="stayBreakdown"></div>
+        </div>
+        <div class="svgo-result-card svgo-result-go">
+          <div class="result-label">GO (Estimated)</div>
+          <div class="result-total" id="goTotal">—</div>
+          <div class="result-period">incl. fitout + year 1 rent</div>
+          <div class="result-breakdown" id="goBreakdown"></div>
+        </div>
+      </div>
+      <div style="background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px;" id="svgoVerdict"></div>
+      <div style="text-align:center;">
+        <a href="../search.html" class="btn btn-primary btn-lg">Browse Available Offices →</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../../data/data.js"></script>
+<script src="../../js/urbn.js"></script>
+<script>
+let fitoutCostPerSqm = 1500;
+
+document.addEventListener("DOMContentLoaded", () => {
+  injectNavbar("../../");
+  injectFooter("../../");
+  const sel = document.getElementById("svMarket");
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+});
+
+function selectFitout(btn, cost) {
+  document.querySelectorAll("#fitoutTranches .chip").forEach(c => c.classList.remove("active"));
+  btn.classList.add("active");
+  fitoutCostPerSqm = parseInt(cost);
+}
+
+function calculate() {
+  const size = parseFloat(document.getElementById("svSize").value) || 800;
+  const rent = parseFloat(document.getElementById("svRent").value) || 1100;
+  const service = parseFloat(document.getElementById("svService").value) || 150;
+  const tax = parseFloat(document.getElementById("svTax").value) / 100 || 0.14;
+  const term = parseFloat(document.getElementById("svTerm").value) || 24;
+  const escalation = parseFloat(document.getElementById("svEscalation").value) / 100 || 0.05;
+  const currency = document.getElementById("svCurrency").value;
+
+  // STAY calculation
+  let stayTotal = 0;
+  let monthlyBase = (rent + service) * size;
+  for (let mo = 0; mo < term; mo++) {
+    const yearFactor = Math.pow(1 + escalation, Math.floor(mo / 12));
+    stayTotal += monthlyBase * yearFactor * (1 + tax);
+  }
+  const stayAnnual = stayTotal / (term / 12);
+
+  // GO calculation
+  const fitoutCost = fitoutCostPerSqm * size;
+  const goRentYear1 = (rent * 0.9 + service * 0.95) * size * 12 * (1 + tax); // ~5-10% savings assumption
+  const goTotal = fitoutCost + goRentYear1;
+  const goYear3 = fitoutCost + goRentYear1 * 3;
+
+  const fmt2 = n => currency + " " + Math.round(n).toLocaleString();
+  const savings = stayTotal - goYear3;
+  const savingsPct = Math.round((savings / stayTotal) * 100);
+
+  document.getElementById("stayTotal").textContent = fmt2(stayTotal);
+  document.getElementById("stayPeriod").textContent = `over ${term} months`;
+  document.getElementById("stayBreakdown").innerHTML = `
+    <div><span>Monthly rent cost</span><span>${fmt2(monthlyBase * (1 + tax))}</span></div>
+    <div><span>Annual cost</span><span>${fmt2(stayAnnual)}</span></div>
+    <div><span>Fitout investment</span><span>${currency} 0</span></div>`;
+
+  document.getElementById("goTotal").textContent = fmt2(goTotal);
+  document.getElementById("goBreakdown").innerHTML = `
+    <div><span>Fitout investment</span><span>${fmt2(fitoutCost)}</span></div>
+    <div><span>Year 1 occupancy</span><span>${fmt2(goRentYear1)}</span></div>
+    <div><span>3-year total</span><span>${fmt2(goYear3)}</span></div>`;
+
+  document.getElementById("svgoVerdict").innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--green-dim);border:1px solid rgba(34,197,94,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;margin-bottom:4px;">
+          ${savings > 0 ? "Relocating Could Save You " + fmt2(Math.abs(savings)) + " Over 3 Years" : "Staying Is More Cost-Effective By " + fmt2(Math.abs(savings))}
+        </div>
+        <p style="font-size:12px;color:var(--text-dim);">
+          Based on ${term}-month stay costs vs. 3-year go scenario including ${currency} ${Math.round(fitoutCostPerSqm).toLocaleString()}/sqm fitout.
+          ${savingsPct > 0 ? "Potential savings: " + savingsPct + "%" : ""}
+          This is an indicative analysis — contact URBN for a detailed review.
+        </p>
+      </div>
+    </div>`;
+
+  document.getElementById("svgoResults").classList.remove("hidden");
+  document.getElementById("svgoResults").scrollIntoView({behavior:"smooth"});
+}
+</script>
+</body>
+</html>

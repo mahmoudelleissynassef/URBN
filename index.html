@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>URBN — Corporate Office Intelligence | Africa & MENA</title>
+  <meta name="description" content="The controlled deal-origination platform for corporates seeking office space across Africa & MENA. Gated intelligence. Protected introductions."/>
+  <link rel="stylesheet" href="css/urbn.css"/>
+</head>
+<body>
+
+<div id="navbar-placeholder"></div>
+
+<!-- MARKET STRIP -->
+<div class="market-strip" style="margin-top:60px;">
+  <div class="market-strip-inner" id="marketStrip"></div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="container hero-content">
+    <div class="hero-eyebrow">Corporate Office Intelligence Platform</div>
+    <h1>Find Your Next<br><em>Office Before</em><br>You Land.</h1>
+    <p>Controlled deal-origination for corporates, multinationals, and first-time market entrants across Africa & MENA. Gated intelligence. Protected introductions.</p>
+    <div class="hero-actions">
+      <a href="pages/search.html" class="btn btn-primary btn-xl">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Explore Properties
+      </a>
+      <a href="pages/tools/stay-vs-go.html" class="btn btn-ghost btn-xl">Stay vs Go Analysis →</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-block">
+        <div class="stat-value">13</div>
+        <div class="stat-label">Active Markets</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value">200+</div>
+        <div class="stat-label">Grade A/A+ Buildings</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value">100%</div>
+        <div class="stat-label">Commission Protected</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Direct Contacts Exposed</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARKETS GRID -->
+<section style="padding: 80px 0; background: var(--dark);">
+  <div class="container">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:40px;">
+      <div>
+        <div class="label label-gold mb-8">Coverage</div>
+        <h2>Active Markets</h2>
+      </div>
+      <a href="pages/search.html" class="btn btn-ghost">View All Listings →</a>
+    </div>
+    <div id="marketsGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="padding: 80px 0;">
+  <div class="container-sm">
+    <div class="text-center mb-48">
+      <div class="label label-gold mb-8">The System</div>
+      <h2>How URBN Works</h2>
+      <p style="color:var(--text-dim);margin-top:12px;">A controlled environment designed to protect all parties.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+      <div class="card" style="padding:28px;">
+        <div style="width:40px;height:40px;background:var(--gold-dim);border:1px solid rgba(201,168,76,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div class="label label-gold mb-8">Step 01</div>
+        <h3 style="font-size:18px;margin-bottom:10px;">Browse Anonymized</h3>
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.7;">Public visitors see grade, submarket, size range, and rent range — no names, no addresses.</p>
+      </div>
+      <div class="card" style="padding:28px;">
+        <div style="width:40px;height:40px;background:var(--gold-dim);border:1px solid rgba(201,168,76,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="label label-gold mb-8">Step 02</div>
+        <h3 style="font-size:18px;margin-bottom:10px;">Register & Unlock</h3>
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.7;">Corporate tenants register, accept terms, and unlock full building details — names, floors, exact rents.</p>
+      </div>
+      <div class="card" style="padding:28px;">
+        <div style="width:40px;height:40px;background:var(--gold-dim);border:1px solid rgba(201,168,76,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.49 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.4 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div class="label label-gold mb-8">Step 03</div>
+        <h3 style="font-size:18px;margin-bottom:10px;">Protected Introduction</h3>
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.7;">Request a site visit → platform introduces you formally → transaction is commission-protected for 24 months.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED LISTINGS -->
+<section style="padding:0 0 80px;">
+  <div class="container">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;">
+      <div>
+        <div class="label label-gold mb-8">Featured</div>
+        <h2>Available Now</h2>
+      </div>
+      <a href="pages/search.html" class="btn btn-ghost">Browse All →</a>
+    </div>
+    <div id="featuredListings" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;"></div>
+  </div>
+</section>
+
+<!-- PLATFORM FEATURES -->
+<section style="padding:80px 0;background:var(--dark);">
+  <div class="container">
+    <div class="text-center mb-48">
+      <div class="label label-gold mb-8">Platform Capabilities</div>
+      <h2>Everything You Need,<br>Nothing You Don't</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+      <div class="card" style="padding:24px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="margin-bottom:16px;"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>
+        <h3 style="font-size:16px;margin-bottom:8px;">Stay vs Go Analysis</h3>
+        <p style="font-size:12px;color:var(--text-dim);">Full lease cost modelling with fitout scenarios. Compare staying vs. relocating with real numbers.</p>
+      </div>
+      <div class="card" style="padding:24px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="margin-bottom:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <h3 style="font-size:16px;margin-bottom:8px;">Market Analytics</h3>
+        <p style="font-size:12px;color:var(--text-dim);">Bloomberg-style dashboard. Vacancy rates, rent trends, supply pipeline — by submarket and grade.</p>
+      </div>
+      <div class="card" style="padding:24px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="margin-bottom:16px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h3 style="font-size:16px;margin-bottom:8px;">Competitive Bidding</h3>
+        <p style="font-size:12px;color:var(--text-dim);">Submit structured offers, track your rank, receive counteroffers — all through the controlled platform.</p>
+      </div>
+      <div class="card" style="padding:24px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="margin-bottom:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h3 style="font-size:16px;margin-bottom:8px;">Deal Protection</h3>
+        <p style="font-size:12px;color:var(--text-dim);">Every introduction is timestamped and logged. Non-circumvention is built into the workflow, not added later.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BAND -->
+<section style="padding:80px 0;text-align:center;">
+  <div class="container-sm">
+    <div class="label label-gold mb-16 text-center">Get Started</div>
+    <h2 style="margin-bottom:16px;">Ready to Find Your Next Office?</h2>
+    <p style="color:var(--text-dim);margin-bottom:40px;max-width:480px;margin-left:auto;margin-right:auto;">Start with a free trial — 3 credits to explore the platform. No credit card required.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="pages/search.html" class="btn btn-primary btn-xl">Start Exploring</a>
+      <a href="pages/subscription.html" class="btn btn-ghost btn-xl">View Plans</a>
+    </div>
+  </div>
+</section>
+
+<div id="footer-placeholder"></div>
+
+<script src="data/data.js"></script>
+<script src="js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNavbar('');
+  injectFooter('');
+
+  // Market strip
+  const strip = document.getElementById('marketStrip');
+  const stripItems = URBN_DATA.markets.map(m => {
+    const stats = URBN_DATA.marketStats[m.id];
+    const trend = stats?.trend === 'up' ? '+' : stats?.trend === 'down' ? '▼' : '—';
+    const trendClass = stats?.trend === 'up' ? 'up' : stats?.trend === 'down' ? 'down' : '';
+    return `<div class="market-strip-item">
+      <span class="strip-dot"></span>
+      <span class="strip-market">${m.name.toUpperCase()}</span>
+      <span class="strip-value">${stats ? stats.avgRent.toLocaleString() + ' ' + m.currency : 'N/A'}</span>
+      <span class="strip-change ${trendClass}">${trend}</span>
+    </div>`;
+  });
+  // Duplicate for seamless loop
+  strip.innerHTML = stripItems.join('') + stripItems.join('');
+
+  // Markets grid
+  const grid = document.getElementById('marketsGrid');
+  const regions = {};
+  URBN_DATA.markets.forEach(m => {
+    if (!regions[m.region]) regions[m.region] = [];
+    regions[m.region].push(m);
+  });
+  URBN_DATA.markets.forEach(m => {
+    const stats = URBN_DATA.marketStats[m.id];
+    grid.innerHTML += `
+    <a href="pages/search.html?market=${m.id}" style="text-decoration:none;">
+      <div class="card card-hover" style="padding:20px;cursor:pointer;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span class="badge badge-region">${m.region}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);">${m.countryCode}</span>
+        </div>
+        <div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--white);margin-bottom:2px;">${m.name}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">${m.country}</div>
+        ${stats ? `
+        <div style="display:flex;justify-content:space-between;">
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text);">${stats.vacancyRate}%</div>
+            <div style="font-size:10px;color:var(--text-dim);">Vacancy</div>
+          </div>
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);">${stats.avgRent.toLocaleString()} ${m.currency}</div>
+            <div style="font-size:10px;color:var(--text-dim);">Avg Rent</div>
+          </div>
+        </div>` : `<div style="font-size:11px;color:var(--text-dim);">${m.submarkets.length} submarkets</div>`}
+      </div>
+    </a>`;
+  });
+
+  // Featured listings (first 6 buildings)
+  const featured = document.getElementById('featuredListings');
+  URBN_DATA.buildings.slice(0, 6).forEach(b => {
+    featured.innerHTML += renderBuildingCard(b, false);
+  });
+});
+</script>
+</body>
+</html>

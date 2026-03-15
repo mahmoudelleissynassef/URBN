@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market Analytics — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="padding:40px 0 80px;">
+  <div class="container">
+    <div class="flex-between mb-32">
+      <div>
+        <div class="label label-gold mb-8">Bloomberg-Style Terminal</div>
+        <h1 style="font-size:32px;">Market Analytics</h1>
+        <p style="color:var(--text-dim);margin-top:8px;font-size:13px;">Live market intelligence derived from URBN platform inventory & interactions.</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm">Export CSV</button>
+        <button class="btn btn-ghost btn-sm">Export PDF</button>
+      </div>
+    </div>
+
+    <!-- Ticker -->
+    <div style="background:var(--dark2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 24px;margin-bottom:32px;overflow-x:auto;">
+      <div id="tickerRow" style="display:flex;gap:32px;min-width:max-content;"></div>
+    </div>
+
+    <!-- Vacancy Heatmap -->
+    <div class="market-widget mb-24">
+      <div class="market-widget-title">Vacancy Rate by Market (%)</div>
+      <div class="heatmap-grid" id="vacancyHeatmap"></div>
+    </div>
+
+    <!-- Rent Trends + Supply -->
+    <div class="grid-2 mb-24">
+      <div class="market-widget">
+        <div class="market-widget-title">Avg Asking Rent by Market</div>
+        <div class="mini-bar" id="rentBars"></div>
+      </div>
+      <div class="market-widget">
+        <div class="market-widget-title">Total Estimated Stock (sqm)</div>
+        <div class="mini-bar" id="stockBars"></div>
+      </div>
+    </div>
+
+    <!-- Platform Demand Signals -->
+    <div class="market-widget mb-24">
+      <div class="market-widget-title">Platform Demand Signals (Demo Data)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" id="demandSignals"></div>
+    </div>
+
+    <!-- Note -->
+    <div style="background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;">
+      <p style="font-size:11px;color:var(--text-dim);">All metrics are computed from URBN platform inventory and interactions. Where data is insufficient, "N/A" is displayed rather than estimated figures. Professional subscribers receive raw data export rights.</p>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  injectNavbar("../");
+  injectFooter("../");
+
+  const statsMarkets = Object.entries(URBN_DATA.marketStats);
+
+  // Ticker
+  const ticker = document.getElementById("tickerRow");
+  statsMarkets.forEach(([id, s]) => {
+    const market = URBN_DATA.markets.find(m => m.id === id);
+    const arrow = s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—";
+    const cls = s.trend === "up" ? "up" : s.trend === "down" ? "down" : "";
+    ticker.innerHTML += `<div class="ticker-item">
+      <span class="t-market">${market?.name?.toUpperCase() || id}</span>
+      <span class="t-value">${s.avgRent.toLocaleString()} ${market?.currency || ""}</span>
+      <span class="t-change ${cls}"> ${arrow}</span>
+    </div>`;
+  });
+
+  // Vacancy heatmap
+  const hm = document.getElementById("vacancyHeatmap");
+  statsMarkets.forEach(([id, s]) => {
+    const market = URBN_DATA.markets.find(m => m.id === id);
+    const cls = s.vacancyRate < 10 ? "heat-low" : s.vacancyRate < 18 ? "heat-mid" : "heat-high";
+    hm.innerHTML += `<div class="heatmap-cell ${cls}">
+      <div class="hm-market">${market?.name || id}</div>
+      <div class="hm-value">${s.vacancyRate}%</div>
+      <div class="hm-label">Vacancy</div>
+    </div>`;
+  });
+
+  // Rent bars
+  const maxRent = Math.max(...statsMarkets.map(([,s]) => s.avgRent));
+  const rb = document.getElementById("rentBars");
+  statsMarkets.forEach(([id, s]) => {
+    const market = URBN_DATA.markets.find(m => m.id === id);
+    const pct = Math.round((s.avgRent / maxRent) * 100);
+    rb.innerHTML += `<div class="mini-bar-row">
+      <span class="mini-bar-label">${market?.name || id}</span>
+      <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+      <span class="mini-bar-value">${s.avgRent.toLocaleString()}</span>
+    </div>`;
+  });
+
+  // Stock bars
+  const maxStock = Math.max(...statsMarkets.map(([,s]) => s.totalStock));
+  const sb = document.getElementById("stockBars");
+  statsMarkets.forEach(([id, s]) => {
+    const market = URBN_DATA.markets.find(m => m.id === id);
+    const pct = Math.round((s.totalStock / maxStock) * 100);
+    sb.innerHTML += `<div class="mini-bar-row">
+      <span class="mini-bar-label">${market?.name || id}</span>
+      <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+      <span class="mini-bar-value">${(s.totalStock/1000).toFixed(0)}k</span>
+    </div>`;
+  });
+
+  // Demand signals
+  const ds = document.getElementById("demandSignals");
+  const signals = [
+    {label:"Total Searches (30d)", value:"1,247", delta:"+18%", up:true},
+    {label:"Shortlists Created", value:"89", delta:"+7%", up:true},
+    {label:"Offers Submitted", value:"23", delta:"+42%", up:true},
+    {label:"Site Visits Requested", value:"34", delta:"-5%", up:false},
+  ];
+  signals.forEach(s => {
+    ds.innerHTML += `<div class="metric-card">
+      <div class="m-label">${s.label}</div>
+      <div class="m-value">${s.value}</div>
+      <div class="m-sub ${s.up ? "text-green" : "text-red"}">${s.delta} vs last month</div>
+    </div>`;
+  });
+});
+</script>
+</body>
+</html>

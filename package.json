@@ -1,0 +1,7 @@
+{
+  "name": "urbn-platform",
+  "version": "1.0.0",
+  "description": "URBN Corporate Office Intelligence Platform",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=14.0.0" }
+}

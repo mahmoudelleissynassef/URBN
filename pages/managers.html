@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Managers Directory — URBN</title>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="navbar-placeholder"></div>
+<div class="pt-nav" style="padding:40px 0 80px;">
+  <div class="container">
+    <div class="flex-between mb-32">
+      <div>
+        <div class="label label-gold mb-8">Industry Directory</div>
+        <h1 style="font-size:32px;">Real Estate Managers</h1>
+        <p style="color:var(--text-dim);margin-top:8px;">Verified corporate leasing specialists across Africa & MENA.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" class="form-input" id="managerSearch" placeholder="Search by name or firm..." style="width:240px;" oninput="filterManagers()">
+        <select class="form-input form-select" id="managerMarket" onchange="filterManagers()" style="width:150px;">
+          <option value="">All Markets</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;" id="managersGrid"></div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  injectNavbar("../");
+  injectFooter("../");
+  const sel = document.getElementById("managerMarket");
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  renderManagers(URBN_DATA.managers);
+});
+
+function filterManagers() {
+  const q = document.getElementById("managerSearch").value.toLowerCase();
+  const market = document.getElementById("managerMarket").value;
+  let filtered = URBN_DATA.managers;
+  if (q) filtered = filtered.filter(m => m.name.toLowerCase().includes(q) || m.company.toLowerCase().includes(q));
+  if (market) filtered = filtered.filter(m => m.markets.includes(market));
+  renderManagers(filtered);
+}
+
+function renderManagers(managers) {
+  const grid = document.getElementById("managersGrid");
+  if (managers.length === 0) { grid.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-dim);">No managers found.</div>`; return; }
+  grid.innerHTML = managers.map(m => {
+    const initials = m.name.split(" ").map(n => n[0]).join("").slice(0,2);
+    const marketNames = m.markets.map(id => URBN_DATA.markets.find(x => x.id === id)?.name).join(", ");
+    return `<div class="manager-card">
+      <div class="manager-avatar">${initials}</div>
+      <div class="manager-info">
+        <div class="manager-name">
+          ${m.name}
+          ${m.verified ? '<span class="badge badge-available" style="font-size:9px;">✓ Verified</span>' : ''}
+        </div>
+        <div class="manager-role">${m.role} · ${m.company}</div>
+        <div class="manager-tags">
+          ${m.markets.map(id => `<span class="badge badge-market">${URBN_DATA.markets.find(x=>x.id===id)?.name||id}</span>`).join("")}
+          <span class="badge badge-grade-a">${m.portfolioType}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+        <div style="font-size:11px;color:var(--text-dim);text-align:right;">${m.areas.join(" · ")}</div>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Introduction request sent to ' + '${m.name}')">Request Intro</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+</script>
+</body>
+</html>
