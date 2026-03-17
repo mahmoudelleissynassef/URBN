@@ -1,3 +1,23 @@
+
+// ── Access Request ───────────────────────────────────────────
+function submitAccessRequest(){
+  const email = document.querySelector('#access-modal .fi[type="email"]')?.value?.trim();
+  const company = document.querySelector('#access-modal .fi[type="text"]')?.value?.trim();
+  const market = document.getElementById('reg-market')?.value;
+  const area = document.querySelector('#access-modal .fi[type="number"]')?.value;
+  if(!email || !company){showToast('Please fill in your email and company name.');return;}
+  // Store lead locally (replace with API call when backend is ready)
+  try{
+    const leads = JSON.parse(localStorage.getItem('urbn_leads') || '[]');
+    leads.push({email, company, market, area, ts: new Date().toISOString()});
+    localStorage.setItem('urbn_leads', JSON.stringify(leads));
+  }catch(e){}
+  // TODO: POST to /api/access-request when backend is ready
+  // fetch('/api/access-request', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,company,market,area})})
+  showToast('Access request submitted. You will receive credentials within 24 hours.');
+  closeModal('access-modal');
+}
+
 // URBN Platform v5 — FT Editorial × JLL Institutional
 
 const USER = {
@@ -61,9 +81,29 @@ function injectNav(base='') {
       <div class="nav-right">
         <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
         <a href="${base}pages/market-scan.html" class="btn btn-navy btn-sm">Request Access</a>
+        <button class="nav-burger" id="nav-burger" onclick="toggleMobileNav()" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
-  </nav>`;
+  </nav>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="${base}index.html">Home</a>
+    <a href="${base}pages/search.html">Offices</a>
+    <a href="${base}pages/buildings.html">Buildings</a>
+    <a href="${base}pages/districts.html">Districts</a>
+    <a href="${base}pages/industrial.html">Industrial</a>
+    <a href="${base}pages/search.html?m=cairo">Cairo</a>
+    <a href="${base}pages/search.html?m=dubai">Dubai</a>
+    <a href="${base}pages/search.html?m=riyadh">Riyadh</a>
+    <a href="${base}pages/search.html?m=lagos">Lagos</a>
+    <a href="${base}pages/search.html?m=nairobi">Nairobi</a>
+    <a href="${base}pages/search.html?m=johannesburg">Johannesburg</a>
+    <a href="${base}pages/search.html?m=casablanca">Casablanca</a>
+    <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border);">
+      <a href="${base}pages/market-scan.html" class="btn btn-navy btn-sm" style="display:block;text-align:center;">Request Access</a>
+    </div>
+  </div>`;
 }
 
 // ── Footer ───────────────────────────────────────────────
@@ -140,6 +180,30 @@ function showToast(msg) {
 }
 
 // ── Save ─────────────────────────────────────────────────
+// ── Mobile Nav ──────────────────────────────────────────────
+function toggleMobileNav(){
+  const nav = document.getElementById('mobile-nav');
+  if(nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const burger = document.getElementById('nav-burger');
+  const nav = document.getElementById('mobile-nav');
+  if(nav && burger && !burger.contains(e.target) && !nav.contains(e.target)){
+    nav.classList.remove('open');
+  }
+});
+
+// ── Persist shortlist via localStorage ───────────────────────
+(function initSavedFromStorage(){
+  try{
+    const stored = JSON.parse(localStorage.getItem('urbn_saved') || '[]');
+    if(Array.isArray(stored)) USER.saved = stored;
+  }catch(e){}
+})();
+function persistSaved(){
+  try{ localStorage.setItem('urbn_saved', JSON.stringify(USER.saved)); }catch(e){}
+}
+
 function heartSVG(on) {
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 }
@@ -148,6 +212,7 @@ function toggleSave(id,btn) {
   if(i>-1){USER.saved.splice(i,1);btn.classList.remove('on');showToast('Removed from shortlist');}
   else{USER.saved.push(id);btn.classList.add('on');showToast('Added to shortlist');}
   btn.innerHTML=heartSVG(USER.saved.includes(id));
+  persistSaved();
 }
 
 // ── Modal ────────────────────────────────────────────────
