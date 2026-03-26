@@ -62,8 +62,38 @@ function injectNav(base='') {
         <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
         <a href="${base}pages/market-scan.html" class="btn btn-navy btn-sm">Request Access</a>
       </div>
+      <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
-  </nav>`;
+  </nav>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="${base}pages/search.html">Offices</a>
+    <a href="${base}pages/search.html?m=cairo">Cairo</a>
+    <a href="${base}pages/search.html?m=dubai">Dubai</a>
+    <a href="${base}pages/search.html?m=riyadh">Riyadh</a>
+    <a href="${base}pages/search.html?m=lagos">Lagos</a>
+    <a href="${base}pages/search.html?m=nairobi">Nairobi</a>
+    <a href="${base}pages/search.html?m=johannesburg">Johannesburg</a>
+    <a href="${base}pages/search.html?m=casablanca">Casablanca</a>
+    <a href="${base}pages/buildings.html">Buildings</a>
+    <a href="${base}pages/districts.html">Districts</a>
+    <a href="${base}pages/industrial.html">Industrial</a>
+    <a href="${base}pages/market-scan.html">Contact</a>
+    <div class="mobile-nav-actions">
+      <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <a href="${base}pages/market-scan.html" class="btn btn-navy btn-sm">Request Access</a>
+    </div>
+  </div>`;
+}
+
+// ── Mobile Nav Toggle ────────────────────────────────────
+function toggleMobileNav() {
+  const btn = document.getElementById('nav-hamburger');
+  const menu = document.getElementById('mobile-nav');
+  if (!btn || !menu) return;
+  btn.classList.toggle('open');
+  menu.classList.toggle('open');
 }
 
 // ── Footer ───────────────────────────────────────────────
