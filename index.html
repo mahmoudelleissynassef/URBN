@@ -159,7 +159,7 @@
     </div>
     <div class="mf" id="access-actions">
       <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
-      <button class="btn btn-navy" onclick="submitAccess()">Submit Request</button>
+      <button class="btn btn-navy" onclick="submitAccess(this)">Submit Request</button>
     </div>
   </div>
 </div>
@@ -230,12 +230,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(sm) sm.textContent=URBN_DATA.markets.length;
 });
 
-function submitAccess(){
+async function submitAccess(btn){
   if (botFilled('reg-website')) return; // honeypot
 
   const email=document.getElementById('reg-email').value.trim();
   const company=document.getElementById('reg-company').value.trim();
   const market=document.getElementById('reg-market').value;
+  const area=document.getElementById('reg-area').value.trim();
   const consent=document.getElementById('reg-consent').checked;
 
   let ok=true;
@@ -247,7 +248,22 @@ function submitAccess(){
 
   if(!ok){ showToast('Please complete the highlighted fields.','error'); return; }
 
-  // NOTE: wire to a real endpoint (CRM/email) before launch — currently UI-only.
+  setBtnBusy(btn,true);
+  const result = await postRequest({
+    requestType:'access', sourcePage:'index.html',
+    website: document.getElementById('reg-website').value,
+    email, company, market, area,
+  });
+  setBtnBusy(btn,false);
+
+  if(!result.ok){
+    showToast('Submission failed — please try again.','error');
+    let f=document.getElementById('access-fail');
+    if(!f){ f=document.createElement('div'); f.id='access-fail'; f.className='fld-err show'; f.style.marginTop='12px'; document.getElementById('access-actions').before(f); }
+    f.innerHTML=requestFailHTML();
+    return;
+  }
+
   document.getElementById('access-body').innerHTML =
     `<div class="form-success"><h3>Request received</h3><p>Thank you. URBN will review your request and issue credentials to <strong style="color:var(--navy);">${email}</strong> within 24 business hours.</p></div>`;
   document.getElementById('access-actions').innerHTML =

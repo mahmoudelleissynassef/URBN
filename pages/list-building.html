@@ -65,7 +65,7 @@
           <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</span>
         </label>
         <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
-        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing()">Submit Building</button>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Building</button>
         <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and responds within 3 business days. We do not publish without verifying the listing at source.</p>
       </div>
     </div>
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
 });
 
-function submitListing() {
+async function submitListing(btn) {
   if (botFilled('ll-website')) return; // honeypot
 
   const name    = document.getElementById('ll-name').value.trim();
@@ -104,7 +104,26 @@ function submitListing() {
 
   if (!ok) { toast('Please complete the highlighted fields.', 'error'); return; }
 
-  // NOTE: wire to a real endpoint (CRM/email) before launch — currently UI-only.
+  setBtnBusy(btn, true);
+  const result = await postRequest({
+    requestType: 'list-building', sourcePage: 'list-building.html',
+    website: document.getElementById('ll-website').value,
+    name, email, company, building, market,
+    district: document.getElementById('ll-district').value.trim(),
+    area: document.getElementById('ll-area').value.trim(),
+    grade: document.getElementById('ll-grade').value,
+    message: document.getElementById('ll-notes').value.trim(),
+  });
+  setBtnBusy(btn, false);
+
+  if (!result.ok) {
+    toast('Submission failed — please try again.', 'error');
+    let f = document.getElementById('ll-fail');
+    if (!f) { f = document.createElement('div'); f.id = 'll-fail'; f.className = 'fld-err show'; f.style.marginTop = '12px'; btn.after(f); }
+    f.innerHTML = requestFailHTML();
+    return;
+  }
+
   const form = document.getElementById('ll-form');
   form.innerHTML = `
     <div class="form-success">

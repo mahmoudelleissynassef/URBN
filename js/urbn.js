@@ -192,6 +192,36 @@ function isCorporateEmail(v) {
 // Honeypot: returns true if the hidden anti-spam field was filled (i.e. a bot).
 function botFilled(id) { const el = document.getElementById(id); return !!(el && el.value.trim()); }
 
+// ── Backend submission (POST /api/request) ───────────────
+// Public fallback inbox shown if a submission can't reach the backend.
+const REQUEST_FALLBACK_EMAIL = 'mahmoud.nassef@urbnoffices.com';
+async function postRequest(payload) {
+  try {
+    const res = await fetch('/api/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let json = {};
+    try { json = await res.json(); } catch (e) { /* non-JSON response */ }
+    // Success only when the backend confirms the request was stored.
+    return { ok: res.ok && json.ok === true, status: res.status, json };
+  } catch (e) {
+    return { ok: false, status: 0, json: { error: 'network' } };
+  }
+}
+function requestFailHTML() {
+  return `We couldn&#39;t submit your request just now. Please email <a href="mailto:${REQUEST_FALLBACK_EMAIL}">${REQUEST_FALLBACK_EMAIL}</a> and we&#39;ll pick it up directly.`;
+}
+function setBtnBusy(btn, busy, busyLabel = 'Sending…') {
+  if (!btn) return;
+  if (busy) { btn.dataset.prevLabel = btn.textContent; btn.disabled = true; btn.textContent = busyLabel; }
+  else { btn.disabled = false; if (btn.dataset.prevLabel) btn.textContent = btn.dataset.prevLabel; }
+}
+function chipValues(containerId) {
+  return [...document.querySelectorAll('#' + containerId + ' .chip.on')].map(c => c.textContent.trim());
+}
+
 // ── Save ─────────────────────────────────────────────────
 function heartSVG(on) {
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
