@@ -139,11 +139,36 @@ function handleLeadRequest(req, res) {
     const message = s(data.message), building = s(data.building);
 
     // Server-side validation (mirrors the client; never trust the client).
+    const num = (x) => x !== '' && !isNaN(Number(x));
     const errs = [];
-    if (!isEmail(email)) errs.push('email');
+    if (!isCorporateEmail(email)) errs.push('email');
     if (type === 'access') { if (!company) errs.push('company'); if (!market) errs.push('market'); }
     if (type === 'market-scan') { if (!company) errs.push('company'); if (!market) errs.push('market'); if (!area) errs.push('area'); }
-    if (type === 'list-building') { if (!name) errs.push('name'); if (!company) errs.push('company'); if (!building) errs.push('building'); if (!market) errs.push('market'); }
+    if (type === 'list-building') {
+      const offering = s(data.offeringType);
+      const DESK_TYPES = ['Coworking desks', 'Serviced office suite'];
+      const AREA_TYPES = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
+      if (!name) errs.push('name');
+      if (!company) errs.push('company');
+      if (!s(data.title)) errs.push('title');
+      if (!s(data.submitterType)) errs.push('submitterType');
+      if (!building) errs.push('building');
+      if (!market) errs.push('market');
+      if (!s(data.district)) errs.push('district');
+      if (!s(data.fitOut)) errs.push('fitOut');
+      if (!offering) errs.push('offeringType');
+      if (!num(s(data.rent))) errs.push('rent');
+      if (!s(data.currency)) errs.push('currency');
+      if (!s(data.pricingBasis)) errs.push('pricingBasis');
+      if (s(data.serviceCharge) && !num(s(data.serviceCharge))) errs.push('serviceCharge');
+      if (DESK_TYPES.includes(offering) && !num(s(data.seats))) errs.push('seats');
+      if (AREA_TYPES.includes(offering) && !num(area)) errs.push('area');
+      const photoCount = Array.isArray(data.photoLinks)
+        ? data.photoLinks.filter(Boolean).length
+        : String(data.photoLinks || '').split(/[\n,]+/).map((x) => x.trim()).filter(Boolean).length;
+      if (photoCount < 3) errs.push('photoLinks');
+      if (data.consent !== true) errs.push('consent');
+    }
     if (errs.length) return sendJson(res, 400, { ok: false, error: 'validation', fields: errs });
 
     // Everything else (minus control/honeypot keys) is preserved in the jsonb payload.
@@ -169,6 +194,8 @@ function handleLeadRequest(req, res) {
       user_agent: String(req.headers['user-agent'] || '').slice(0, 500) || null,
       ip_hash: ipHash,
     };
+    // Supply-side listings are held for verification before publishing.
+    if (type === 'list-building') row.status = 'pending';
 
     // 1) Store in Supabase. This is the source of truth — failure is a hard error.
     try {

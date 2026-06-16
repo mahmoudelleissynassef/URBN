@@ -34,39 +34,124 @@
       <div class="reason"><div class="reason-num">03</div><h4>Verified, not recycled</h4><p>Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
     </div>
 
+    <div class="form-note">
+      <p><strong>A verified URBN account and corporate email are required before a listing is published.</strong> Self-service account creation isn&#39;t available yet — submitting this form creates a <strong>pending supply-side request</strong>. URBN verifies your firm and corporate email, then follows up to activate the listing. Free webmail addresses (Gmail, Outlook, Hotmail, Yahoo, etc.) are not accepted.</p>
+    </div>
+
     <div id="ll-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
+
+      <div class="form-sec-title">Your details</div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Your Name</label><input type="text" class="fi" id="ll-name" placeholder="Full name"><div class="fld-err" id="err-ll-name">Enter your name.</div></div>
-        <div class="fg"><label class="fl">Work Email</label><input type="email" class="fi" id="ll-email" placeholder="you@company.com"><div class="fld-err" id="err-ll-email">Enter a valid work email address.</div></div>
+        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fi" id="ll-name" placeholder="Full name"><div class="fld-err" id="err-ll-name">Enter your full name.</div></div>
+        <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="ll-email" placeholder="you@company.com"><div class="fld-err" id="err-ll-email">Enter a valid corporate email (free webmail is not accepted).</div></div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Company / Operator</label><input type="text" class="fi" id="ll-company" placeholder="Landlord or operator name"><div class="fld-err" id="err-ll-company">Enter your company or operator name.</div></div>
+        <div class="fg"><label class="fl">Company / Operator</label><input type="text" class="fi" id="ll-company" placeholder="Firm or operator name"><div class="fld-err" id="err-ll-company">Enter your company or operator name.</div></div>
+        <div class="fg"><label class="fl">Job Title</label><input type="text" class="fi" id="ll-title" placeholder="e.g. Leasing Director"><div class="fld-err" id="err-ll-title">Enter your job title.</div></div>
+      </div>
+      <div class="fg"><label class="fl">You Are A</label>
+        <select class="fi fi-sel" id="ll-type">
+          <option value="">Select submitter type...</option>
+          <option>Broker</option><option>Developer</option><option>Landlord / Owner</option>
+          <option>Asset Manager</option><option>Coworking Operator</option>
+          <option>Serviced Offices Operator</option><option>Property Manager</option><option>Other</option>
+        </select>
+        <div class="fld-err" id="err-ll-type">Select your submitter type.</div>
+      </div>
+
+      <div class="form-sec-title">Building &amp; location</div>
+      <div class="fr2">
         <div class="fg"><label class="fl">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name"><div class="fld-err" id="err-ll-building">Enter the building name.</div></div>
-      </div>
-      <div class="fr2">
         <div class="fg"><label class="fl">Market</label>
           <select class="fi fi-sel" id="ll-market"><option value="">Select market...</option></select>
           <div class="fld-err" id="err-ll-market">Select the building&#39;s market.</div>
         </div>
-        <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"></div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"></div>
-        <div class="fg"><label class="fl">Building Grade</label>
-          <select class="fi fi-sel" id="ll-grade"><option value="">Select grade...</option><option>A+</option><option>A</option><option>Other</option></select>
+        <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"><div class="fld-err" id="err-ll-district">Enter the district / submarket.</div></div>
+        <div class="fg"><label class="fl">Google Maps URL (pin)</label><input type="url" class="fi" id="ll-maps" placeholder="https://maps.google.com/..."><div class="fld-err" id="err-ll-maps">Enter a valid URL (or leave blank).</div></div>
+      </div>
+      <div class="fg"><label class="fl">Floor Number / Range (optional)</label><input type="text" class="fi" id="ll-floor" placeholder="e.g. 12, or 8–14"></div>
+
+      <div class="form-sec-title">Space &amp; offering</div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Fit-Out Condition</label>
+          <select class="fi fi-sel" id="ll-fitout">
+            <option value="">Select condition...</option>
+            <option>Shell &amp; Core</option><option>CAT A</option><option>CAT B</option>
+            <option>Fitted</option><option>Furnished</option>
+            <option>Serviced / Managed</option><option>Coworking / Flexible workspace</option>
+          </select>
+          <div class="fld-err" id="err-ll-fitout">Select the fit-out condition.</div>
+        </div>
+        <div class="fg"><label class="fl">Offering Type</label>
+          <select class="fi fi-sel" id="ll-offering">
+            <option value="">Select offering...</option>
+            <option>Whole building</option><option>Full floor</option><option>Partial floor</option>
+            <option>Private office</option><option>Coworking desks</option><option>Serviced office suite</option>
+          </select>
+          <div class="fld-err" id="err-ll-offering">Select the offering type.</div>
         </div>
       </div>
-      <div class="fg"><label class="fl">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Floor plates, certifications, current availability, fit-out condition..."></textarea></div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"><div class="fld-err" id="err-ll-area">Enter the available area in sqm.</div></div>
+        <div class="fg"><label class="fl">Available Desks / Seats</label><input type="number" class="fi" id="ll-seats" placeholder="e.g. 40"><div class="fld-err" id="err-ll-seats">Enter the number of desks / seats.</div></div>
+      </div>
+      <p style="font-size:11px;color:var(--text-2);margin:-6px 0 4px;">Area is required for whole-building / floor / private-office offerings; desks &amp; seats are required for coworking / serviced-office offerings.</p>
+
+      <div class="form-sec-title">Commercials</div>
+      <div class="fr3">
+        <div class="fg"><label class="fl">Asking Rent / Price</label><input type="number" class="fi" id="ll-rent" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-rent">Enter a numeric price.</div></div>
+        <div class="fg"><label class="fl">Currency</label>
+          <select class="fi fi-sel" id="ll-currency">
+            <option value="">—</option>
+            <option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>SAR</option>
+            <option>EGP</option><option>KES</option><option>NGN</option><option>ZAR</option><option>MAD</option>
+            <option>JOD</option><option>TND</option><option>GHS</option><option>ETB</option><option>AOA</option><option>DZD</option>
+          </select>
+          <div class="fld-err" id="err-ll-currency">Select a currency.</div>
+        </div>
+        <div class="fg"><label class="fl">Pricing Basis</label>
+          <select class="fi fi-sel" id="ll-basis">
+            <option value="">Select basis...</option>
+            <option>per sqm / year</option><option>per sqm / month</option><option>per desk / month</option>
+            <option>per office / month</option><option>total monthly rent</option>
+          </select>
+          <div class="fld-err" id="err-ll-basis">Select a pricing basis.</div>
+        </div>
+      </div>
+      <div class="fr3">
+        <div class="fg"><label class="fl">Service Charge (optional)</label><input type="number" class="fi" id="ll-svc" placeholder="e.g. 150"><div class="fld-err" id="err-ll-svc">Service charge must be numeric.</div></div>
+        <div class="fg"><label class="fl">Service Charge Basis</label>
+          <select class="fi fi-sel" id="ll-svcbasis">
+            <option value="">—</option>
+            <option>per sqm / year</option><option>per sqm / month</option><option>Included in rent</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Availability Date</label><input type="date" class="fi" id="ll-avail"></div>
+      </div>
+      <div class="fg"><label class="fl">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
+
+      <div class="form-sec-title">Photos &amp; floorplans</div>
+      <div class="form-note">
+        <p>Listings require <strong>at least 3 photos</strong> for verification. <strong>Direct file upload isn&#39;t available yet</strong> — for now paste shareable links (Google Drive, Dropbox, OneDrive, etc.), one per line. URBN will request the original files during verification. We won&#39;t publish a listing on links alone.</p>
+      </div>
+      <div class="fg"><label class="fl">Photo Links — at least 3, one per line</label><textarea class="fi" id="ll-photos" placeholder="https://drive.google.com/...&#10;https://drive.google.com/...&#10;https://drive.google.com/..."></textarea><div class="fld-err" id="err-ll-photos">Provide at least 3 photo links (one per line).</div></div>
+      <div class="fg"><label class="fl">Floorplan Link (optional)</label><input type="url" class="fi" id="ll-floorplan" placeholder="https://..."></div>
+
+      <div class="fg"><label class="fl">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Certifications, amenities, parking, current availability, context..."></textarea></div>
+
       <!-- Honeypot -->
       <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="ll-website" tabindex="-1" autocomplete="off"></label></div>
+
       <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
         <label class="consent">
           <input type="checkbox" id="ll-consent" required aria-required="true">
           <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</span>
         </label>
         <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
-        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Building</button>
-        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and responds within 3 business days. We do not publish without verifying the listing at source.</p>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Listing for Review</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and verifies the listing at source before publishing. Typical response within 3 business days.</p>
       </div>
     </div>
   </div>
@@ -82,37 +167,70 @@ document.addEventListener('DOMContentLoaded', () => {
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
 });
 
+// Offering types that need a desk/seat count vs a sqm area.
+const LL_DESK_TYPES = ['Coworking desks', 'Serviced office suite'];
+const LL_AREA_TYPES = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
+
 async function submitListing(btn) {
   if (botFilled('ll-website')) return; // honeypot
 
-  const name    = document.getElementById('ll-name').value.trim();
-  const email   = document.getElementById('ll-email').value.trim();
-  const company = document.getElementById('ll-company').value.trim();
-  const building= document.getElementById('ll-building').value.trim();
-  const market  = document.getElementById('ll-market').value;
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const name = v('ll-name'), email = v('ll-email'), company = v('ll-company'), title = v('ll-title'), submitterType = v('ll-type');
+  const building = v('ll-building'), market = v('ll-market'), district = v('ll-district'), maps = v('ll-maps'), floor = v('ll-floor');
+  const fitOut = v('ll-fitout'), offering = v('ll-offering'), area = v('ll-area'), seats = v('ll-seats');
+  const rent = v('ll-rent'), currency = v('ll-currency'), basis = v('ll-basis');
+  const svc = v('ll-svc'), svcBasis = v('ll-svcbasis'), avail = v('ll-avail'), term = v('ll-term');
+  const notes = v('ll-notes'), floorplan = v('ll-floorplan');
+  const photoLinks = v('ll-photos').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
   const consent = document.getElementById('ll-consent').checked;
 
+  const isNum = x => x !== '' && !isNaN(Number(x));
+  const isUrl = x => /^https?:\/\/\S+$/i.test(x);
+
   let ok = true;
-  fldErr('ll-name',    'err-ll-name',    !name);              ok = ok && !!name;
-  const emailOk = isCorporateEmail(email);
-  fldErr('ll-email',   'err-ll-email',   !emailOk);           ok = ok && emailOk;
-  fldErr('ll-company', 'err-ll-company', !company);           ok = ok && !!company;
-  fldErr('ll-building','err-ll-building',!building);          ok = ok && !!building;
-  fldErr('ll-market',  'err-ll-market',  !market);            ok = ok && !!market;
+  const set = (id, errId, bad) => { fldErr(id, errId, bad); if (bad) ok = false; };
+  set('ll-name', 'err-ll-name', !name);
+  set('ll-email', 'err-ll-email', !isCorporateEmail(email));
+  set('ll-company', 'err-ll-company', !company);
+  set('ll-title', 'err-ll-title', !title);
+  set('ll-type', 'err-ll-type', !submitterType);
+  set('ll-building', 'err-ll-building', !building);
+  set('ll-market', 'err-ll-market', !market);
+  set('ll-district', 'err-ll-district', !district);
+  set('ll-maps', 'err-ll-maps', maps !== '' && !isUrl(maps));   // optional, but valid URL if present
+  set('ll-fitout', 'err-ll-fitout', !fitOut);
+  set('ll-offering', 'err-ll-offering', !offering);
+  if (LL_DESK_TYPES.includes(offering)) set('ll-seats', 'err-ll-seats', !isNum(seats));
+  if (LL_AREA_TYPES.includes(offering)) set('ll-area', 'err-ll-area', !isNum(area));
+  set('ll-rent', 'err-ll-rent', !isNum(rent));
+  set('ll-currency', 'err-ll-currency', !currency);
+  set('ll-basis', 'err-ll-basis', !basis);
+  set('ll-svc', 'err-ll-svc', svc !== '' && !isNum(svc));        // optional, but numeric if present
+  set('ll-photos', 'err-ll-photos', photoLinks.length < 3);
   document.getElementById('err-ll-consent').classList.toggle('show', !consent);
-  ok = ok && consent;
+  if (!consent) ok = false;
 
   if (!ok) { toast('Please complete the highlighted fields.', 'error'); return; }
 
   setBtnBusy(btn, true);
   const result = await postRequest({
-    requestType: 'list-building', sourcePage: 'list-building.html',
+    requestType: 'list-building', sourcePage: location.pathname,
     website: document.getElementById('ll-website').value,
-    name, email, company, building, market,
-    district: document.getElementById('ll-district').value.trim(),
-    area: document.getElementById('ll-area').value.trim(),
-    grade: document.getElementById('ll-grade').value,
-    message: document.getElementById('ll-notes').value.trim(),
+    consent: true,
+    // submitter
+    name, email, company, title, submitterType,
+    // building & location
+    building, market, district, mapsUrl: maps, floor,
+    // space & offering
+    fitOut, offeringType: offering, area, seats,
+    // commercials
+    rent, currency, pricingBasis: basis,
+    serviceCharge: svc, serviceChargeBasis: svcBasis,
+    availabilityDate: avail, minTerm: term,
+    // media (links — direct upload deferred)
+    photoLinks, floorplanLink: floorplan,
+    // notes -> message column
+    message: notes,
   });
   setBtnBusy(btn, false);
 
@@ -127,8 +245,8 @@ async function submitListing(btn) {
   const form = document.getElementById('ll-form');
   form.innerHTML = `
     <div class="form-success">
-      <h3>Submission received</h3>
-      <p>Thank you. URBN will review <strong style="color:var(--navy);">${building}</strong> and respond to <strong style="color:var(--navy);">${email}</strong> within 3 business days.</p>
+      <h3>Listing submitted for review</h3>
+      <p><strong style="color:var(--navy);">${building}</strong> has been logged as a <strong>pending supply-side request</strong>. URBN will verify your firm and corporate email, then respond to <strong style="color:var(--navy);">${email}</strong> within 3 business days — including how to share original photos and floorplans.</p>
       <p style="margin-top:10px;">Questions? Email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.</p>
     </div>`;
   form.scrollIntoView({ behavior: 'smooth', block: 'center' });
