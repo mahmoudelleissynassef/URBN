@@ -1,12 +1,78 @@
 // URBN Platform v5 — FT Editorial × JLL Institutional
 
-const USER = {
-  id: 'demo', name: 'Demo User', company: 'Acme Corporation',
-  email: 'demo@acmecorp.com', role: 'corporate_tenant', plan: 'membership',
-  saved: ['b001', 'b005', 'b008'],
-  intros: [{ bid: 'b001', uid: 'u001a', date: '2026-03-01', status: 'introduced' }],
-  alerts: [{ market: 'cairo', sub: 'New Cairo', minSz: 500, maxRent: 1400 }],
+// Client-side UI state only. NOT a logged-in user — real auth is Supabase
+// (URBNAuth below). `saved` is hydrated from saved_properties when signed in.
+const USER = { saved: [], intros: [], alerts: [] };
+
+// ── Supabase Auth ────────────────────────────────────────
+// Loads the Supabase JS client from CDN (no build step / npm needed) and reads
+// the publishable anon key from /api/config. The service-role key is never used
+// in the browser. Session persists in localStorage (per-origin).
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if ([...document.scripts].some(s => s.src === src)) return resolve();
+    const el = document.createElement('script');
+    el.src = src; el.onload = () => resolve(); el.onerror = () => reject(new Error('script_load_failed'));
+    document.head.appendChild(el);
+  });
+}
+
+const URBNAuth = {
+  client: null, session: null, user: null, _ready: null,
+  init() {
+    if (this._ready) return this._ready;
+    this._ready = (async () => {
+      try { await loadScriptOnce('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'); }
+      catch (e) { console.warn('[auth] supabase-js failed to load'); return this; }
+      let cfg = {};
+      try { cfg = await fetch('/api/config').then(r => r.json()); } catch (e) {}
+      if (cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) {
+        this.client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey,
+          { auth: { persistSession: true, autoRefreshToken: true } });
+        try {
+          const { data } = await this.client.auth.getSession();
+          this.session = (data && data.session) || null;
+          this.user = (this.session && this.session.user) || null;
+          this.client.auth.onAuthStateChange((_e, sess) => {
+            URBNAuth.session = sess; URBNAuth.user = sess ? sess.user : null; updateAuthNav();
+          });
+          if (this.user) hydrateSaved();
+        } catch (e) {}
+      } else {
+        console.warn('[auth] Supabase not configured (set SUPABASE_URL + SUPABASE_ANON_KEY)');
+      }
+      return this;
+    })();
+    return this._ready;
+  },
+  async signOut() {
+    await this.init();
+    if (this.client) { try { await this.client.auth.signOut(); } catch (e) {} }
+    this.session = null; this.user = null; updateAuthNav();
+  },
+  // Gate a page: resolves to the user, or redirects to sign-in.
+  async requireAuth(redirect = '/pages/signin.html') {
+    await this.init();
+    if (!this.user) { location.href = redirect + '?next=' + encodeURIComponent(location.pathname); return null; }
+    return this.user;
+  },
 };
+
+// Show signed-in vs signed-out nav items.
+function updateAuthNav() {
+  const signedIn = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user);
+  document.querySelectorAll('[data-auth="in"]').forEach(el => { el.style.display = signedIn ? '' : 'none'; });
+  document.querySelectorAll('[data-auth="out"]').forEach(el => { el.style.display = signedIn ? 'none' : ''; });
+}
+
+// Pull the user's saved building ids into USER.saved (best-effort).
+async function hydrateSaved() {
+  try {
+    if (!URBNAuth.client || !URBNAuth.user) return;
+    const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', URBNAuth.user.id);
+    if (Array.isArray(data)) { USER.saved = data.map(r => r.building_id); }
+  } catch (e) { /* table may not exist yet */ }
+}
 
 const IMG = {
   cairo:'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=600&q=80',
@@ -56,12 +122,16 @@ function injectNav(base='') {
         <a href="${base}pages/districts.html">Districts</a>
         <a href="${base}pages/industrial.html">Industrial</a>
         <a href="${base}pages/list-building.html">List Your Building</a>
+        <a href="${base}pages/subscription.html">Pricing</a>
         <div class="nav-sep"></div>
         <a href="${base}pages/market-scan.html">Contact</a>
       </div>
       <div class="nav-right">
-        <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
-        <button class="btn btn-navy btn-sm" onclick="openModal('access-modal')">Request Access</button>
+        <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+        <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
+        <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
+        <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>
+        <button class="btn btn-navy btn-sm" data-auth="out" onclick="openModal('access-modal')">Request Access</button>
       </div>
       <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -82,13 +152,19 @@ function injectNav(base='') {
     <a href="${base}pages/districts.html">Districts</a>
     <a href="${base}pages/industrial.html">Industrial</a>
     <a href="${base}pages/list-building.html">List Your Building</a>
+    <a href="${base}pages/subscription.html">Pricing</a>
     <a href="${base}pages/market-scan.html">Contact</a>
     <div class="mobile-nav-actions">
-      <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
-      <button class="btn btn-navy btn-sm" onclick="toggleMobileNav();openModal('access-modal')">Request Access</button>
+      <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+      <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
+      <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
+      <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>
+      <button class="btn btn-navy btn-sm" data-auth="out" onclick="toggleMobileNav();openModal('access-modal')">Request Access</button>
     </div>
   </div>`;
   injectAccessModal(base);
+  updateAuthNav();
+  URBNAuth.init().then(updateAuthNav);
 }
 
 // ── Mobile Nav Toggle ────────────────────────────────────
@@ -151,7 +227,7 @@ function injectFooter(base='') {
             <li><a href="${base}pages/terms.html">Terms of Use</a></li>
             <li><a href="${base}pages/documents.html">Commission Agreement</a></li>
             <li><a href="${base}pages/privacy.html">Privacy Policy</a></li>
-            <li><a href="${base}pages/login.html">Sign In</a></li>
+            <li><a href="${base}pages/signin.html">Sign In</a></li>
           </ul>
         </div>
       </div>
@@ -302,11 +378,29 @@ function chipValues(containerId) {
 function heartSVG(on) {
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 }
-function toggleSave(id,btn) {
-  const i=USER.saved.indexOf(id);
-  if(i>-1){USER.saved.splice(i,1);btn.classList.remove('on');showToast('Removed from shortlist');}
-  else{USER.saved.push(id);btn.classList.add('on');showToast('Added to shortlist');}
-  btn.innerHTML=heartSVG(USER.saved.includes(id));
+async function toggleSave(id,btn) {
+  await URBNAuth.init();
+  if (!URBNAuth.user) {
+    showToast('Sign in to save properties to your shortlist', 'info');
+    setTimeout(() => { location.href = '/pages/signin.html?next=' + encodeURIComponent(location.pathname + location.search); }, 1100);
+    return;
+  }
+  const adding = !USER.saved.includes(id);
+  // Optimistic UI
+  if (adding) { USER.saved.push(id); btn.classList.add('on'); }
+  else { USER.saved.splice(USER.saved.indexOf(id), 1); btn.classList.remove('on'); }
+  btn.innerHTML = heartSVG(USER.saved.includes(id));
+  try {
+    if (adding) {
+      await URBNAuth.client.from('saved_properties').insert({ user_id: URBNAuth.user.id, building_id: id });
+      showToast('Added to shortlist');
+    } else {
+      await URBNAuth.client.from('saved_properties').delete().eq('user_id', URBNAuth.user.id).eq('building_id', id);
+      showToast('Removed from shortlist');
+    }
+  } catch (e) {
+    showToast('Could not update shortlist — please try again', 'error');
+  }
 }
 
 // ── Modal ────────────────────────────────────────────────

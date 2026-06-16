@@ -12,6 +12,7 @@ const mimeTypes = {
   '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
   '.xml': 'application/xml', '.txt': 'text/plain', '.webmanifest': 'application/manifest+json',
+  '.csv': 'text/csv',
 };
 
 // ── Lead capture: POST /api/request ──────────────────────────────────────────
@@ -239,6 +240,16 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/request') {
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handleLeadRequest(req, res);
+  }
+
+  // Public client config for the frontend. Exposes ONLY the Supabase URL and the
+  // publishable/anon key (safe in the browser, protected by RLS). The service-role
+  // key is never sent here.
+  if (urlPath === '/api/config') {
+    return sendJson(res, 200, {
+      supabaseUrl: process.env.SUPABASE_URL || '',
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+    });
   }
 
   let reqPath = urlPath;
