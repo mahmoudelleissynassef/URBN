@@ -29,6 +29,24 @@ const REQUEST_TYPES = {
   'list-building': 'List Your Building',
 };
 
+// Market -> local currency (mirror of data/data.js). Allowed quoting currencies
+// per market = [local, USD] (+ EUR for XOF / Francophone West African markets).
+// Keep in sync with allowedCurrencies() in js/urbn.js. No live FX.
+const MARKET_CURRENCY = {
+  cairo: 'EGP', dubai: 'AED', riyadh: 'SAR', casablanca: 'MAD', rabat: 'MAD',
+  amman: 'JOD', tunis: 'TND', algiers: 'DZD', addis: 'ETB', nairobi: 'KES',
+  accra: 'GHS', lagos: 'NGN', abuja: 'NGN', johannesburg: 'ZAR', capetown: 'ZAR', luanda: 'AOA',
+};
+const FRANCOPHONE_WA_MARKETS = ['dakar', 'abidjan', 'bamako', 'ouagadougou', 'lome', 'cotonou', 'niamey'];
+function allowedCurrenciesForMarket(marketId) {
+  const local = MARKET_CURRENCY[marketId];
+  const out = [];
+  if (local) out.push(local);
+  out.push('USD');
+  if (local === 'XOF' || FRANCOPHONE_WA_MARKETS.includes(marketId)) out.push('EUR');
+  return out;
+}
+
 function rateLimited(ip) {
   const now = Date.now();
   const hits = (rateBuckets.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
@@ -159,15 +177,16 @@ function handleLeadRequest(req, res) {
       if (!s(data.fitOut)) errs.push('fitOut');
       if (!offering) errs.push('offeringType');
       if (!num(s(data.rent))) errs.push('rent');
-      if (!s(data.currency)) errs.push('currency');
       if (!s(data.pricingBasis)) errs.push('pricingBasis');
       if (s(data.serviceCharge) && !num(s(data.serviceCharge))) errs.push('serviceCharge');
+      // Currency must be allowed for the selected market.
+      const cur = s(data.currency);
+      if (!cur || !allowedCurrenciesForMarket(market).includes(cur)) errs.push('currency');
       if (DESK_TYPES.includes(offering) && !num(s(data.seats))) errs.push('seats');
       if (AREA_TYPES.includes(offering) && !num(area)) errs.push('area');
-      const photoCount = Array.isArray(data.photoLinks)
-        ? data.photoLinks.filter(Boolean).length
-        : String(data.photoLinks || '').split(/[\n,]+/).map((x) => x.trim()).filter(Boolean).length;
-      if (photoCount < 3) errs.push('photoLinks');
+      // At least 3 uploaded photo paths (real uploads, not links).
+      const photoCount = Array.isArray(data.photoPaths) ? data.photoPaths.filter(Boolean).length : 0;
+      if (photoCount < 3) errs.push('photoPaths');
       if (data.consent !== true) errs.push('consent');
     }
     if (errs.length) return sendJson(res, 400, { ok: false, error: 'validation', fields: errs });
@@ -233,6 +252,106 @@ function handleLeadRequest(req, res) {
   });
 }
 
+// Verify a Supabase access token and return the user (or null).
+async function getAuthUser(token) {
+  const base = process.env.SUPABASE_URL, anon = process.env.SUPABASE_ANON_KEY;
+  if (!base || !anon || !token) return null;
+  try {
+    const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/user`, {
+      method: 'GET', headers: { apikey: anon, Authorization: 'Bearer ' + token },
+    });
+    if (r.status < 200 || r.status >= 300) return null;
+    return JSON.parse(r.body);
+  } catch (e) { return null; }
+}
+
+function validateBatchRow(r) {
+  const num = (x) => x !== '' && x != null && !isNaN(Number(x));
+  const DESK = ['Coworking desks', 'Serviced office suite'];
+  const AREA = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
+  const errs = [];
+  if (!r.building_name) errs.push('building_name');
+  const marketOk = !!MARKET_CURRENCY[r.market] || FRANCOPHONE_WA_MARKETS.includes(r.market);
+  if (!marketOk) errs.push('market');
+  if (!r.offering_type) errs.push('offering_type');
+  if (!r.fit_out) errs.push('fit_out');
+  if (!num(r.asking_rent)) errs.push('asking_rent');
+  if (!r.pricing_basis) errs.push('pricing_basis');
+  if (marketOk && (!r.currency || !allowedCurrenciesForMarket(r.market).includes(r.currency))) errs.push('currency');
+  if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
+  if (AREA.includes(r.offering_type) && !num(r.unit_size_sqm)) errs.push('unit_size_sqm');
+  if (r.service_charge && !num(r.service_charge)) errs.push('service_charge');
+  return errs;
+}
+
+async function insertSupabaseTable(table, rowOrRows) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) throw new Error('supabase_env_missing');
+  const payload = JSON.stringify(rowOrRows);
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}`,
+      Prefer: 'return=representation', 'Content-Length': Buffer.byteLength(payload),
+    },
+  }, payload);
+  if (r.status < 200 || r.status >= 300) throw new Error(`supabase_${r.status}:${r.body.slice(0, 300)}`);
+  return JSON.parse(r.body || '[]');
+}
+
+// Batch listing upload: validate rows server-side, store as pending review.
+function handleBatch(req, res) {
+  const MAX = 2 * 1024 * 1024; // 2 MB
+  let body = '', tooLarge = false;
+  req.on('data', (c) => { if (body.length <= MAX) body += c; if (body.length > MAX) tooLarge = true; });
+  req.on('end', async () => {
+    if (tooLarge) return sendJson(res, 413, { ok: false, error: 'payload_too_large' });
+    let data;
+    try { data = JSON.parse(body || '{}'); } catch (e) { return sendJson(res, 400, { ok: false, error: 'invalid_json' }); }
+
+    const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+    const user = await getAuthUser(token);
+    if (!user || !user.id) return sendJson(res, 401, { ok: false, error: 'not_authenticated' });
+
+    const rows = Array.isArray(data.rows) ? data.rows.slice(0, 1000) : [];
+    if (!rows.length) return sendJson(res, 400, { ok: false, error: 'no_rows' });
+
+    const evaluated = rows.map((r, i) => ({ i, r, errs: validateBatchRow(r) }));
+    const accepted = evaluated.filter((e) => e.errs.length === 0);
+    const rejected = evaluated.filter((e) => e.errs.length > 0);
+
+    // Look up the user's company (best-effort) so the batch is attributable.
+    let companyId = null;
+    try {
+      const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const pr = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/profiles?id=eq.${user.id}&select=company_id`, {
+        method: 'GET', headers: { apikey: key, Authorization: `Bearer ${key}` },
+      });
+      const arr = JSON.parse(pr.body || '[]'); companyId = (arr[0] && arr[0].company_id) || null;
+    } catch (e) {}
+
+    try {
+      const batch = await insertSupabaseTable('listing_batches', {
+        uploaded_by: user.id, company_id: companyId, filename: String(data.filename || '').slice(0, 300),
+        rows_processed: rows.length, rows_accepted: accepted.length, rows_rejected: rejected.length,
+        validation_errors: rejected.map((e) => ({ row: e.i + 1, errors: e.errs })),
+        status: 'pending_review',
+      });
+      const batchId = Array.isArray(batch) ? batch[0].id : batch.id;
+      if (evaluated.length) {
+        await insertSupabaseTable('listing_batch_rows', evaluated.map((e) => ({
+          batch_id: batchId, row_index: e.i + 1, raw: e.r,
+          status: e.errs.length ? 'rejected' : 'pending_review', errors: e.errs,
+        })));
+      }
+      return sendJson(res, 200, { ok: true, batchId, processed: rows.length, accepted: accepted.length, rejected: rejected.length });
+    } catch (e) {
+      console.error('[api/batch] store failed:', e.message);
+      return sendJson(res, 502, { ok: false, error: 'storage_failed' });
+    }
+  });
+}
+
 // ── Server ───────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split('?')[0];
@@ -240,6 +359,11 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/request') {
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handleLeadRequest(req, res);
+  }
+
+  if (urlPath === '/api/batch') {
+    if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handleBatch(req, res);
   }
 
   // Public client config for the frontend. Exposes ONLY the Supabase URL and the

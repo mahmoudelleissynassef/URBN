@@ -374,6 +374,21 @@ function chipValues(containerId) {
   return [...document.querySelectorAll('#' + containerId + ' .chip.on')].map(c => c.textContent.trim());
 }
 
+// ── Allowed currencies per market ────────────────────────
+// Each market allows its local currency + USD. Francophone West African (XOF)
+// markets additionally allow EUR. No live FX — these are just the accepted
+// quoting currencies. Server mirrors this in server.js (keep both in sync).
+const FRANCOPHONE_WA_MARKETS = ['dakar', 'abidjan', 'bamako', 'ouagadougou', 'lome', 'cotonou', 'niamey'];
+function allowedCurrencies(marketId) {
+  const m = (typeof URBN_DATA !== 'undefined') ? URBN_DATA.markets.find(x => x.id === marketId) : null;
+  const local = m ? m.currency : null;
+  const out = [];
+  if (local) out.push(local);
+  out.push('USD');
+  if (local === 'XOF' || FRANCOPHONE_WA_MARKETS.includes(marketId)) out.push('EUR');
+  return [...new Set(out)];
+}
+
 // ── Save ─────────────────────────────────────────────────
 function heartSVG(on) {
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
