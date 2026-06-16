@@ -18,9 +18,9 @@ const mimeTypes = {
 // ── Lead capture: POST /api/request ──────────────────────────────────────────
 // Stores each submission in Supabase (source of truth) and notifies via Resend.
 // All credentials come from environment variables — never hardcoded.
-const MAX_BODY = 10 * 1024;          // 10 KB payload cap
+const MAX_BODY = 64 * 1024;          // 64 KB payload cap (listing payloads + file paths)
 const RL_WINDOW_MS = 60 * 1000;      // rate-limit window
-const RL_MAX = 5;                    // max submissions per IP per window
+const RL_MAX = 12;                   // max submissions per IP per window
 const rateBuckets = new Map();       // ip -> [timestamps]
 
 const REQUEST_TYPES = {
@@ -63,6 +63,12 @@ function sendJson(res, status, obj) {
 
 function isEmail(v) {
   return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+// Mirror of isCorporateEmail() in js/urbn.js — keep the two in sync.
+const FREE_EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'mail.com'];
+function isCorporateEmail(v) {
+  if (!isEmail(v)) return false;
+  return !FREE_EMAIL_DOMAINS.includes(v.trim().split('@')[1].toLowerCase());
 }
 
 function escapeHtml(s) {
@@ -142,6 +148,7 @@ function handleLeadRequest(req, res) {
   req.on('error', () => { if (!res.headersSent) sendJson(res, 400, { ok: false, error: 'read_error' }); });
   req.on('end', async () => {
     if (tooLarge) return sendJson(res, 413, { ok: false, error: 'payload_too_large' });
+    try {
 
     let data;
     try { data = JSON.parse(body || '{}'); } catch (e) { return sendJson(res, 400, { ok: false, error: 'invalid_json' }); }
@@ -222,7 +229,7 @@ function handleLeadRequest(req, res) {
       await insertSupabase(row);
     } catch (e) {
       console.error('[api/request] supabase insert failed:', e.message);
-      return sendJson(res, 502, { ok: false, error: 'storage_failed' });
+      return sendJson(res, 502, { ok: false, error: 'storage_failed', detail: String(e.message || '').slice(0, 300) });
     }
 
     // 2) Notify via Resend. The request is already saved, so an email failure is
@@ -249,6 +256,10 @@ function handleLeadRequest(req, res) {
     }
 
     return sendJson(res, 200, { ok: true, stored: true, emailDelivered });
+    } catch (e) {
+      console.error('[api/request] handler error:', (e && e.stack) || e);
+      if (!res.headersSent) sendJson(res, 500, { ok: false, error: 'server_error', detail: String((e && e.message) || e).slice(0, 200) });
+    }
   });
 }
 

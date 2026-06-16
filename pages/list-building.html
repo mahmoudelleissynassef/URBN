@@ -269,7 +269,29 @@ async function submitListing(btn) {
   });
   setBtnBusy(btn, false);
 
-  if (!result.ok) { showFail(requestFailHTML() + '<br>Your photos uploaded, but the listing record was not saved — please resubmit.'); return; }
+  if (!result.ok) {
+    // Roll back uploaded files so failed submissions don't orphan storage objects.
+    let rolledBack = false;
+    try {
+      const paths = [...photoPaths]; if (floorplanPath) paths.push(floorplanPath);
+      if (paths.length && URBNAuth.client) { await URBNAuth.client.storage.from('listing-media').remove(paths); rolledBack = true; }
+    } catch (e) { rolledBack = false; }
+
+    const j = result.json || {};
+    let reason;
+    if (j.error === 'validation') reason = 'The server rejected these fields: <strong>' + (j.fields || []).join(', ') + '</strong>.';
+    else if (j.error === 'rate_limited') reason = 'Too many submissions in a short time — wait about a minute, then resubmit.';
+    else if (j.error === 'storage_failed') reason = 'The server could not save the listing (database error' + (j.detail ? ': ' + j.detail : '') + ').';
+    else if (j.error === 'payload_too_large') reason = 'The submission was too large to send.';
+    else if (j.error) reason = 'Server error: <strong>' + j.error + '</strong>' + (j.detail ? ' — ' + j.detail : '') + ' (HTTP ' + (result.status || '?') + ').';
+    else reason = 'The listing could not be saved (HTTP ' + (result.status || 'network error') + ').';
+
+    const fileNote = rolledBack
+      ? 'Your uploaded photos were removed, so nothing is orphaned — fix the above and resubmit.'
+      : 'Note: your photos may already be uploaded; resubmitting re-uploads them.';
+    showFail(reason + '<br>' + fileNote + '<br>If this persists, email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.');
+    return;
+  }
 
   const form = document.getElementById('ll-form');
   form.innerHTML = `
