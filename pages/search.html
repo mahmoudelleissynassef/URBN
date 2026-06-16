@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Browse Offices — URBN</title>
+  <meta name="description" content="Browse verified Grade A and A+ office buildings across 13 Africa & MENA markets. Filter by market, district, available area, desks, certifications and fit-out condition."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/search.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="Browse Offices — URBN"/>
+  <meta property="og:description" content="Browse verified Grade A and A+ office buildings across 13 Africa & MENA markets."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/search.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Browse Offices — URBN"/>
+  <meta name="twitter:description" content="Browse verified Grade A and A+ office buildings across 13 Africa & MENA markets."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
@@ -89,7 +102,7 @@
   <div style="flex:1;padding:32px 36px;overflow-y:auto;">
     <div class="flex-b mb32">
       <div>
-        <h2 style="font-size:28px;" id="search-title">All Markets</h2>
+        <h1 style="font-size:28px;" id="search-title">Browse Offices</h1>
         <p style="font-size:12px;color:var(--text-2);margin-top:4px;" id="search-count">Loading...</p>
       </div>
       <select class="fi fi-sel" id="sort-sel" onchange="applyFilters()" style="width:170px;font-size:12px;">
@@ -101,9 +114,13 @@
       </select>
     </div>
     <div id="results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;"></div>
-    <div id="no-results" class="hidden" style="text-align:center;padding:80px 0;color:var(--text-2);">
-      <div style="font-family:var(--fd);font-size:28px;margin-bottom:8px;">No Offices Found</div>
-      <p>Try adjusting your filters.</p>
+    <div id="no-results" class="hidden" style="text-align:center;padding:72px 24px;color:var(--text-2);">
+      <div style="font-family:var(--fd);font-size:28px;margin-bottom:8px;color:var(--text);">No offices match these filters</div>
+      <p style="max-width:440px;margin:0 auto 22px;line-height:1.7;">Inventory in some markets is still being verified. Loosen a filter, or let URBN build you a curated shortlist of verified buildings within 48 hours.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="resetFilters()">Reset Filters</button>
+        <a href="market-scan.html" class="btn btn-navy">Request a Market Scan →</a>
+      </div>
     </div>
   </div>
 </div>
@@ -122,8 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Market chips
   const mc = document.getElementById('market-chips');
   URBN_DATA.markets.forEach(m => {
+    const count = URBN_DATA.buildings.filter(b => b.market === m.id).length;
     const btn = document.createElement('button');
-    btn.className = 'chip'; btn.textContent = m.name;
+    btn.className = 'chip'; if (!count) btn.classList.add('chip-empty');
+    btn.innerHTML = `${m.name} <span class="chip-count">${count}</span>`;
     btn.onclick = () => toggleMarket(m.id, btn);
     mc.appendChild(btn);
   });
@@ -207,7 +226,7 @@ function applyFilters() {
   if (sort === 'size-desc') res.sort((a,b) => b.gla - a.gla);
   if (sort === 'grade') res.sort((a,b) => a.grade==='A+' ? -1 : 1);
 
-  const mnames = F.market.length ? F.market.map(id => URBN_DATA.markets.find(m=>m.id===id)?.name).join(', ') : 'All Markets';
+  const mnames = F.market.length ? F.market.map(id => URBN_DATA.markets.find(m=>m.id===id)?.name).join(', ') : 'Browse Offices';
   document.getElementById('search-title').textContent = mnames;
   document.getElementById('search-count').textContent = `${res.length} building${res.length!==1?'s':''} found`;
 

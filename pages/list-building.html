@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>List Your Building — URBN</title>
+  <meta name="description" content="For landlords and office operators: list a verified Grade A building with URBN to reach qualified corporate demand through protected, commission-secured introductions."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/list-building.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="List Your Building — URBN"/>
+  <meta property="og:description" content="Reach qualified corporate demand through protected, commission-secured introductions."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/list-building.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="List Your Building — URBN"/>
+  <meta name="twitter:description" content="Reach qualified corporate demand through protected, commission-secured introductions."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w-sm">
+    <div class="mb48">
+      <span class="overline label-navy">For Operators &amp; Landlords</span>
+      <h1 style="font-size:44px;">List Your<br><em>Building</em></h1>
+      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;">URBN connects verified Grade A and A+ buildings with corporate occupiers and multinationals entering Africa &amp; MENA. Every enquiry is a qualified corporate requirement, and every introduction is protected.</p>
+    </div>
+
+    <div class="g3" style="margin-bottom:44px;">
+      <div class="reason"><div class="reason-num">01</div><h4>Qualified corporate demand</h4><p>Occupiers reach you with a defined market, area, and timeline — not speculative enquiries.</p></div>
+      <div class="reason"><div class="reason-num">02</div><h4>Protected introductions</h4><p>Each introduction is timestamped, logged, and commission-protected for 24 months. No disputed origination.</p></div>
+      <div class="reason"><div class="reason-num">03</div><h4>Verified, not recycled</h4><p>Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
+    </div>
+
+    <div id="ll-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
+      <div class="fr2">
+        <div class="fg"><label class="fl">Your Name</label><input type="text" class="fi" id="ll-name" placeholder="Full name"><div class="fld-err" id="err-ll-name">Enter your name.</div></div>
+        <div class="fg"><label class="fl">Work Email</label><input type="email" class="fi" id="ll-email" placeholder="you@company.com"><div class="fld-err" id="err-ll-email">Enter a valid work email address.</div></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Company / Operator</label><input type="text" class="fi" id="ll-company" placeholder="Landlord or operator name"><div class="fld-err" id="err-ll-company">Enter your company or operator name.</div></div>
+        <div class="fg"><label class="fl">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name"><div class="fld-err" id="err-ll-building">Enter the building name.</div></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Market</label>
+          <select class="fi fi-sel" id="ll-market"><option value="">Select market...</option></select>
+          <div class="fld-err" id="err-ll-market">Select the building&#39;s market.</div>
+        </div>
+        <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"></div>
+        <div class="fg"><label class="fl">Building Grade</label>
+          <select class="fi fi-sel" id="ll-grade"><option value="">Select grade...</option><option>A+</option><option>A</option><option>Other</option></select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Floor plates, certifications, current availability, fit-out condition..."></textarea></div>
+      <!-- Honeypot -->
+      <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="ll-website" tabindex="-1" autocomplete="off"></label></div>
+      <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
+        <label class="consent">
+          <input type="checkbox" id="ll-consent">
+          <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</span>
+        </label>
+        <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing()">Submit Building</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and responds within 3 business days. We do not publish without verifying the listing at source.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../');
+  injectFooter('../');
+  const sel = document.getElementById('ll-market');
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+});
+
+function submitListing() {
+  if (botFilled('ll-website')) return; // honeypot
+
+  const name    = document.getElementById('ll-name').value.trim();
+  const email   = document.getElementById('ll-email').value.trim();
+  const company = document.getElementById('ll-company').value.trim();
+  const building= document.getElementById('ll-building').value.trim();
+  const market  = document.getElementById('ll-market').value;
+  const consent = document.getElementById('ll-consent').checked;
+
+  let ok = true;
+  fldErr('ll-name',    'err-ll-name',    !name);              ok = ok && !!name;
+  const emailOk = isCorporateEmail(email);
+  fldErr('ll-email',   'err-ll-email',   !emailOk);           ok = ok && emailOk;
+  fldErr('ll-company', 'err-ll-company', !company);           ok = ok && !!company;
+  fldErr('ll-building','err-ll-building',!building);          ok = ok && !!building;
+  fldErr('ll-market',  'err-ll-market',  !market);            ok = ok && !!market;
+  document.getElementById('err-ll-consent').classList.toggle('show', !consent);
+  ok = ok && consent;
+
+  if (!ok) { toast('Please complete the highlighted fields.', 'error'); return; }
+
+  // NOTE: wire to a real endpoint (CRM/email) before launch — currently UI-only.
+  const form = document.getElementById('ll-form');
+  form.innerHTML = `
+    <div class="form-success">
+      <h3>Submission received</h3>
+      <p>Thank you. URBN will review <strong style="color:var(--navy);">${building}</strong> and respond to <strong style="color:var(--navy);">${email}</strong> within 3 business days.</p>
+      <p style="margin-top:10px;">Questions? Email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.</p>
+    </div>`;
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+</body>
+</html>

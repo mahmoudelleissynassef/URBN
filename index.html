@@ -4,7 +4,31 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>URBN — Corporate Office Intelligence · Africa & MENA</title>
+  <meta name="description" content="URBN is verified Grade A office intelligence for corporate occupiers entering Africa & MENA — browse inventory across 13 markets or request a curated Market Scan shortlist within 48 hours."/>
+  <link rel="canonical" href="https://urbnoffices.com/"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="URBN — Corporate Office Intelligence · Africa & MENA"/>
+  <meta property="og:description" content="Verified Grade A office options for corporate occupiers and multinationals across Africa & MENA. Browse inventory or request a curated Market Scan."/>
+  <meta property="og:url" content="https://urbnoffices.com/"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="URBN — Corporate Office Intelligence · Africa & MENA"/>
+  <meta name="twitter:description" content="Verified Grade A office options for corporate occupiers and multinationals across Africa & MENA."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="css/urbn.css"/>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "URBN",
+    "description": "Corporate office intelligence and protected-introduction platform for occupiers entering Africa & MENA.",
+    "url": "https://urbnoffices.com/",
+    "logo": "https://urbnoffices.com/favicon.svg",
+    "areaServed": ["Africa", "Middle East and North Africa"]
+  }
+  </script>
 </head>
 <body>
 <div id="nav-placeholder"></div>
@@ -23,9 +47,10 @@
     <h1>Find Office Space in<br><em>Opaque Markets</em><br>Before You Land.</h1>
     <p class="hero-sub">Verified Grade A office options for corporate occupiers, multinationals, and expansion teams across Africa and MENA.</p>
     <div class="hero-actions">
-      <a href="pages/search.html" class="btn btn-inv btn-xl">Browse Offices</a>
-      <a href="pages/market-scan.html" class="btn btn-inv-o btn-xl">Request Market Scan</a>
+      <a href="pages/market-scan.html" class="btn btn-inv btn-xl">Request Market Scan</a>
+      <a href="pages/search.html" class="btn btn-inv-o btn-xl">Browse Offices</a>
     </div>
+    <p class="hero-help">Want a verified shortlist in 48 hours? Request a Market Scan. Already know what you&#39;re looking for? Browse offices.</p>
   </div>
 </section>
 
@@ -48,7 +73,7 @@
   <div class="w">
     <div class="section-head-row">
       <div><div class="section-rule"></div><h2>Markets</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">13 cities across Africa and MENA. Grade A office inventory verified directly.</p></div>
-      <a href="pages/search.html" class="btn btn-ghost">All Markets →</a>
+      <a href="pages/markets.html" class="btn btn-ghost">All Markets →</a>
     </div>
     <div class="g4c" id="markets-grid"></div>
   </div>
@@ -109,8 +134,8 @@
     <h2 style="margin-bottom:14px;">Know Your Options Before You Land.</h2>
     <p style="font-size:16px;color:var(--text-2);max-width:440px;margin:0 auto 36px;line-height:1.78;">Request a curated Market Scan and receive a verified shortlist of buildings within 48 hours.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a href="pages/search.html" class="btn btn-navy btn-xl">Browse Offices</a>
-      <a href="pages/market-scan.html" class="btn btn-outline btn-xl">Request Market Scan</a>
+      <a href="pages/market-scan.html" class="btn btn-navy btn-xl">Request Market Scan</a>
+      <a href="pages/search.html" class="btn btn-outline btn-xl">Browse Offices</a>
     </div>
   </div>
 </section>
@@ -119,16 +144,22 @@
 <div class="mbg" id="access-modal">
   <div class="modal">
     <div class="mh"><div><div class="label mb12">Restricted Access</div><h3>Request Access</h3></div><div class="mx">X</div></div>
-    <div class="mb">
-      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;line-height:1.7;">Full building details and introduction requests are available to registered corporate tenants.</p>
-      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" placeholder="you@company.com"></div>
-      <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" placeholder="Your company"></div>
-      <div class="fg"><label class="fl">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select></div>
-      <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" placeholder="e.g. 800"></div>
+    <div class="mb" id="access-body">
+      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;line-height:1.7;">Registering unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and the ability to request protected introductions</strong> across all 13 markets. Credentials are issued to verified corporate tenants.</p>
+      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="reg-email" placeholder="you@company.com"><div class="fld-err" id="err-reg-email">Enter a valid corporate email address.</div></div>
+      <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" id="reg-company" placeholder="Your company"><div class="fld-err" id="err-reg-company">Enter your company name.</div></div>
+      <div class="fg"><label class="fl">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select><div class="fld-err" id="err-reg-market">Please select a target market.</div></div>
+      <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" id="reg-area" placeholder="e.g. 800"></div>
+      <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="reg-website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="consent">
+        <input type="checkbox" id="reg-consent">
+        <span>I agree to URBN processing these details to assess and grant access, per the <a href="pages/privacy.html">Privacy Policy</a> and <a href="pages/terms.html">Terms of Use</a>.</span>
+      </label>
+      <div class="fld-err" id="err-reg-consent" style="margin-top:8px;">Please confirm you accept the Privacy Policy and Terms of Use.</div>
     </div>
-    <div class="mf">
+    <div class="mf" id="access-actions">
       <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
-      <button class="btn btn-navy" onclick="showToast('Access request submitted. You will receive credentials within 24 hours.');closeModal('access-modal')">Submit Request</button>
+      <button class="btn btn-navy" onclick="submitAccess()">Submit Request</button>
     </div>
   </div>
 </div>
@@ -194,6 +225,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   const sel=document.getElementById('reg-market');
   URBN_DATA.markets.forEach(m=>sel.innerHTML+=`<option value="${m.id}">${m.name}, ${m.country}</option>`);
 });
+
+function submitAccess(){
+  if (botFilled('reg-website')) return; // honeypot
+
+  const email=document.getElementById('reg-email').value.trim();
+  const company=document.getElementById('reg-company').value.trim();
+  const market=document.getElementById('reg-market').value;
+  const consent=document.getElementById('reg-consent').checked;
+
+  let ok=true;
+  const emailOk=isCorporateEmail(email);
+  fldErr('reg-email','err-reg-email',!emailOk);      ok=ok&&emailOk;
+  fldErr('reg-company','err-reg-company',!company);  ok=ok&&!!company;
+  fldErr('reg-market','err-reg-market',!market);     ok=ok&&!!market;
+  document.getElementById('err-reg-consent').classList.toggle('show',!consent); ok=ok&&consent;
+
+  if(!ok){ showToast('Please complete the highlighted fields.','error'); return; }
+
+  // NOTE: wire to a real endpoint (CRM/email) before launch — currently UI-only.
+  document.getElementById('access-body').innerHTML =
+    `<div class="form-success"><h3>Request received</h3><p>Thank you. URBN will review your request and issue credentials to <strong style="color:var(--navy);">${email}</strong> within 24 business hours.</p></div>`;
+  document.getElementById('access-actions').innerHTML =
+    `<button class="btn btn-navy" onclick="closeModal('access-modal')">Close</button>`;
+}
 </script>
 </body>
 </html>

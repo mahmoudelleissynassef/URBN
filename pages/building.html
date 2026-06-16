@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Building — URBN</title>
+  <meta name="description" content="Verified Grade A office building — floor-by-floor availability, floor plates, asking rents, amenities and protected introductions via URBN."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/building.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="Verified Office Building — URBN"/>
+  <meta property="og:description" content="Floor-by-floor availability, asking rents, amenities and protected introductions via URBN."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/building.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Verified Office Building — URBN"/>
+  <meta name="twitter:description" content="Floor-by-floor availability, asking rents and protected introductions via URBN."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
@@ -87,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
   const saved = USER.saved.includes(B.id);
-  const img = getImg(B.market);
+  const img = imgFor(B);
   document.title = B.name + ' — URBN';
 
   document.getElementById('bpage').innerHTML = `

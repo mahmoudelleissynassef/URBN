@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Markets — URBN</title>
+  <meta name="description" content="The 13 office markets URBN covers across Africa & MENA — verified building counts, indicative average rents and a route into pre-filtered search for each city."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/markets.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="Markets — URBN"/>
+  <meta property="og:description" content="13 office markets across Africa & MENA — verified building counts and indicative average rents."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/markets.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Markets — URBN"/>
+  <meta name="twitter:description" content="13 office markets across Africa & MENA — verified building counts and indicative average rents."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w">
+    <div class="mb48">
+      <span class="overline label-navy">Coverage</span>
+      <h1 style="font-size:44px;">Markets</h1>
+      <p style="font-size:15px;color:var(--text-2);margin-top:14px;max-width:520px;line-height:1.8;">URBN covers 13 office markets across Africa &amp; MENA. Each is verified directly at source. Choose a market to browse its inventory, or request a managed Market Scan.</p>
+    </div>
+    <div class="g4c" id="markets-grid"></div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../');
+  injectFooter('../');
+  const mg = document.getElementById('markets-grid');
+  URBN_DATA.markets.forEach(m => {
+    const s = URBN_DATA.marketStats[m.id];
+    const bc = URBN_DATA.buildings.filter(b => b.market === m.id).length;
+    const subs = m.submarkets.slice(0, 2).join(', ');
+    mg.innerHTML += `<a href="search.html?m=${m.id}" class="city-card">
+      <div class="city-card-region">${m.region}</div>
+      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-divider"></div>
+      <div class="city-card-data">
+        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${bc} listed</span></div>
+        <div class="city-card-row"><span class="city-card-label">Districts</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:120px;">${subs}</span></div>
+        ${s ? `<div class="city-card-row"><span class="city-card-label">Avg Rent</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>` : ''}
+      </div>
+      <div class="city-card-footer">${bc ? 'Browse offices →' : 'Request a Market Scan →'}</div>
+    </a>`;
+  });
+});
+</script>
+</body>
+</html>

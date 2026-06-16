@@ -41,7 +41,7 @@ function injectNav(base='') {
       <div class="nav-links">
         <a href="${base}pages/search.html">Offices</a>
         <div class="nav-dd">
-          <a href="#">Markets</a>
+          <a href="${base}pages/markets.html">Markets</a>
           <div class="nav-dd-panel">
             <a href="${base}pages/search.html?m=cairo">Cairo</a>
             <a href="${base}pages/search.html?m=dubai">Dubai</a>
@@ -55,6 +55,7 @@ function injectNav(base='') {
         <a href="${base}pages/buildings.html">Buildings</a>
         <a href="${base}pages/districts.html">Districts</a>
         <a href="${base}pages/industrial.html">Industrial</a>
+        <a href="${base}pages/list-building.html">List Your Building</a>
         <div class="nav-sep"></div>
         <a href="${base}pages/market-scan.html">Contact</a>
       </div>
@@ -69,6 +70,7 @@ function injectNav(base='') {
   </nav>
   <div class="mobile-nav" id="mobile-nav">
     <a href="${base}pages/search.html">Offices</a>
+    <a href="${base}pages/markets.html">Markets</a>
     <a href="${base}pages/search.html?m=cairo">Cairo</a>
     <a href="${base}pages/search.html?m=dubai">Dubai</a>
     <a href="${base}pages/search.html?m=riyadh">Riyadh</a>
@@ -79,6 +81,7 @@ function injectNav(base='') {
     <a href="${base}pages/buildings.html">Buildings</a>
     <a href="${base}pages/districts.html">Districts</a>
     <a href="${base}pages/industrial.html">Industrial</a>
+    <a href="${base}pages/list-building.html">List Your Building</a>
     <a href="${base}pages/market-scan.html">Contact</a>
     <div class="mobile-nav-actions">
       <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm">Dashboard</a>
@@ -113,6 +116,7 @@ function injectFooter(base='') {
           <div class="fc-title">Platform</div>
           <ul>
             <li><a href="${base}pages/search.html">Browse Offices</a></li>
+            <li><a href="${base}pages/markets.html">Markets</a></li>
             <li><a href="${base}pages/buildings.html">Buildings</a></li>
             <li><a href="${base}pages/districts.html">Districts</a></li>
             <li><a href="${base}pages/industrial.html">Industrial</a></li>
@@ -133,6 +137,7 @@ function injectFooter(base='') {
         <div class="fc">
           <div class="fc-title">Company</div>
           <ul>
+            <li><a href="${base}pages/list-building.html">List Your Building</a></li>
             <li><a href="${base}pages/dashboards/tenant.html">Dashboard</a></li>
             <li><a href="${base}pages/managers.html">Contacts</a></li>
             <li><a href="${base}pages/subscription.html">Access & Pricing</a></li>
@@ -142,9 +147,9 @@ function injectFooter(base='') {
         <div class="fc">
           <div class="fc-title">Legal</div>
           <ul>
-            <li><a href="${base}pages/documents.html">Terms of Use</a></li>
+            <li><a href="${base}pages/terms.html">Terms of Use</a></li>
             <li><a href="${base}pages/documents.html">Commission Agreement</a></li>
-            <li><a href="${base}pages/documents.html">Privacy Policy</a></li>
+            <li><a href="${base}pages/privacy.html">Privacy Policy</a></li>
             <li><a href="${base}pages/login.html">Sign In</a></li>
           </ul>
         </div>
@@ -159,15 +164,33 @@ function injectFooter(base='') {
 }
 
 // ── Toast ────────────────────────────────────────────────
-function showToast(msg) {
+function showToast(msg, type='success') {
   let tc = document.querySelector('.tc');
   if (!tc) { tc = document.createElement('div'); tc.className='tc'; document.body.appendChild(tc); }
   const t = document.createElement('div');
-  t.className='toast';
+  t.className = 'toast' + (type ? ' toast-'+type : '');
   t.innerHTML=`<span class="tm">${msg}</span>`;
   tc.appendChild(t);
   setTimeout(()=>t.remove(),3800);
 }
+// Alias used across pages (building.html, market-scan.html, …)
+function toast(msg, type) { return showToast(msg, type); }
+
+// ── Form validation helpers ──────────────────────────────
+function fldErr(inputId, errId, show) {
+  const i = document.getElementById(inputId), e = document.getElementById(errId);
+  if (i) i.classList.toggle('fi-err', !!show);
+  if (e) e.classList.toggle('show', !!show);
+}
+function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v||'').trim()); }
+const FREE_EMAIL_DOMAINS = ['gmail.com','yahoo.com','hotmail.com','outlook.com','live.com','icloud.com','aol.com','proton.me','protonmail.com','gmx.com','mail.com'];
+// A plausible corporate address: valid format and not a consumer webmail domain.
+function isCorporateEmail(v) {
+  if (!isEmail(v)) return false;
+  return !FREE_EMAIL_DOMAINS.includes(v.trim().split('@')[1].toLowerCase());
+}
+// Honeypot: returns true if the hidden anti-spam field was filled (i.e. a bot).
+function botFilled(id) { const el = document.getElementById(id); return !!(el && el.value.trim()); }
 
 // ── Save ─────────────────────────────────────────────────
 function heartSVG(on) {
@@ -201,8 +224,20 @@ function initTabs(wrap) {
 function p(n){return new URLSearchParams(window.location.search).get(n);}
 function fmt(n){return n?.toLocaleString()||'—';}
 function getImg(m){return IMG[m]||IMG.cairo;}
+// Per-building image first (so distinct listings never share a landmark),
+// falling back to the market image, then a neutral default.
+function imgFor(b){
+  if (b && typeof URBN_DATA!=='undefined' && URBN_DATA.buildingImages && URBN_DATA.buildingImages[b.id]) {
+    return URBN_DATA.buildingImages[b.id];
+  }
+  return getImg(b && b.market);
+}
 function gradeTag(g){
   return `<span class="lc-grade-tag">${g==='A+'?'Grade A+':'Grade A'}</span>`;
+}
+// Inline grade badge (used on building detail + units view, not absolutely positioned)
+function gradeB(g){
+  return `<span class="badge badge-grade">${g==='A+'?'Grade A+':'Grade A'}</span>`;
 }
 
 // ── Listing card ─────────────────────────────────────────
@@ -212,7 +247,7 @@ function renderCard(b, base='') {
   return `
   <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
     <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.name}" loading="lazy">
+      <img src="${imgFor(b)}" alt="${b.name} — ${b.submarket}, ${mkt?.country||''}" loading="lazy">
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
@@ -254,7 +289,7 @@ function renderAnonCard(b, base='') {
   return `
   <div class="lc" onclick="openModal('access-modal')">
     <div class="lc-img">
-      <img src="${getImg(b.market)}" alt="${b.anonName}" loading="lazy">
+      <img src="${imgFor(b)}" alt="${b.anonName}" loading="lazy">
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
     </div>

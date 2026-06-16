@@ -273,6 +273,36 @@ const URBN_DATA = {
     },
   ],
 
+  // Per-building exterior imagery.
+  // Each distinct building gets its own image so no two listings in the same
+  // market reuse the same photo (previously every building in a market shared
+  // one landmark, e.g. all Dubai cards showed the Burj Khalifa). These are
+  // generic Grade-A office/tower placeholders until verified building photos
+  // are supplied — never a famous landmark standing in for a specific address.
+  buildingImages: {
+    // Cairo — four distinct images
+    b001: 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=600&q=80',
+    b002: 'https://images.unsplash.com/photo-1554118879-4e3c0b34c2f8?w=600&q=80',
+    b003: 'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=600&q=80',
+    b004: 'https://images.unsplash.com/photo-1568385247005-0d371d214e26?w=600&q=80',
+    // Dubai — three distinct images
+    b005: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=80',
+    b006: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=600&q=80',
+    b007: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80',
+    // Single-building markets
+    b008: 'https://images.unsplash.com/photo-1586276393635-5ecd8a851acc?w=600&q=80', // Riyadh
+    b009: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80', // Casablanca
+    b010: 'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=600&q=80', // Nairobi
+    b011: 'https://images.unsplash.com/photo-1618523023100-7adc284d4f05?w=600&q=80', // Lagos
+    b012: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=600&q=80', // Johannesburg
+    b013: 'https://images.unsplash.com/photo-1554118879-4e3c0b34c2f8?w=600&q=80', // Accra
+    b014: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=600&q=80', // Addis
+    b015: 'https://images.unsplash.com/photo-1553244977-ef09dd7706aa?w=600&q=80', // Amman
+    b016: 'https://images.unsplash.com/photo-1574515944794-d6dedc7150de?w=600&q=80', // Luanda
+    b017: 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=600&q=80', // Tunis
+    b018: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80', // Cape Town
+  },
+
   // Market stats for Bloomberg dashboard
   marketStats: {
     cairo: { vacancyRate: 14.2, avgRent: 1100, totalStock: 1850000, newSupply: 125000, absorption: 95000, trend: 'up' },
