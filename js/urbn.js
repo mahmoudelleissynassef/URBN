@@ -515,12 +515,14 @@ function renderCard(b, base='') {
   const saved=USER.saved.includes(b.id);
   const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
   const fallback = getImg(b.market);
+  const blur = b.imageClear === false;   // free/anonymous viewers see a blurred tease
   return `
   <div class="lc" onclick="window.location.href='/building?id=${b.id}'">
     <div class="lc-img">
-      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name}" loading="lazy">
+      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
+      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
       <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
     </div>
     <div class="lc-body">

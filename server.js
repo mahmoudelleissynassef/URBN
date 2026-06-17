@@ -1191,6 +1191,16 @@ async function approvedGrantsFor(userId) {
   } catch (e) {}
   return set;
 }
+// Is the user on a paid tier? (active company_subscription that isn't 'free')
+async function isPayingUser(userId) {
+  if (!userId) return false;
+  try {
+    const prof = (await sbGet(`profiles?id=eq.${userId}&select=company_id`))[0];
+    if (!prof || !prof.company_id) return false;
+    const subs = await sbGet(`company_subscriptions?company_id=eq.${prof.company_id}&status=eq.active&select=tier`);
+    return subs.some((s) => s.tier && String(s.tier).toLowerCase() !== 'free');
+  } catch (e) { return false; }
+}
 // Create a short-lived signed URL for a private storage object (service role).
 async function signStorageUrl(bucket, objectPath, expiresIn = 3600) {
   const base = process.env.SUPABASE_URL;
@@ -1211,8 +1221,8 @@ function handlePublicListings(req, res) {
   (async () => {
     try {
       const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-      let grantedIds = new Set(), admin = false;
-      if (token) { const user = await getAuthUser(token); if (user && user.id) { admin = await isAdmin(user.id); if (!admin) grantedIds = await approvedGrantsFor(user.id); } }
+      let grantedIds = new Set(), admin = false, paying = false;
+      if (token) { const user = await getAuthUser(token); if (user && user.id) { admin = await isAdmin(user.id); if (admin) { paying = true; } else { grantedIds = await approvedGrantsFor(user.id); paying = await isPayingUser(user.id); } } }
       const [buildings, units, media] = await Promise.all([
         sbGet('buildings?status=eq.approved&select=*'),
         sbGet('units?status=eq.approved&select=*'),
@@ -1231,6 +1241,9 @@ function handlePublicListings(req, res) {
           const main = ms.find((m) => m.is_main) || ms.find((m) => m.approved_for_public) || ms[0];
           if (main && main.path) { const url = await signStorageUrl(main.bucket, main.path, 3600); if (url) shaped.image = url; }
         }
+        // Photos are shown clear to admins, reveal-granted users and paying tiers;
+        // free/anonymous viewers see the public-safe image BLURRED (an upsell tease).
+        shaped.imageClear = granted || paying;
         out.push(shaped);
       }
       return sendJson(res, 200, { ok: true, buildings: out });
