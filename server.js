@@ -37,6 +37,13 @@ const MARKET_CURRENCY = {
   amman: 'JOD', tunis: 'TND', algiers: 'DZD', addis: 'ETB', nairobi: 'KES',
   accra: 'GHS', lagos: 'NGN', abuja: 'NGN', johannesburg: 'ZAR', capetown: 'ZAR', luanda: 'AOA',
 };
+const MARKET_NAMES = {
+  cairo: 'Cairo', dubai: 'Dubai', riyadh: 'Riyadh', casablanca: 'Casablanca', rabat: 'Rabat',
+  amman: 'Amman', tunis: 'Tunis', algiers: 'Algiers', addis: 'Addis Ababa', nairobi: 'Nairobi',
+  accra: 'Accra', lagos: 'Lagos', abuja: 'Abuja', johannesburg: 'Johannesburg', capetown: 'Cape Town', luanda: 'Luanda',
+  dakar: 'Dakar', abidjan: 'Abidjan',
+};
+function marketName(id) { return MARKET_NAMES[id] || (id ? String(id) : ''); }
 const FRANCOPHONE_WA_MARKETS = ['dakar', 'abidjan', 'bamako', 'ouagadougou', 'lome', 'cotonou', 'niamey'];
 function allowedCurrenciesForMarket(marketId) {
   const local = MARKET_CURRENCY[marketId];
@@ -114,13 +121,13 @@ async function insertSupabase(row) {
   return JSON.parse(r.body || '[]');
 }
 
-async function sendResendEmail({ subject, text, html, replyTo }) {
+async function sendResendEmail({ subject, text, html, replyTo, from }) {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.LEAD_FROM;
+  const fromAddr = from || process.env.LEAD_FROM;
   const to = process.env.LEAD_TO;
-  if (!key || !from || !to) throw new Error('resend_env_missing');
+  if (!key || !fromAddr || !to) throw new Error('resend_env_missing');
   const body = JSON.stringify({
-    from, to: [to], subject, text, html,
+    from: fromAddr, to: [to], subject, text, html,
     ...(replyTo ? { reply_to: replyTo } : {}),
   });
   const r = await httpsRequest('https://api.resend.com/emails', {
@@ -133,6 +140,90 @@ async function sendResendEmail({ subject, text, html, replyTo }) {
   }, body);
   if (r.status < 200 || r.status >= 300) throw new Error(`resend_${r.status}:${r.body.slice(0, 300)}`);
   return JSON.parse(r.body || '{}');
+}
+
+// ── Internal notification email builders ─────────────────────────────────────
+function emailRow(label, value, isHtml) {
+  const v = (value == null || value === '') ? '—' : (isHtml ? value : escapeHtml(String(value)));
+  return `<tr><td style="padding:6px 16px 6px 0;color:#6B7280;font-size:13px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td><td style="padding:6px 0;color:#111418;font-size:13px;word-break:break-word;">${v}</td></tr>`;
+}
+function emailSection(title, rowsHtml) {
+  return `<tr><td style="padding:18px 24px 2px;"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#243A5E;border-bottom:1px solid #E6E8EB;padding-bottom:6px;margin-bottom:8px;">${escapeHtml(title)}</div><table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${rowsHtml}</table></td></tr>`;
+}
+function emailShell(headerTitle, badge, inner) {
+  return `<div style="background:#F7F8F9;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <table cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;width:100%;background:#ffffff;border:1px solid #E6E8EB;border-radius:6px;overflow:hidden;">
+      <tr><td style="background:#243A5E;padding:20px 24px;">
+        <div style="color:#ffffff;font-size:18px;font-weight:600;">${escapeHtml(headerTitle)}</div>
+        ${badge ? `<div style="margin-top:8px;"><span style="display:inline-block;background:#C2A36B;color:#1C2E4A;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:3px;">${escapeHtml(badge)}</span></div>` : ''}
+      </td></tr>
+      ${inner}
+      <tr><td style="padding:14px 24px;background:#F7F8F9;color:#9CA3AF;font-size:11px;border-top:1px solid #E6E8EB;">URBN internal notification · do not forward externally.</td></tr>
+    </table>
+  </div>`;
+}
+function rawPayloadRow(payload) {
+  return `<tr><td style="padding:6px 24px 18px;"><div style="font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Raw payload (technical)</div><pre style="background:#F0F1F3;border:1px solid #E6E8EB;padding:10px;font-size:10px;color:#6B7280;white-space:pre-wrap;word-break:break-word;border-radius:4px;margin:0;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre></td></tr>`;
+}
+
+function buildListingEmail(data, payload, requestId, createdAt) {
+  const mkt = marketName(data.market) || (data.market || '');
+  const building = data.building || '(no name)';
+  const subject = `New listing submission: ${building} — ${mkt || '(no market)'} — Pending Review`;
+  const photoPaths = Array.isArray(data.photoPaths) ? data.photoPaths : [];
+  const floorplanYN = data.floorplanPath ? 'Yes' : 'No';
+  const bucket = data.mediaBucket || 'listing-media';
+  const ts = createdAt || new Date().toISOString();
+  const mapsCell = data.mapsUrl ? `<a href="${escapeHtml(String(data.mapsUrl))}" style="color:#243A5E;">${escapeHtml(String(data.mapsUrl))}</a>` : '—';
+  const emailCell = data.email ? `<a href="mailto:${escapeHtml(String(data.email))}" style="color:#243A5E;">${escapeHtml(String(data.email))}</a>` : '—';
+
+  const inner =
+    emailSection('Submitter Details',
+      emailRow('Name', data.name) + emailRow('Email', emailCell, true) + emailRow('Company', data.company) +
+      emailRow('Job Title', data.title) + emailRow('Submitter Type', data.submitterType)) +
+    emailSection('Building & Location',
+      emailRow('Building', data.building) + emailRow('Market', mkt) + emailRow('District', data.district) +
+      emailRow('Google Maps', mapsCell, true) + emailRow('Floor / Range', data.floor)) +
+    emailSection('Space & Offering',
+      emailRow('Fit-out Condition', data.fitOut) + emailRow('Offering Type', data.offeringType) +
+      emailRow('Area (sqm)', data.area) + emailRow('Desks / Seats', data.seats)) +
+    emailSection('Commercials',
+      emailRow('Asking Rent', data.rent) + emailRow('Currency', data.currency) + emailRow('Pricing Basis', data.pricingBasis) +
+      emailRow('Service Charge', data.serviceCharge) + emailRow('Service Charge Basis', data.serviceChargeBasis) +
+      emailRow('Availability Date', data.availabilityDate) + emailRow('Minimum Term', data.minTerm)) +
+    emailSection('Media',
+      emailRow('Photos Uploaded', String(photoPaths.length)) + emailRow('Floorplan Uploaded', floorplanYN) + emailRow('Storage Bucket', bucket)) +
+    emailSection('Storage Paths',
+      (photoPaths.length ? photoPaths.map((p, i) => emailRow('Photo ' + (i + 1), p)).join('') : emailRow('Photos', '—')) +
+      (data.floorplanPath ? emailRow('Floorplan', data.floorplanPath) : '')) +
+    emailSection('Notes', emailRow('Notes', data.message)) +
+    emailSection('System',
+      emailRow('Supabase Request ID', requestId) + emailRow('Source Page', data.sourcePage) + emailRow('Submitted', ts)) +
+    rawPayloadRow(payload);
+
+  const html = emailShell('New List Your Building Request', 'Pending Review', inner);
+  const line = (k, v) => `${k}: ${(v == null || v === '') ? '—' : v}`;
+  const text = [
+    'NEW LIST YOUR BUILDING REQUEST — PENDING REVIEW', '',
+    'SUBMITTER', line('Name', data.name), line('Email', data.email), line('Company', data.company), line('Job Title', data.title), line('Submitter Type', data.submitterType), '',
+    'BUILDING & LOCATION', line('Building', data.building), line('Market', mkt), line('District', data.district), line('Google Maps', data.mapsUrl), line('Floor / Range', data.floor), '',
+    'SPACE & OFFERING', line('Fit-out Condition', data.fitOut), line('Offering Type', data.offeringType), line('Area (sqm)', data.area), line('Desks / Seats', data.seats), '',
+    'COMMERCIALS', line('Asking Rent', data.rent), line('Currency', data.currency), line('Pricing Basis', data.pricingBasis), line('Service Charge', data.serviceCharge), line('Service Charge Basis', data.serviceChargeBasis), line('Availability Date', data.availabilityDate), line('Minimum Term', data.minTerm), '',
+    'MEDIA', line('Photos Uploaded', String(photoPaths.length)), line('Floorplan Uploaded', floorplanYN), line('Storage Bucket', bucket),
+    'Storage paths:', ...(photoPaths.length ? photoPaths.map((p, i) => '  - photo ' + (i + 1) + ': ' + p) : ['  - none']),
+    ...(data.floorplanPath ? ['  - floorplan: ' + data.floorplanPath] : []), '',
+    'NOTES', (data.message || '—'), '',
+    'SYSTEM', line('Supabase Request ID', requestId), line('Source Page', data.sourcePage), line('Submitted', ts),
+  ].join('\n');
+  return { subject, html, text };
+}
+
+function buildGenericEmail(label, fields, payload) {
+  const entries = Object.entries(fields).filter(([, v]) => v);
+  const inner = emailSection(label + ' Details', entries.map(([k, v]) => emailRow(k, v)).join('')) + rawPayloadRow(payload);
+  const html = emailShell('New ' + label + ' Request', null, inner);
+  const text = `NEW ${label.toUpperCase()} REQUEST\n\n` + entries.map(([k, v]) => `${k}: ${v}`).join('\n');
+  return { html, text };
 }
 
 function handleLeadRequest(req, res) {
@@ -225,8 +316,10 @@ function handleLeadRequest(req, res) {
     if (type === 'list-building') row.status = 'pending';
 
     // 1) Store in Supabase. This is the source of truth — failure is a hard error.
+    let requestId = null, createdAt = null;
     try {
-      await insertSupabase(row);
+      const inserted = await insertSupabase(row);
+      if (Array.isArray(inserted) && inserted[0]) { requestId = inserted[0].id || null; createdAt = inserted[0].created_at || null; }
     } catch (e) {
       console.error('[api/request] supabase insert failed:', e.message);
       return sendJson(res, 502, { ok: false, error: 'storage_failed', detail: String(e.message || '').slice(0, 300) });
@@ -237,18 +330,20 @@ function handleLeadRequest(req, res) {
     let emailDelivered = true;
     try {
       const label = REQUEST_TYPES[type];
-      const fields = { Name: name, Email: email, Company: company, Phone: phone, Market: market, Area: area, Building: building, Message: message };
-      const rows = Object.entries(fields).filter(([, v]) => v);
-      const text = `New ${label} request\n\n` +
-        rows.map(([k, v]) => `${k}: ${v}`).join('\n') +
-        `\n\nFull submission:\n${JSON.stringify(payload, null, 2)}`;
-      const html = `<h2>New ${label} request</h2>` +
-        `<table cellpadding="6" style="border-collapse:collapse">` +
-        rows.map(([k, v]) => `<tr><td style="font-weight:bold">${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join('') +
-        `</table><pre style="background:#f4f4f4;padding:12px">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`;
+      let mail, fromAddr;
+      if (type === 'list-building') {
+        // Polished internal review email, sent from the dedicated listings sender.
+        mail = buildListingEmail(data, payload, requestId, createdAt);
+        fromAddr = process.env.LISTINGS_FROM || process.env.LEAD_FROM;
+      } else {
+        const fields = { Name: name, Email: email, Company: company, Phone: phone, Market: marketName(market) || market, Area: area, Building: building, Message: message };
+        const g = buildGenericEmail(label, fields, payload);
+        mail = { subject: `New ${label} request — ${company || name || email}`, html: g.html, text: g.text };
+        fromAddr = process.env.LEAD_FROM;
+      }
       await sendResendEmail({
-        subject: `New ${label} request — ${company || name || email}`,
-        text, html, replyTo: email || undefined,
+        subject: mail.subject, text: mail.text, html: mail.html,
+        replyTo: email || undefined, from: fromAddr,
       });
     } catch (e) {
       emailDelivered = false;
