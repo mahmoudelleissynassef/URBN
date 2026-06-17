@@ -27,11 +27,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   injectNav('../'); injectFooter('../');
   const DOCS = [
-    { title: 'Terms of Use', audience: 'All users', version: 'v2.1', desc: 'Governs platform access, information architecture, and user conduct.', href: 'terms.html' },
+    { title: 'Terms of Use', audience: 'All users', version: 'v2.1', desc: 'Governs platform access, information architecture, and user conduct.', href: '/terms' },
     { title: 'Commission & Success Fee Agreement', audience: 'Corporate tenants', version: 'v1.3', desc: 'A success fee is payable for any transaction closed for a property introduced via the platform, within 24 months of introduction.', href: null },
     { title: 'Non-Circumvention Agreement', audience: 'Corporate tenants', version: 'v1.1', desc: 'Tenants may not contact landlords introduced through the platform without URBN’s written involvement.', href: null },
     { title: 'Landlord Referral Agreement', audience: 'Landlords & representatives', version: 'v1.0', desc: 'Recognition of introduction, update obligations, fee protection, and non-circumvention.', href: null },
-    { title: 'Privacy Policy', audience: 'All users', version: 'v1.2', desc: 'What we collect, why, retention, sharing, and your data rights.', href: 'privacy.html' },
+    { title: 'Privacy Policy', audience: 'All users', version: 'v1.2', desc: 'What we collect, why, retention, sharing, and your data rights.', href: '/privacy' },
   ];
   document.getElementById('docs-list').innerHTML = DOCS.map(d => `
     <div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;">
