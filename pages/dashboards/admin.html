@@ -11,19 +11,29 @@
 <div id="nav-placeholder"></div>
 <div class="pt-nav" style="padding:40px 0 80px;">
   <div class="w">
-    <div class="mb32"><span class="overline label-navy">Admin</span><h1 style="font-size:40px;">Listing Review Console</h1></div>
+    <div class="mb32"><span class="overline label-navy">Admin</span><h1 style="font-size:40px;">URBN Admin Console</h1></div>
     <div id="admin-gate"><div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">CHECKING ACCESS…</div></div>
     <div id="admin-app" class="hidden">
-      <div class="chips" style="margin-bottom:22px;">
-        <button class="chip on" id="tab-pending" onclick="showTab('pending')">Pending listings</button>
+      <div class="chips" style="margin-bottom:22px;flex-wrap:wrap;">
+        <button class="chip on" id="tab-overview" onclick="showTab('overview')">Overview</button>
+        <button class="chip" id="tab-pending" onclick="showTab('pending')">Pending listings</button>
         <button class="chip" id="tab-batches" onclick="showTab('batches')">Pending batches</button>
         <button class="chip" id="tab-approved" onclick="showTab('approved')">Approved</button>
         <button class="chip" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
+        <button class="chip" id="tab-membership" onclick="showTab('membership')">Membership</button>
+        <button class="chip" id="tab-users" onclick="showTab('users')">Users</button>
+        <button class="chip" id="tab-companies" onclick="showTab('companies')">Companies</button>
+        <button class="chip" id="tab-analytics" onclick="showTab('analytics')">Analytics</button>
       </div>
-      <div id="panel-pending"></div>
+      <div id="panel-overview"></div>
+      <div id="panel-pending" class="hidden"></div>
       <div id="panel-batches" class="hidden"></div>
       <div id="panel-approved" class="hidden"></div>
       <div id="panel-rejected" class="hidden"></div>
+      <div id="panel-membership" class="hidden"></div>
+      <div id="panel-users" class="hidden"></div>
+      <div id="panel-companies" class="hidden"></div>
+      <div id="panel-analytics" class="hidden"></div>
     </div>
   </div>
 </div>
@@ -31,6 +41,9 @@
 <script src="../../data/data.js"></script>
 <script src="../../js/urbn.js"></script>
 <script>
+const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'membership', 'users', 'companies', 'analytics'];
+const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, membership: loadMembership, users: loadUsers, companies: loadCompanies, analytics: loadAnalytics };
+
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
   const user = await URBNAuth.requireAuth('/pages/signin.html');
@@ -42,12 +55,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   document.getElementById('admin-gate').classList.add('hidden');
   document.getElementById('admin-app').classList.remove('hidden');
-  loadPending();
+  const tab = new URLSearchParams(location.search).get('tab');
+  showTab(TABS.includes(tab) ? tab : 'overview');
 });
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 function fmtDate(s) { try { return new Date(s).toISOString().split('T')[0]; } catch (e) { return s || ''; } }
 function row(label, val) { return (val == null || val === '') ? '' : `<div style="display:flex;gap:8px;padding:2px 0;font-size:12.5px;"><span style="color:var(--text-2);min-width:130px;">${esc(label)}</span><span>${esc(val)}</span></div>`; }
+function loadingBox() { return '<div style="padding:30px 0;color:var(--text-2);font-size:13px;">Loading…</div>'; }
+function emptyBox(msg) { return `<div style="padding:30px 0;color:var(--text-2);">${esc(msg)}</div>`; }
+function errBox(j) { return `<div class="form-note"><p>Could not load (${esc((j && j.error) || 'error')}).</p></div>`; }
 
 async function adminFetch(path, method, body) {
   await URBNAuth.init();
@@ -60,19 +77,44 @@ async function adminFetch(path, method, body) {
 }
 
 function showTab(t) {
-  ['pending', 'batches', 'approved', 'rejected'].forEach(x => {
+  TABS.forEach(x => {
     document.getElementById('panel-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tab-' + x).className = 'chip' + (x === t ? ' on' : '');
   });
-  ({ pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected }[t])();
+  try { history.replaceState(null, '', location.pathname + '?tab=' + t); } catch (e) {}
+  (LOADERS[t] || function () {})();
 }
 
+// ── Overview ─────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  const panel = document.getElementById('panel-overview');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/overview', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  const c = j.counts || {};
+  const cards = [
+    ['Pending listings', c.pendingListings, 'pending'], ['Pending batch rows', c.pendingBatchRows, 'batches'],
+    ['Pending membership', c.pendingMembership, 'membership'], ['Approved listings', c.approved, 'approved'],
+    ['Rejected listings', c.rejected, 'rejected'], ['Total users', c.users, 'users'],
+    ['Total companies', c.companies, 'companies'],
+  ];
+  const tiles = cards.map(([label, n, tab]) => `<button class="card" onclick="showTab('${tab}')" style="padding:20px;text-align:left;cursor:pointer;border:none;background:var(--surface,#fff);">
+      <div style="font-family:var(--fd);font-size:34px;line-height:1;">${Number(n || 0)}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${esc(label)}</div></button>`).join('');
+  const latest = (j.latest || []).map(r => `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.request_type || '')}</td><td>${esc(r.market || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status || '')}</span></td></tr>`).join('');
+  panel.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:26px;">${tiles}</div>
+    <h3 style="font-size:16px;margin:0 0 12px;">Latest submissions</h3>
+    ${latest ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Market</th><th>Company</th><th>Email</th><th>Status</th></tr></thead><tbody>${latest}</tbody></table></div>` : emptyBox('No submissions yet.')}`;
+}
+
+// ── Pending single listings ──────────────────────────────────────────────────
 async function loadPending() {
   const panel = document.getElementById('panel-pending');
-  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);font-size:13px;">Loading…</div>';
+  panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/pending-listings', 'GET');
-  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load (${esc(j.error || 'error')}).</p></div>`; return; }
-  if (!j.listings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No pending listing submissions.</div>'; return; }
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.listings.length) { panel.innerHTML = emptyBox('No pending listing submissions.'); return; }
   panel.innerHTML = j.listings.map(L => {
     const p = L.payload || {};
     const photoCount = Array.isArray(p.photoPaths) ? p.photoPaths.length : 0;
@@ -124,12 +166,13 @@ async function rejectListing(id, mode, btn) {
   else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 
+// ── Batches ──────────────────────────────────────────────────────────────────
 async function loadBatches() {
   const panel = document.getElementById('panel-batches');
-  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/listing-batches', 'GET');
-  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load (${esc(j.error || 'error')}).</p></div>`; return; }
-  if (!j.batches.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No batch uploads.</div>'; return; }
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.batches.length) { panel.innerHTML = emptyBox('No batch uploads.'); return; }
   panel.innerHTML = j.batches.map(B => {
     const rows = j.rows.filter(r => r.batch_id === B.id);
     return `<div class="card" style="padding:22px;margin-bottom:18px;">
@@ -147,21 +190,124 @@ async function approveRow(id, btn) { setBtnBusy(btn, true, '…'); const j = awa
 async function rejectRow(id, btn) { const reason = prompt('Reason (optional):') || ''; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-batch-row', 'POST', { rowId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Row rejected'); loadBatches(); } else showToast('Failed', 'error'); }
 async function approveValidBatch(id, btn) { if (!confirm('Approve all valid (pending) rows in this batch? They go live.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-valid-batch', 'POST', { batchId: id }); setBtnBusy(btn, false); if (j.ok) { showToast(j.approved + ' rows approved'); loadBatches(); } else showToast('Failed', 'error'); }
 
+// ── Approved ─────────────────────────────────────────────────────────────────
 async function loadApproved() {
   const panel = document.getElementById('panel-approved');
-  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/listings?status=approved', 'GET');
-  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load.</p></div>`; return; }
-  if (!j.buildings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No approved listings yet.</div>'; return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>District</th><th>Approved</th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.market)}</td><td>${esc(b.submarket || '')}</td><td>${fmtDate(b.approved_at)}</td></tr>`).join('')}</tbody></table></div>`;
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.buildings || !j.buildings.length) { panel.innerHTML = emptyBox('No approved listings yet.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>District</th><th>Approved</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.market)}</td><td>${esc(b.submarket || '')}</td><td>${fmtDate(b.approved_at)}</td><td><button class="btn btn-ghost btn-sm" onclick="unpublishBuilding('${b.id}',this)">Unpublish</button></td></tr>`).join('')}</tbody></table></div>`;
 }
+async function unpublishBuilding(id, btn) {
+  if (!confirm('Unpublish this building? It will be removed from public results until re-approved.')) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/unpublish-building', 'POST', { buildingId: id, status: 'draft' });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Building unpublished'); loadApproved(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+
+// ── Rejected ─────────────────────────────────────────────────────────────────
 async function loadRejected() {
   const panel = document.getElementById('panel-rejected');
-  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/listings?status=rejected', 'GET');
-  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load.</p></div>`; return; }
-  if (!j.listings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No rejected listings.</div>'; return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Submitter</th><th>Reason</th><th>Date</th></tr></thead><tbody>${j.listings.map(L => `<tr><td>${esc((L.payload && L.payload.building) || '')}</td><td>${esc(L.email || '')}</td><td>${esc(L.review_note || '')}</td><td>${fmtDate(L.reviewed_at)}</td></tr>`).join('')}</tbody></table></div>`;
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.listings || !j.listings.length) { panel.innerHTML = emptyBox('No rejected listings.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Submitter</th><th>Reason</th><th>Date</th><th></th></tr></thead><tbody>${j.listings.map(L => `<tr><td>${esc((L.payload && L.payload.building) || '')}</td><td>${esc(L.email || '')}</td><td>${esc(L.review_note || '')}</td><td>${fmtDate(L.reviewed_at)}</td><td><button class="btn btn-ghost btn-sm" onclick="reopenListing('${L.id}',this)">Reopen</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+async function reopenListing(id, btn) {
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/reopen-listing', 'POST', { requestId: id });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Listing reopened — back in Pending'); loadRejected(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+
+// ── Membership requests ──────────────────────────────────────────────────────
+async function loadMembership() {
+  const panel = document.getElementById('panel-membership');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/membership-requests', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.requests || !j.requests.length) { panel.innerHTML = emptyBox('No membership requests yet.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Email</th><th>Requested tier</th><th>Status</th><th></th></tr></thead><tbody>${j.requests.map(r => {
+    const tier = (r.payload && r.payload.requestedTier) || '';
+    const actions = (r.status === 'pending' || r.status === 'new')
+      ? `<button class="btn btn-navy btn-sm" onclick="approveMembership('${r.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectMembership('${r.id}',this)">Reject</button>`
+      : '';
+    return `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.name || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td>${esc(tier)}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status)}</span></td><td>${actions}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+async function approveMembership(id, btn) {
+  if (!confirm('Approve this membership request and activate the tier for the company?')) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/approve-membership', 'POST', { requestId: id });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Membership approved'); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+async function rejectMembership(id, btn) {
+  const reason = prompt('Reason (emailed to requester):'); if (reason === null) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/reject-membership', 'POST', { requestId: id, reason });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Membership request rejected'); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+
+// ── Users ────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const panel = document.getElementById('panel-users');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/users', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.users || !j.users.length) { panel.innerHTML = emptyBox('No users yet.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Requests</th><th>Saves</th><th>Joined</th></tr></thead><tbody>${j.users.map(u => `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td>${Number(u.requests || 0)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+// ── Companies ────────────────────────────────────────────────────────────────
+async function loadCompanies() {
+  const panel = document.getElementById('panel-companies');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/companies', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.companies || !j.companies.length) { panel.innerHTML = emptyBox('No companies yet.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Company</th><th>Members</th><th>Tier</th><th>Status</th><th>Requests</th><th>Listings</th><th>Batches</th><th>Created</th></tr></thead><tbody>${j.companies.map(c => `<tr><td>${esc(c.name || '')}</td><td>${Number(c.members || 0)}</td><td>${esc(c.tier)}</td><td>${esc(c.status)}</td><td>${Number(c.requests || 0)}</td><td>${Number(c.listings || 0)}</td><td>${Number(c.batches || 0)}</td><td>${fmtDate(c.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+function kvTable(obj, headers) {
+  const entries = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
+  return `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>${esc(headers[0])}</th><th>${esc(headers[1])}</th></tr></thead><tbody>${entries.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${typeof v === 'number' ? v : esc(v)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function statTiles(pairs) {
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:8px;">${pairs.map(([label, n]) => `<div class="card" style="padding:16px;"><div style="font-family:var(--fd);font-size:26px;line-height:1;">${Number(n || 0)}</div><div style="font-size:11.5px;color:var(--text-2);margin-top:5px;">${esc(label)}</div></div>`).join('')}</div>`;
+}
+async function loadAnalytics() {
+  const panel = document.getElementById('panel-analytics');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/analytics', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  const a = j.analytics || {};
+  const s = a.supply || {}, d = a.demand || {}, e = a.engagement || {}, m = a.membership || {}, q = a.dataQuality || {};
+  const sec = (title, body) => `<div style="margin-bottom:30px;"><h3 style="font-size:16px;margin:0 0 12px;">${esc(title)}</h3>${body}</div>`;
+  const avgRent = Object.entries(s.avgRentByMarket || {}).sort((x, y) => y[1] - x[1]);
+  const avgRentTbl = avgRent.length
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Market</th><th>Avg rent</th><th>Range</th></tr></thead><tbody>${avgRent.map(([k, v]) => { const rg = (s.rentRangeByMarket || {})[k] || []; return `<tr><td>${esc(k)}</td><td>${v}</td><td>${rg.length ? esc(rg[0] + ' – ' + rg[1]) : '—'}</td></tr>`; }).join('')}</tbody></table></div>`
+    : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
+  const mostSaved = (e.mostSaved || []).length
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(x.market)}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
+  panel.innerHTML =
+    sec('Supply', statTiles([['Approved buildings', s.approvedBuildings], ['Approved units', s.approvedUnits], ['Total sqm', s.totalSqm], ['Total desks', s.totalDesks]])
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Listings by market</strong>' + kvTable(s.listingsByMarket, ['Market', 'Listings']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Average rent by market</strong>' + avgRentTbl + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Offering mix</strong>' + kvTable(s.listingsByOffering, ['Offering', 'Units']) + '</div>')
+    + sec('Demand', statTiles([['Access requests by market', Object.keys(d.accessByMarket || {}).length], ['Market scans', Object.keys(d.scanByMarket || {}).length]])
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Access requests by market</strong>' + kvTable(d.accessByMarket, ['Market', 'Requests']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Market scans by market</strong>' + kvTable(d.scanByMarket, ['Market', 'Scans']) + '</div>')
+    + sec('Engagement', statTiles([['Total saves', e.totalSaves]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong>' + mostSaved + '</div>')
+    + sec('Membership', statTiles([['Total companies', m.totalCompanies], ['Total users', m.totalUsers], ['Pending membership', m.pendingMembership]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Active companies by tier</strong>' + kvTable(m.companiesByTier, ['Tier', 'Companies']) + '</div>')
+    + sec('Data quality', statTiles([['Buildings missing photo', q.buildingsMissingPhoto], ['Buildings missing map', q.buildingsMissingMaps], ['Units missing rent', q.unitsMissingRent], ['Buildings with no units', q.buildingsNoUnits]]));
 }
 </script>
 </body>

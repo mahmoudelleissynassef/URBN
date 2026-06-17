@@ -81,6 +81,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user) return;
   await URBN_LISTINGS.load();
   await loadDashboard(user);
+  // Deep-link to a section via ?tab= (used by user.urbnoffices.com routes).
+  const tab = new URLSearchParams(location.search).get('tab');
+  const map = { overview: 'overview', shortlist: 'shortlist', saved: 'shortlist', requests: 'requests', listings: 'listings' };
+  if (tab && map[tab]) {
+    const sec = map[tab];
+    const btn = Array.from(document.querySelectorAll('.dn')).find(n => (n.getAttribute('onclick') || '').includes("show('" + sec + "'"));
+    show(sec, btn || null);
+  }
 });
 function unavailableCard(id) {
   return `<div class="lc" style="opacity:.7;"><div class="lc-body"><div class="lc-name">Saved building</div><div class="lc-district">No longer available</div><p style="font-size:12px;color:var(--text-2);margin-top:10px;line-height:1.6;">This building is no longer approved/live. Reference: ${String(id).replace(/[^a-zA-Z0-9_-]/g,'')}</p></div></div>`;

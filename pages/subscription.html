@@ -103,22 +103,25 @@ async function requestTier(tier) {
   if (!URBNAuth.user) { location.href = 'signup.html?tier=' + encodeURIComponent(tier); return; }
   try {
     const { data: prof } = await URBNAuth.client.from('profiles').select('company_id, full_name').eq('id', URBNAuth.user.id).maybeSingle();
-    let currentTier = 'free';
-    if (prof && prof.company_id) {
-      const { data: subs } = await URBNAuth.client.from('company_subscriptions').select('tier,status').eq('company_id', prof.company_id).order('created_at', { ascending: false }).limit(10);
+    let currentTier = 'free', companyId = (prof && prof.company_id) || null, companyName = '';
+    if (companyId) {
+      const { data: comp } = await URBNAuth.client.from('companies').select('name').eq('id', companyId).maybeSingle();
+      companyName = (comp && comp.name) || '';
+      const { data: subs } = await URBNAuth.client.from('company_subscriptions').select('tier,status').eq('company_id', companyId).order('created_at', { ascending: false }).limit(10);
       const active = (subs || []).find(s => s.status === 'active'); if (active) currentTier = active.tier;
       // Record the tier request/change in company_subscriptions (manual approval; no payment).
       const { error } = await URBNAuth.client.from('company_subscriptions').insert({
-        company_id: prof.company_id, tier, status: tier === 'free' ? 'active' : 'requested', requested_by: URBNAuth.user.id,
+        company_id: companyId, tier, status: tier === 'free' ? 'active' : 'requested', requested_by: URBNAuth.user.id,
       });
       if (error) throw error;
     }
     if (tier === 'free') { showToast('Free access is active'); return; }
     // Create a client_requests row + send user confirmation + admin notification.
+    // companyId flows into payload so admin approval can activate the subscription.
     const result = await postRequest({
       requestType: 'membership', sourcePage: location.pathname,
-      email: URBNAuth.user.email, name: (prof && prof.full_name) || '',
-      requestedTier: tier, currentTier, consent: true,
+      email: URBNAuth.user.email, name: (prof && prof.full_name) || '', company: companyName,
+      requestedTier: tier, currentTier, companyId, consent: true,
     });
     showToast(result.ok ? 'Membership request submitted — pending approval' : 'Request recorded; confirmation email may be delayed', result.ok ? 'success' : 'info');
   } catch (e) {

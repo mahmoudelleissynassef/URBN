@@ -522,6 +522,24 @@ const numOrNull = (x) => (x === '' || x == null || isNaN(Number(x))) ? null : Nu
 const arrOrNull = (s) => { const a = String(s || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean); return a.length ? a : null; };
 const dateOrNull = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '').trim()) ? String(s).trim() : null;
 
+// Auth user emails (GoTrue admin API, service role).
+async function listAuthUsers() {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/admin/users?per_page=1000`, { method: 'GET', headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (r.status < 200 || r.status >= 300) return [];
+    const j = JSON.parse(r.body); return j.users || (Array.isArray(j) ? j : []);
+  } catch (e) { return []; }
+}
+function groupCount(arr, keyFn) {
+  const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; }); return m;
+}
+function groupAgg(arr, keyFn, valFn) {
+  const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); const v = valFn(x); if (k == null || k === '' || v == null || isNaN(v)) return; (m[k] = m[k] || []).push(v); }); return m;
+}
+const sum = (a) => a.reduce((s, n) => s + n, 0);
+const avg = (a) => a.length ? Math.round(sum(a) / a.length) : 0;
+
 async function sendApprovalEmail(to, name, buildingName, approved, note) {
   if (!to) return;
   const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
@@ -539,6 +557,20 @@ async function sendApprovalEmail(to, name, buildingName, approved, note) {
       from, to,
     });
   } catch (e) { console.error('[admin] approval email failed:', e.message); }
+}
+
+async function sendMembershipDecisionEmail(to, name, tier, approved) {
+  if (!to) return;
+  const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+  const title = approved ? 'Your membership has been activated' : 'Your membership request update';
+  const badge = approved ? 'Active' : 'Update';
+  const hi = name || 'there';
+  const msg = approved
+    ? `Your <strong>${escapeHtml(tier || '')}</strong> membership is now active on URBN Offices.`
+    : `Thank you. Your request for the <strong>${escapeHtml(tier || '')}</strong> tier was not approved at this time. Your current access is unchanged.`;
+  const inner = `<tr><td style="padding:20px 24px 8px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(hi)},</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">${msg}</p></td></tr>`;
+  try { await sendResendEmail({ subject: `URBN Offices — ${title}`, html: emailShell(title, badge, inner), text: `Hi ${hi},\n\n${approved ? 'Your ' + (tier || '') + ' membership is now active.' : 'Your ' + (tier || '') + ' tier request was not approved.'}\n\n— URBN Offices`, from, to }); }
+  catch (e) { console.error('[admin] membership email:', e.message); }
 }
 
 // Approve a manual list-building request -> buildings + units + listing_media.
@@ -610,6 +642,72 @@ function handleAdmin(req, res, urlPath) {
       if (req.method === 'GET' && urlPath === '/api/admin/listing-batches') {
         return sendJson(res, 200, { ok: true, batches: await sbGet(`listing_batches?order=created_at.desc`), rows: await sbGet(`listing_batch_rows?order=row_index.asc`) });
       }
+      if (req.method === 'GET' && urlPath === '/api/admin/overview') {
+        const len = async (q) => (await sbGet(q + (q.includes('?') ? '&' : '?') + 'select=id')).length;
+        const [pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership, latest] = await Promise.all([
+          len('client_requests?request_type=eq.list-building&status=in.(pending,new)'),
+          len('listing_batch_rows?status=eq.pending_review'),
+          len('buildings?status=eq.approved'),
+          len('client_requests?request_type=eq.list-building&status=eq.rejected'),
+          len('profiles'), len('companies'),
+          len('client_requests?request_type=in.(membership,membership-change)&status=eq.pending'),
+          sbGet('client_requests?order=created_at.desc&limit=8'),
+        ]);
+        return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, latest });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/users') {
+        const [profiles, companies, saved, reqs, authUsers] = await Promise.all([
+          sbGet('profiles?select=*&order=created_at.desc'), sbGet('companies?select=id,name'),
+          sbGet('saved_properties?select=user_id'), sbGet('client_requests?select=email'), listAuthUsers(),
+        ]);
+        const emailById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; });
+        const compById = {}; companies.forEach((c) => { compById[c.id] = c.name; });
+        const savedByUser = groupCount(saved, (s) => s.user_id);
+        const reqByEmail = groupCount(reqs, (r) => (r.email || '').toLowerCase());
+        const users = profiles.map((p) => { const email = emailById[p.id] || ''; return { id: p.id, email, full_name: p.full_name, company: compById[p.company_id] || '', user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at, requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 }; });
+        return sendJson(res, 200, { ok: true, users });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/companies') {
+        const [companies, members, subs, reqs, batches] = await Promise.all([
+          sbGet('companies?select=*&order=created_at.desc'), sbGet('company_members?select=company_id'),
+          sbGet('company_subscriptions?select=company_id,tier,status&order=created_at.desc'),
+          sbGet('client_requests?select=company,request_type'), sbGet('listing_batches?select=company_id'),
+        ]);
+        const memberCount = groupCount(members, (m) => m.company_id), batchCount = groupCount(batches, (b) => b.company_id);
+        const latestSub = {}; subs.forEach((s) => { if (!latestSub[s.company_id]) latestSub[s.company_id] = s; });
+        const reqByName = groupCount(reqs, (r) => (r.company || '').toLowerCase());
+        const listingByName = groupCount(reqs.filter((r) => r.request_type === 'list-building'), (r) => (r.company || '').toLowerCase());
+        const out = companies.map((c) => ({ id: c.id, name: c.name, created_at: c.created_at, members: memberCount[c.id] || 0, tier: (latestSub[c.id] || {}).tier || '—', status: (latestSub[c.id] || {}).status || '—', requests: reqByName[(c.name || '').toLowerCase()] || 0, listings: listingByName[(c.name || '').toLowerCase()] || 0, batches: batchCount[c.id] || 0 }));
+        return sendJson(res, 200, { ok: true, companies: out });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/membership-requests') {
+        return sendJson(res, 200, { ok: true, requests: await sbGet('client_requests?request_type=in.(membership,membership-change)&order=created_at.desc') });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/analytics') {
+        const [buildings, units, reqs, subs, saved, profiles, companies] = await Promise.all([
+          sbGet('buildings?status=eq.approved&select=*'), sbGet('units?status=eq.approved&select=*'),
+          sbGet('client_requests?select=*&order=created_at.desc&limit=2000'), sbGet('company_subscriptions?select=company_id,tier,status&order=created_at.desc'),
+          sbGet('saved_properties?select=user_id,building_id'), sbGet('profiles?select=id'), sbGet('companies?select=id'),
+        ]);
+        const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
+        const access = reqs.filter((r) => r.request_type === 'access'), scan = reqs.filter((r) => r.request_type === 'market-scan');
+        const listReqs = reqs.filter((r) => r.request_type === 'list-building');
+        const memReqs = reqs.filter((r) => r.request_type === 'membership' || r.request_type === 'membership-change');
+        const rentByMarket = groupAgg(units, (u) => bById[u.building_id] ? bById[u.building_id].market : null, (u) => Number(u.asking_rent));
+        const avgRentByMarket = {}, rentRangeByMarket = {};
+        Object.keys(rentByMarket).forEach((k) => { avgRentByMarket[k] = avg(rentByMarket[k]); rentRangeByMarket[k] = [Math.min(...rentByMarket[k]), Math.max(...rentByMarket[k])]; });
+        const latestSub = {}; subs.forEach((s) => { if (!latestSub[s.company_id]) latestSub[s.company_id] = s; });
+        const companiesByTier = groupCount(Object.values(latestSub).filter((s) => s.status === 'active'), (s) => s.tier);
+        const savedByBuilding = groupCount(saved, (s) => s.building_id);
+        const mostSaved = Object.entries(savedByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', saves: n }));
+        return sendJson(res, 200, { ok: true, analytics: {
+          supply: { approvedBuildings: buildings.length, approvedUnits: units.length, totalSqm: sum(units.map((u) => Number(u.size_sqm) || 0)), totalDesks: sum(units.map((u) => Number(u.desks) || 0)), listingsByMarket: groupCount(buildings, (b) => b.market), listingsBySubmarket: groupCount(buildings, (b) => b.submarket), listingsByOffering: groupCount(units, (u) => u.offering_type), avgRentByMarket, rentRangeByMarket, pendingBySource: groupCount(listReqs.filter((r) => r.status === 'pending' || r.status === 'new'), (r) => r.source_page) },
+          demand: { accessByMarket: groupCount(access, (r) => r.market), scanByMarket: groupCount(scan, (r) => r.market), requestsByCompany: groupCount(reqs, (r) => r.company), latest: reqs.slice(0, 8).map((r) => ({ type: r.request_type, market: r.market, company: r.company, email: r.email, created_at: r.created_at })) },
+          engagement: { mostSaved, totalSaves: saved.length, savedByMarket: groupCount(saved, (s) => (bById[s.building_id] || {}).market) },
+          membership: { companiesByTier, pendingMembership: memReqs.filter((r) => r.status === 'pending').length, totalCompanies: companies.length, totalUsers: profiles.length },
+          dataQuality: { buildingsMissingPhoto: buildings.filter((b) => !b.image_url).length, buildingsMissingMaps: buildings.filter((b) => !b.google_maps_url).length, unitsMissingRent: units.filter((u) => !u.asking_rent).length, unitsMissingServiceCharge: units.filter((u) => u.service_charge == null).length, buildingsNoUnits: buildings.filter((b) => !units.some((u) => u.building_id === b.id)).length },
+        } });
+      }
       const body = await readJsonBody(req);
       if (!body) return sendJson(res, 400, { ok: false, error: 'invalid_json' });
       if (urlPath === '/api/admin/approve-listing') {
@@ -640,6 +738,38 @@ function handleAdmin(req, res, urlPath) {
         const rows = await sbGet(`listing_batch_rows?batch_id=eq.${body.batchId}&status=eq.pending_review&select=*`);
         let n = 0; for (const row of rows) { await approveBatchRowRec(row, user.id); n++; }
         return sendJson(res, 200, { ok: true, approved: n });
+      }
+      if (urlPath === '/api/admin/approve-membership') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        const p = row.payload || {}, tier = p.requestedTier || body.tier;
+        if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', requested_by: user.id }]);
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        await sendMembershipDecisionEmail(row.email, row.name, tier, true);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reject-membership') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
+        await sendMembershipDecisionEmail(row.email, row.name, (row.payload || {}).requestedTier, false);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/set-tier') {
+        if (!body.companyId || !MEMBERSHIP_TIERS.includes(body.tier)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', requested_by: user.id }]);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/unpublish-building') {
+        if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('buildings', `id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
+        await sbPatch('units', `building_id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reopen-listing') {
+        if (!body.requestId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'pending', review_note: null });
+        return sendJson(res, 200, { ok: true });
       }
       return sendJson(res, 404, { ok: false, error: 'unknown_admin_endpoint' });
     } catch (e) {
@@ -754,6 +884,31 @@ const server = http.createServer((req, res) => {
       // Supabase listings show unless this is explicitly enabled.
       showDemoListings: String(process.env.SHOW_DEMO_LISTINGS || '').toLowerCase() === 'true',
     });
+  }
+
+  // ── Subdomain-aware routing ────────────────────────────────────────────────
+  // admin.<domain> and user.<domain> map clean routes to the real page files via
+  // redirect (so relative asset paths keep working). Public host is unaffected.
+  // Staging (urbn-staging.up.railway.app) keeps serving every file directly.
+  const host = String(req.headers.host || '').toLowerCase();
+  if (host.startsWith('admin.')) {
+    const m = {
+      '/': '/pages/dashboards/admin.html', '/dashboard': '/pages/dashboards/admin.html',
+      '/pending-listings': '/pages/dashboards/admin.html?tab=pending', '/batch-uploads': '/pages/dashboards/admin.html?tab=batches',
+      '/approved-listings': '/pages/dashboards/admin.html?tab=approved', '/rejected-listings': '/pages/dashboards/admin.html?tab=rejected',
+      '/users': '/pages/dashboards/admin.html?tab=users', '/companies': '/pages/dashboards/admin.html?tab=companies',
+      '/membership-requests': '/pages/dashboards/admin.html?tab=membership', '/analytics': '/pages/dashboards/admin.html?tab=analytics',
+      '/settings': '/pages/dashboards/admin.html?tab=overview',
+    };
+    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
+  } else if (host.startsWith('user.')) {
+    const m = {
+      '/': '/pages/dashboards/tenant.html', '/dashboard': '/pages/dashboards/tenant.html',
+      '/account': '/pages/account.html', '/saved': '/pages/dashboards/tenant.html?tab=shortlist',
+      '/requests': '/pages/dashboards/tenant.html?tab=requests', '/listings': '/pages/list-building.html',
+      '/batch-upload': '/pages/operator/batch-upload.html', '/membership': '/pages/subscription.html',
+    };
+    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
   }
 
   let reqPath = urlPath;
