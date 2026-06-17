@@ -64,7 +64,7 @@ const URBNAuth = {
     this.session = null; this.user = null; this.admin = false; updateAuthNav();
   },
   // Gate a page: resolves to the user, or redirects to sign-in.
-  async requireAuth(redirect = '/pages/signin.html') {
+  async requireAuth(redirect = '/sign-in') {
     await this.init();
     if (!this.user) { location.href = redirect + '?next=' + encodeURIComponent(location.pathname); return null; }
     return this.user;
@@ -110,13 +110,16 @@ const IMG = {
 };
 
 // ── Nav ─────────────────────────────────────────────────
+// All links use absolute, clean URLs (no ".html", no "/pages/..."). The `base`
+// argument is kept for backward compatibility but ignored — every page is served
+// from clean canonical routes on the single main domain.
 function injectNav(base='') {
   const el = document.getElementById('nav-placeholder');
   if (!el) return;
   el.innerHTML = `
   <nav class="nav">
     <div class="nav-i">
-      <a href="${base}index.html" class="logo">
+      <a href="/" class="logo">
         <div class="logo-mark">U</div>
         <div>
           <span class="logo-text">URBN</span>
@@ -124,41 +127,44 @@ function injectNav(base='') {
         </div>
       </a>
       <div class="nav-links">
-        <a href="${base}pages/search.html">Offices</a>
+        <a href="/offices">Offices</a>
         <div class="nav-dd">
-          <a href="${base}pages/markets.html">Markets</a>
+          <a href="/markets">Markets</a>
           <div class="nav-dd-panel">
-            <a href="${base}pages/search.html?m=cairo">Cairo</a>
-            <a href="${base}pages/search.html?m=dubai">Dubai</a>
-            <a href="${base}pages/search.html?m=riyadh">Riyadh</a>
-            <a href="${base}pages/search.html?m=lagos">Lagos</a>
-            <a href="${base}pages/search.html?m=nairobi">Nairobi</a>
-            <a href="${base}pages/search.html?m=johannesburg">Johannesburg</a>
-            <a href="${base}pages/search.html?m=casablanca">Casablanca</a>
+            <a href="/offices-in-cairo">Cairo</a>
+            <a href="/offices-in-nairobi">Nairobi</a>
+            <a href="/offices-in-casablanca">Casablanca</a>
+            <a href="/offices-in-accra">Accra</a>
+            <a href="/offices-in-addis-ababa">Addis Ababa</a>
+            <a href="/offices-in-johannesburg">Johannesburg</a>
+            <a href="/offices-in-cape-town">Cape Town</a>
+            <a href="/offices-in-kigali">Kigali</a>
+            <a href="/offices-in-abidjan">Abidjan</a>
           </div>
         </div>
-        <a href="${base}pages/buildings.html">Buildings</a>
-        <a href="${base}pages/districts.html">Districts</a>
-        <a href="${base}pages/industrial.html">Industrial</a>
+        <a href="/buildings">Buildings</a>
+        <a href="/districts">Districts</a>
+        <a href="/industrial">Industrial</a>
         <div class="nav-dd">
-          <a href="${base}pages/stay-vs-go.html">Tools</a>
+          <a href="/stay-vs-go">Tools</a>
           <div class="nav-dd-panel">
-            <a href="${base}pages/stay-vs-go.html">Stay vs Go</a>
-            <a href="${base}pages/market-scan.html">Market Scan</a>
-            <a href="${base}pages/dashboards/tenant.html?tab=shortlist" data-auth="in" style="display:none;">Saved Properties</a>
+            <a href="/stay-vs-go">Stay vs Go</a>
+            <a href="/market-scan">Market Scan</a>
+            <a href="/insights">Insights</a>
+            <a href="/dashboard?tab=shortlist" data-auth="in" style="display:none;">Saved Properties</a>
           </div>
         </div>
-        <a href="${base}pages/list-building.html">List Your Building</a>
-        <a href="${base}pages/subscription.html">Pricing</a>
+        <a href="/list-building">List Your Building</a>
+        <a href="/pricing">Pricing</a>
         <div class="nav-sep"></div>
-        <a href="${base}pages/market-scan.html">Contact</a>
+        <a href="/contact">Contact</a>
       </div>
       <div class="nav-right">
-        <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
-        <a href="${base}pages/dashboards/admin.html" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
-        <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
-        <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
-        <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>
+        <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+        <a href="/admin" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
+        <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
+        <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
+        <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
         <button class="btn btn-navy btn-sm" data-auth="out" onclick="openModal('access-modal')">Request Access</button>
       </div>
       <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
@@ -167,28 +173,27 @@ function injectNav(base='') {
     </div>
   </nav>
   <div class="mobile-nav" id="mobile-nav">
-    <a href="${base}pages/search.html">Offices</a>
-    <a href="${base}pages/markets.html">Markets</a>
-    <a href="${base}pages/search.html?m=cairo">Cairo</a>
-    <a href="${base}pages/search.html?m=dubai">Dubai</a>
-    <a href="${base}pages/search.html?m=riyadh">Riyadh</a>
-    <a href="${base}pages/search.html?m=lagos">Lagos</a>
-    <a href="${base}pages/search.html?m=nairobi">Nairobi</a>
-    <a href="${base}pages/search.html?m=johannesburg">Johannesburg</a>
-    <a href="${base}pages/search.html?m=casablanca">Casablanca</a>
-    <a href="${base}pages/buildings.html">Buildings</a>
-    <a href="${base}pages/districts.html">Districts</a>
-    <a href="${base}pages/industrial.html">Industrial</a>
-    <a href="${base}pages/stay-vs-go.html">Stay vs Go</a>
-    <a href="${base}pages/list-building.html">List Your Building</a>
-    <a href="${base}pages/subscription.html">Pricing</a>
-    <a href="${base}pages/market-scan.html">Contact</a>
+    <a href="/offices">Offices</a>
+    <a href="/markets">Markets</a>
+    <a href="/offices-in-cairo">Cairo</a>
+    <a href="/offices-in-nairobi">Nairobi</a>
+    <a href="/offices-in-casablanca">Casablanca</a>
+    <a href="/offices-in-accra">Accra</a>
+    <a href="/offices-in-johannesburg">Johannesburg</a>
+    <a href="/buildings">Buildings</a>
+    <a href="/districts">Districts</a>
+    <a href="/industrial">Industrial</a>
+    <a href="/stay-vs-go">Stay vs Go</a>
+    <a href="/insights">Insights</a>
+    <a href="/list-building">List Your Building</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/contact">Contact</a>
     <div class="mobile-nav-actions">
-      <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
-      <a href="${base}pages/dashboards/admin.html" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
-      <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
-      <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
-      <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>
+      <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+      <a href="/admin" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
+      <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
+      <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
+      <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
       <button class="btn btn-navy btn-sm" data-auth="out" onclick="toggleMobileNav();openModal('access-modal')">Request Access</button>
     </div>
   </div>`;
@@ -222,42 +227,45 @@ function injectFooter(base='') {
         <div class="fc">
           <div class="fc-title">Platform</div>
           <ul>
-            <li><a href="${base}pages/search.html">Browse Offices</a></li>
-            <li><a href="${base}pages/markets.html">Markets</a></li>
-            <li><a href="${base}pages/buildings.html">Buildings</a></li>
-            <li><a href="${base}pages/districts.html">Districts</a></li>
-            <li><a href="${base}pages/industrial.html">Industrial</a></li>
-            <li><a href="${base}pages/stay-vs-go.html">Stay vs Go</a></li>
-            <li><a href="${base}pages/market-scan.html">Market Scan</a></li>
+            <li><a href="/offices">Browse Offices</a></li>
+            <li><a href="/markets">Markets</a></li>
+            <li><a href="/buildings">Buildings</a></li>
+            <li><a href="/districts">Districts</a></li>
+            <li><a href="/industrial">Industrial</a></li>
+            <li><a href="/stay-vs-go">Stay vs Go</a></li>
+            <li><a href="/insights">Insights</a></li>
           </ul>
         </div>
         <div class="fc">
-          <div class="fc-title">Markets</div>
+          <div class="fc-title">Offices by city</div>
           <ul>
-            <li><a href="${base}pages/search.html?m=cairo">Cairo</a></li>
-            <li><a href="${base}pages/search.html?m=dubai">Dubai</a></li>
-            <li><a href="${base}pages/search.html?m=riyadh">Riyadh</a></li>
-            <li><a href="${base}pages/search.html?m=lagos">Lagos</a></li>
-            <li><a href="${base}pages/search.html?m=nairobi">Nairobi</a></li>
-            <li><a href="${base}pages/search.html?m=johannesburg">Johannesburg</a></li>
+            <li><a href="/offices-in-cairo">Offices in Cairo</a></li>
+            <li><a href="/offices-in-nairobi">Offices in Nairobi</a></li>
+            <li><a href="/offices-in-casablanca">Offices in Casablanca</a></li>
+            <li><a href="/offices-in-accra">Offices in Accra</a></li>
+            <li><a href="/offices-in-addis-ababa">Offices in Addis Ababa</a></li>
+            <li><a href="/offices-in-johannesburg">Offices in Johannesburg</a></li>
+            <li><a href="/offices-in-cape-town">Offices in Cape Town</a></li>
+            <li><a href="/offices-in-kigali">Offices in Kigali</a></li>
+            <li><a href="/offices-in-abidjan">Offices in Abidjan</a></li>
           </ul>
         </div>
         <div class="fc">
           <div class="fc-title">Company</div>
           <ul>
-            <li><a href="${base}pages/list-building.html">List Your Building</a></li>
-            <li><a href="${base}pages/subscription.html">Pricing</a></li>
-            <li><a href="${base}pages/market-scan.html">Contact</a></li>
-            <li><a href="${base}pages/dashboards/tenant.html">Dashboard</a></li>
+            <li><a href="/list-building">List Your Building</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/dashboard">Dashboard</a></li>
           </ul>
         </div>
         <div class="fc">
           <div class="fc-title">Legal</div>
           <ul>
-            <li><a href="${base}pages/terms.html">Terms of Use</a></li>
-            <li><a href="${base}pages/documents.html">Commission Agreement</a></li>
-            <li><a href="${base}pages/privacy.html">Privacy Policy</a></li>
-            <li><a href="${base}pages/signin.html">Sign In</a></li>
+            <li><a href="/terms">Terms of Use</a></li>
+            <li><a href="/documents">Commission Agreement</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/sign-in">Sign In</a></li>
           </ul>
         </div>
       </div>
@@ -289,7 +297,7 @@ function injectAccessModal(base='') {
         <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="reg-website" tabindex="-1" autocomplete="off"></label></div>
         <label class="consent">
           <input type="checkbox" id="reg-consent" required aria-required="true">
-          <span>I agree to URBN processing these details to assess and grant access, per the <a href="${base}pages/privacy.html">Privacy Policy</a> and <a href="${base}pages/terms.html">Terms of Use</a>.</span>
+          <span>I agree to URBN processing these details to assess and grant access, per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
         <div class="fld-err" id="err-reg-consent" style="margin-top:8px;">Please confirm you accept the Privacy Policy and Terms of Use.</div>
       </div>
@@ -427,7 +435,7 @@ async function toggleSave(id,btn) {
   await URBNAuth.init();
   if (!URBNAuth.user) {
     showToast('Sign in to save properties to your shortlist', 'info');
-    setTimeout(() => { location.href = '/pages/signin.html?next=' + encodeURIComponent(location.pathname + location.search); }, 1100);
+    setTimeout(() => { location.href = '/sign-in?next=' + encodeURIComponent(location.pathname + location.search); }, 1100);
     return;
   }
   const adding = !USER.saved.includes(id);
@@ -508,7 +516,7 @@ function renderCard(b, base='') {
   const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
   const fallback = getImg(b.market);
   return `
-  <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
+  <div class="lc" onclick="window.location.href='/building?id=${b.id}'">
     <div class="lc-img">
       <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name}" loading="lazy">
       <div class="lc-img-grad"></div>
@@ -553,7 +561,7 @@ async function requestListingAction(type, buildingId, extra = {}) {
   await URBNAuth.init();
   if (!URBNAuth.user || !URBNAuth.session) {
     showToast('Sign in to continue', 'info');
-    setTimeout(() => { location.href = '/pages/signin.html?next=' + encodeURIComponent(location.pathname + location.search); }, 1000);
+    setTimeout(() => { location.href = '/sign-in?next=' + encodeURIComponent(location.pathname + location.search); }, 1000);
     return { ok: false, redirect: true };
   }
   try {

@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /account
+Disallow: /batch-upload
 Disallow: /pages/dashboards/
-Disallow: /pages/login.html
+Disallow: /api/
 
 Sitemap: https://urbnoffices.com/sitemap.xml

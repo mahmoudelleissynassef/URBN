@@ -15,6 +15,64 @@ const mimeTypes = {
   '.csv': 'text/csv',
 };
 
+// ── Clean URL routing ────────────────────────────────────────────────────────
+// Every page is reachable at a short, extensionless, canonical URL (no ".html",
+// no "/pages/..."). The clean path is served internally (200, URL unchanged);
+// the underlying file path and any ".html" URL 301-redirect to the clean one so
+// there is a single canonical URL per page (good for SEO, no duplicate content).
+const ROUTES = {
+  '/': '/index.html',
+  '/offices': '/pages/search.html',
+  '/search': '/pages/search.html',
+  '/markets': '/pages/markets.html',
+  '/buildings': '/pages/buildings.html',
+  '/building': '/pages/building.html',
+  '/districts': '/pages/districts.html',
+  '/industrial': '/pages/industrial.html',
+  '/stay-vs-go': '/pages/stay-vs-go.html',
+  '/list-building': '/pages/list-building.html',
+  '/batch-upload': '/pages/operator/batch-upload.html',
+  '/pricing': '/pages/subscription.html',
+  '/market-scan': '/pages/market-scan.html',
+  '/contact': '/pages/market-scan.html',
+  '/sign-in': '/pages/signin.html',
+  '/sign-up': '/pages/signup.html',
+  '/account': '/pages/account.html',
+  '/dashboard': '/pages/dashboards/tenant.html',
+  '/admin': '/pages/dashboards/admin.html',
+  '/terms': '/pages/terms.html',
+  '/privacy': '/pages/privacy.html',
+  '/documents': '/pages/documents.html',
+  // SEO city landing pages
+  '/offices-in-cairo': '/pages/markets/cairo.html',
+  '/offices-in-addis-ababa': '/pages/markets/addis-ababa.html',
+  '/offices-in-casablanca': '/pages/markets/casablanca.html',
+  '/offices-in-abidjan': '/pages/markets/abidjan.html',
+  '/offices-in-accra': '/pages/markets/accra.html',
+  '/offices-in-nairobi': '/pages/markets/nairobi.html',
+  '/offices-in-kigali': '/pages/markets/kigali.html',
+  '/offices-in-johannesburg': '/pages/markets/johannesburg.html',
+  '/offices-in-cape-town': '/pages/markets/cape-town.html',
+  // Insights / advisory content
+  '/insights': '/pages/insights/index.html',
+  '/insights/cost-of-office-space-in-cairo': '/pages/insights/cost-of-office-space-in-cairo.html',
+  '/insights/cost-of-office-space-in-addis-ababa': '/pages/insights/cost-of-office-space-in-addis-ababa.html',
+  '/insights/cost-of-office-space-in-casablanca': '/pages/insights/cost-of-office-space-in-casablanca.html',
+  '/insights/cost-of-office-space-in-abidjan': '/pages/insights/cost-of-office-space-in-abidjan.html',
+  '/insights/cost-of-office-space-in-accra': '/pages/insights/cost-of-office-space-in-accra.html',
+  '/insights/cost-of-office-space-in-nairobi': '/pages/insights/cost-of-office-space-in-nairobi.html',
+  '/insights/cost-of-office-space-in-kigali': '/pages/insights/cost-of-office-space-in-kigali.html',
+  '/insights/cost-of-office-space-in-johannesburg': '/pages/insights/cost-of-office-space-in-johannesburg.html',
+  '/insights/cost-of-office-space-in-cape-town': '/pages/insights/cost-of-office-space-in-cape-town.html',
+};
+// Reverse map (file path -> canonical clean path) for 301 redirects. The first
+// clean route that points to a file wins as its canonical URL.
+const ROUTE_REVERSE = (() => {
+  const r = {};
+  for (const [clean, file] of Object.entries(ROUTES)) { if (!(file in r)) r[file] = clean; }
+  return r;
+})();
+
 // ── Lead capture: POST /api/request ──────────────────────────────────────────
 // Stores each submission in Supabase (source of truth) and notifies via Resend.
 // All credentials come from environment variables — never hardcoded.
@@ -1364,12 +1422,29 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  // Path-based routing only. The whole app — public site, signed-in portal and
-  // admin console — is served from the single main domain (urbnoffices.com).
-  // There is NO subdomain/host-aware behavior: admin access is enforced
-  // server-side via the admin_users lookup in the /api/admin layer, never by host.
+  // Clean-URL routing (single canonical URL per page; no subdomains/host logic).
   let reqPath = urlPath;
-  if (reqPath === '/') reqPath = '/index.html';
+  const search = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+
+  // 1) Canonical clean route → serve the underlying file directly (URL stays clean).
+  if (ROUTES[reqPath]) {
+    reqPath = ROUTES[reqPath];
+  } else {
+    // 2) Legacy/underlying path that has a cleaner canonical → 301 to it.
+    //    Covers "/pages/..." paths and any "/x.html" (strip .html and retry).
+    let canonical = ROUTE_REVERSE[reqPath];
+    if (!canonical && reqPath.endsWith('.html')) {
+      const stripped = reqPath.slice(0, -5);
+      canonical = ROUTE_REVERSE[reqPath] || (ROUTES[stripped] ? stripped : (stripped === '/index' ? '/' : stripped));
+    }
+    if (canonical && canonical !== urlPath) {
+      res.writeHead(301, { Location: canonical + search });
+      return res.end();
+    }
+    // 3) Fallback: serve extensionless paths by appending .html.
+    if (reqPath === '/') reqPath = '/index.html';
+  }
+
   let filePath = path.join(__dirname, reqPath);
   if (!path.extname(filePath)) filePath += '.html';
 

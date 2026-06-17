@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pricing — URBN</title>
-  <meta name="description" content="URBN membership tiers for corporate occupiers and operators — Free, Starter, Membership and Enterprise. Paid access is activated after verification."/>
-  <link rel="canonical" href="https://urbnoffices.com/pages/subscription.html"/>
+  <title>Pricing â€” URBN</title>
+  <meta name="description" content="URBN membership tiers for corporate occupiers and operators â€” Free, Starter, Membership and Enterprise. Paid access is activated after verification."/>
+  <link rel="canonical" href="https://urbnoffices.com/pricing"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
@@ -15,7 +15,7 @@
     <div class="text-center mb48">
       <span class="overline label-navy">Pricing</span>
       <h1 style="font-size:44px;">Membership Tiers</h1>
-      <p style="font-size:15px;color:var(--text-2);margin-top:14px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.8;">URBN is a controlled-access platform. Start free, then request a paid tier — paid access is activated manually after we verify your firm. No card required to request.</p>
+      <p style="font-size:15px;color:var(--text-2);margin-top:14px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.8;">URBN is a controlled-access platform. Start free, then request a paid tier â€” paid access is activated manually after we verify your firm. No card required to request.</p>
     </div>
 
     <div class="plan-grid mb48">
@@ -36,7 +36,7 @@
         <div class="plan-price">$499<span>/month</span></div>
         <p class="plan-desc">For companies exploring a single market with focused requirements.</p>
         <div class="plan-feats">
-          <div class="plan-feat">One market — full building &amp; unit detail</div>
+          <div class="plan-feat">One market â€” full building &amp; unit detail</div>
           <div class="plan-feat">Saved properties &amp; shortlists</div>
           <div class="plan-feat">Up to 5 introduction requests</div>
           <div class="plan-feat">Stay vs Go tool</div>
@@ -49,7 +49,7 @@
         <div class="plan-price">$1,299<span>/month</span></div>
         <p class="plan-desc">For expansion teams actively searching across multiple markets.</p>
         <div class="plan-feats">
-          <div class="plan-feat">All 16 markets — full building &amp; unit detail</div>
+          <div class="plan-feat">All 16 markets â€” full building &amp; unit detail</div>
           <div class="plan-feat">Unlimited saved properties</div>
           <div class="plan-feat">Unlimited introductions</div>
           <div class="plan-feat">Market Scan requests (2/month)</div>
@@ -86,7 +86,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   injectNav('../'); injectFooter('../');
   const items = [
-    ['Verified listings', 'Every building is verified directly — no recycled broker data.'],
+    ['Verified listings', 'Every building is verified directly â€” no recycled broker data.'],
     ['Protected introductions', 'All site-visit requests are formally logged and timestamped.'],
     ['Non-circumvention', 'Built into the platform workflow, not added as an afterthought.'],
     ['Legal framework', 'Terms of Use, Commission Agreement, and Referral Agreement.'],
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `<div><h4 style="font-size:16px;margin-bottom:6px;">${t}</h4><p style="font-size:12.5px;color:var(--text-2);line-height:1.7;">${d}</p></div>`).join('');
 });
 
-// Record a tier request in Supabase. No payment is taken — paid tiers are
+// Record a tier request in Supabase. No payment is taken â€” paid tiers are
 // activated manually after verification. Signed-out users are routed to sign-up
 // with the tier preselected.
 async function requestTier(tier) {
@@ -123,7 +123,7 @@ async function requestTier(tier) {
       email: URBNAuth.user.email, name: (prof && prof.full_name) || '', company: companyName,
       requestedTier: tier, currentTier, companyId, consent: true,
     });
-    showToast(result.ok ? 'Membership request submitted — pending approval' : 'Request recorded; confirmation email may be delayed', result.ok ? 'success' : 'info');
+    showToast(result.ok ? 'Membership request submitted â€” pending approval' : 'Request recorded; confirmation email may be delayed', result.ok ? 'success' : 'info');
   } catch (e) {
     showToast('Could not submit your request right now', 'error');
   }
