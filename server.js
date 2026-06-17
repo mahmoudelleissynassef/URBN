@@ -38,6 +38,7 @@ const ROUTES = {
   '/sign-in': '/pages/signin.html',
   '/sign-up': '/pages/signup.html',
   '/account': '/pages/account.html',
+  '/saved': '/pages/saved.html',
   '/dashboard': '/pages/dashboards/tenant.html',
   '/admin': '/pages/dashboards/admin.html',
   '/terms': '/pages/terms.html',
@@ -764,7 +765,16 @@ function handleAdmin(req, res, urlPath) {
     try {
       if (req.method === 'GET' && urlPath === '/api/admin/me') return sendJson(res, 200, { ok: true, admin: true, email: user.email });
       if (req.method === 'GET' && urlPath === '/api/admin/pending-listings') {
-        return sendJson(res, 200, { ok: true, listings: await sbGet(`client_requests?request_type=eq.list-building&status=in.(pending,new)&order=created_at.desc`) });
+        const listings = await sbGet(`client_requests?request_type=eq.list-building&status=in.(pending,new)&order=created_at.desc`);
+        // Sign the uploaded photos/floorplan so the reviewer can SEE them (they
+        // live in a private bucket and there are no listing_media rows pre-approval).
+        for (const L of listings) {
+          const p = L.payload || {}; const bucket = p.mediaBucket || 'listing-media'; const media = [];
+          for (const path of (Array.isArray(p.photoPaths) ? p.photoPaths : [])) { const url = await signStorageUrl(bucket, path, 3600); if (url) media.push({ kind: 'photo', url }); }
+          if (p.floorplanPath) { const url = await signStorageUrl(bucket, p.floorplanPath, 3600); if (url) media.push({ kind: 'floorplan', url }); }
+          L.media = media;
+        }
+        return sendJson(res, 200, { ok: true, listings });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/listings') {
         const status = (req.url.split('status=')[1] || 'approved').split('&')[0];

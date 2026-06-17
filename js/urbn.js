@@ -151,7 +151,7 @@ function injectNav(base='') {
             <a href="/stay-vs-go">Stay vs Go</a>
             <a href="/market-scan">Market Scan</a>
             <a href="/insights">Insights</a>
-            <a href="/dashboard?tab=shortlist" data-auth="in" style="display:none;">Saved Properties</a>
+            <a href="/saved" data-auth="in" style="display:none;">Saved Properties</a>
           </div>
         </div>
         <a href="/list-building">List Your Building</a>
