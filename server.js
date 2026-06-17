@@ -623,18 +623,32 @@ async function sendRevealDecisionEmail(to, buildingName, market, approved) {
 }
 
 // Approve a manual list-building request -> buildings + units + listing_media.
-async function approveRequestRow(row, adminId) {
-  const p = row.payload || {}, now = new Date().toISOString(), bId = 'b_' + row.id;
-  await sbUpsert('buildings', [{
-    id: bId, name: p.building || row.name || 'Untitled', market: row.market || p.market || null, submarket: p.district || null,
-    address: p.address || null, google_maps_url: p.mapsUrl || null, grade: p.grade || null, image_url: p.mainPhotoUrl || null,
-    building_height_m: numOrNull(p.buildingHeight), amenities: Array.isArray(p.amenities) ? p.amenities : arrOrNull(p.amenities),
-    parking_spaces_available: numOrNull(p.parkingSpaces), parking_arrangement: p.parkingArrangement || null,
-    parking_included_in_rent: p.parkingIncludedInRent || null, parking_price_per_spot_month: numOrNull(p.parkingPricePerSpot),
-    visitor_parking_hourly_rate: numOrNull(p.visitorParkingHourly), parking_monthly_membership_available: p.parkingMonthlyMembership === true || p.parkingMonthlyMembership === 'yes' || null,
-    parking_monthly_membership_price: numOrNull(p.parkingMonthlyMembershipPrice), parking_notes: p.parkingNotes || null,
-    status: 'approved', submitted_by: p.submittedBy || null, request_id: row.id, approved_by: adminId, approved_at: now,
-  }]);
+// existingBuildingId (optional): attach the unit to a building already in the
+// inventory instead of creating a new one (admin "assign to existing building",
+// or the uploader picked an existing building on the form).
+async function approveRequestRow(row, adminId, existingBuildingId) {
+  const p = row.payload || {}, now = new Date().toISOString();
+  // Resolve target building: explicit arg > uploader's chosen building > new.
+  let bId = existingBuildingId || p.existingBuildingId || null;
+  if (bId) {
+    // Verify it exists; if not, fall back to creating a new building.
+    const found = await sbGet(`buildings?id=eq.${encodeURIComponent(bId)}&select=id`);
+    if (!found.length) bId = null;
+  }
+  const attachOnly = !!bId;
+  if (!attachOnly) {
+    bId = 'b_' + row.id;
+    await sbUpsert('buildings', [{
+      id: bId, name: p.building || row.name || 'Untitled', market: row.market || p.market || null, submarket: p.district || null,
+      address: p.address || null, google_maps_url: p.mapsUrl || null, grade: p.grade || null, image_url: p.mainPhotoUrl || null,
+      building_height_m: numOrNull(p.buildingHeight), amenities: Array.isArray(p.amenities) ? p.amenities : arrOrNull(p.amenities),
+      parking_spaces_available: numOrNull(p.parkingSpaces), parking_arrangement: p.parkingArrangement || null,
+      parking_included_in_rent: p.parkingIncludedInRent || null, parking_price_per_spot_month: numOrNull(p.parkingPricePerSpot),
+      visitor_parking_hourly_rate: numOrNull(p.visitorParkingHourly), parking_monthly_membership_available: p.parkingMonthlyMembership === true || p.parkingMonthlyMembership === 'yes' || null,
+      parking_monthly_membership_price: numOrNull(p.parkingMonthlyMembershipPrice), parking_notes: p.parkingNotes || null,
+      status: 'approved', submitted_by: p.submittedBy || null, request_id: row.id, approved_by: adminId, approved_at: now,
+    }]);
+  }
   await sbUpsert('units', [{
     id: 'u_' + row.id, building_id: bId, unit_floor: p.floor || null, size_sqm: numOrNull(p.area), offering_type: p.offeringType || null,
     fit_out: p.fitOut || null, desks: numOrNull(p.seats), meeting_rooms: null, asking_rent: numOrNull(p.rent), currency: p.currency || null,
@@ -817,9 +831,38 @@ function handleAdmin(req, res, urlPath) {
       if (urlPath === '/api/admin/approve-listing') {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
-        await approveRequestRow(row, user.id);
+        // Optional: attach to an existing inventory building chosen by the admin.
+        await approveRequestRow(row, user.id, body.buildingId || null);
         await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, true);
         return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/create-building') {
+        const f = body.fields || {};
+        if (!f.name || !f.market) return sendJson(res, 400, { ok: false, error: 'name_and_market_required' });
+        const id = 'b_man_' + crypto.randomUUID();
+        const rec = {
+          id, name: String(f.name), market: String(f.market), submarket: f.submarket || null,
+          address: f.address || null, google_maps_url: f.google_maps_url || null, grade: f.grade || null,
+          year_built: numOrNull(f.year_built), floors: numOrNull(f.floors), building_height_m: numOrNull(f.building_height_m),
+          total_gla_sqm: numOrNull(f.total_gla_sqm), typical_floorplate_sqm: numOrNull(f.typical_floorplate_sqm),
+          certifications: arrOrNull(f.certifications), amenities: arrOrNull(f.amenities),
+          parking_spaces_available: numOrNull(f.parking_spaces_available), parking_arrangement: f.parking_arrangement || null,
+          parking_included_in_rent: f.parking_included_in_rent || null, parking_price_per_spot_month: numOrNull(f.parking_price_per_spot_month),
+          visitor_parking_hourly_rate: numOrNull(f.visitor_parking_hourly_rate), parking_monthly_membership_price: numOrNull(f.parking_monthly_membership_price),
+          parking_notes: f.parking_notes || null,
+          status: (f.status === 'draft' || f.status === 'approved') ? f.status : 'approved',
+          submitted_by: user.id, approved_by: user.id, approved_at: new Date().toISOString(),
+        };
+        const inserted = await insertSupabaseTable('buildings', rec);
+        return sendJson(res, 200, { ok: true, id: (Array.isArray(inserted) && inserted[0] && inserted[0].id) || id });
+      }
+      if (urlPath === '/api/admin/archive-building') {
+        if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        // Reversible: archive hides from public listings + pickers; data is kept.
+        const status = body.restore ? 'approved' : 'archived';
+        await sbPatch('buildings', `id=eq.${encodeURIComponent(body.buildingId)}`, { status });
+        await sbPatch('units', `building_id=eq.${encodeURIComponent(body.buildingId)}`, { status });
+        return sendJson(res, 200, { ok: true, status });
       }
       if (urlPath === '/api/admin/reject-listing') {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
@@ -1232,6 +1275,22 @@ function handleListingRequest(req, res) {
   })();
 }
 
+// Building inventory picker for the (signed-in) List Your Building form, so an
+// uploader can attach a unit to a building already in inventory instead of
+// re-entering its details. Requires authentication. Returns building-level
+// descriptive fields used to prefill the form. Excludes archived buildings.
+function handleBuildingsPicker(req, res) {
+  (async () => {
+    try {
+      const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+      const user = await getAuthUser(token);
+      if (!user || !user.id) return sendJson(res, 401, { ok: false, error: 'not_authenticated' });
+      const rows = await sbGet('buildings?status=eq.approved&order=name.asc&select=id,name,market,submarket,address,google_maps_url,grade,year_built,floors,building_height_m,total_gla_sqm,typical_floorplate_sqm,certifications,amenities,parking_spaces_available,parking_arrangement,parking_included_in_rent,parking_price_per_spot_month,visitor_parking_hourly_rate,parking_monthly_membership_price,parking_notes');
+      return sendJson(res, 200, { ok: true, buildings: rows });
+    } catch (e) { return sendJson(res, 200, { ok: true, buildings: [] }); }
+  })();
+}
+
 // Latest construction-cost inputs per market (used by the Stay vs Go tool).
 function handleConstructionCosts(req, res) {
   let market = null;
@@ -1267,6 +1326,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/listings') {
     if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handlePublicListings(req, res);
+  }
+  if (urlPath === '/api/buildings-picker') {
+    if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handleBuildingsPicker(req, res);
   }
   if (urlPath === '/api/listing-image') return handleListingImage(req, res);
   if (urlPath === '/api/listing-media') return handleListingMedia(req, res);

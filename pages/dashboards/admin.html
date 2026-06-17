@@ -6,6 +6,15 @@
   <meta name="robots" content="noindex"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="../../css/urbn.css"/>
+  <style>
+    .admin-layout { display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; }
+    .admin-side { flex:0 0 210px; display:flex; flex-direction:column; gap:5px; position:sticky; top:84px; }
+    .admin-main { flex:1; min-width:0; }
+    .admin-navbtn { display:block; width:100%; text-align:left; padding:9px 14px; border:1px solid var(--border); background:var(--bg-white); border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; transition:background .15s,color .15s; }
+    .admin-navbtn:hover { border-color:var(--navy,#243A5E); }
+    .admin-navbtn.on { background:var(--navy,#243A5E); color:#fff; border-color:var(--navy,#243A5E); }
+    @media (max-width:760px){ .admin-side{ flex-basis:100%; position:static; flex-direction:row; flex-wrap:wrap; } .admin-navbtn{ width:auto; } }
+  </style>
 </head>
 <body>
 <div id="nav-placeholder"></div>
@@ -14,32 +23,36 @@
     <div class="mb32"><span class="overline label-navy">Admin</span><h1 style="font-size:40px;">URBN Admin Console</h1></div>
     <div id="admin-gate"><div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">CHECKING ACCESS…</div></div>
     <div id="admin-app" class="hidden">
-      <div class="chips" style="margin-bottom:22px;flex-wrap:wrap;">
-        <button class="chip on" id="tab-overview" onclick="showTab('overview')">Overview</button>
-        <button class="chip" id="tab-pending" onclick="showTab('pending')">Pending listings</button>
-        <button class="chip" id="tab-batches" onclick="showTab('batches')">Pending batches</button>
-        <button class="chip" id="tab-approved" onclick="showTab('approved')">Approved</button>
-        <button class="chip" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
-        <button class="chip" id="tab-reveal" onclick="showTab('reveal')">Reveal requests</button>
-        <button class="chip" id="tab-buildings" onclick="showTab('buildings')">Buildings</button>
-        <button class="chip" id="tab-membership" onclick="showTab('membership')">Membership</button>
-        <button class="chip" id="tab-users" onclick="showTab('users')">Users</button>
-        <button class="chip" id="tab-companies" onclick="showTab('companies')">Companies</button>
-        <button class="chip" id="tab-capex" onclick="showTab('capex')">Construction costs</button>
-        <button class="chip" id="tab-analytics" onclick="showTab('analytics')">Analytics</button>
+      <div class="admin-layout">
+        <aside class="admin-side">
+          <button class="admin-navbtn on" id="tab-overview" onclick="showTab('overview')">Overview</button>
+          <button class="admin-navbtn" id="tab-pending" onclick="showTab('pending')">Pending listings</button>
+          <button class="admin-navbtn" id="tab-batches" onclick="showTab('batches')">Pending batches</button>
+          <button class="admin-navbtn" id="tab-approved" onclick="showTab('approved')">Approved</button>
+          <button class="admin-navbtn" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
+          <button class="admin-navbtn" id="tab-reveal" onclick="showTab('reveal')">Reveal requests</button>
+          <button class="admin-navbtn" id="tab-buildings" onclick="showTab('buildings')">Buildings</button>
+          <button class="admin-navbtn" id="tab-membership" onclick="showTab('membership')">Membership</button>
+          <button class="admin-navbtn" id="tab-users" onclick="showTab('users')">Users</button>
+          <button class="admin-navbtn" id="tab-companies" onclick="showTab('companies')">Companies</button>
+          <button class="admin-navbtn" id="tab-capex" onclick="showTab('capex')">Construction costs</button>
+          <button class="admin-navbtn" id="tab-analytics" onclick="showTab('analytics')">Analytics</button>
+        </aside>
+        <div class="admin-main">
+          <div id="panel-overview"></div>
+          <div id="panel-pending" class="hidden"></div>
+          <div id="panel-batches" class="hidden"></div>
+          <div id="panel-approved" class="hidden"></div>
+          <div id="panel-rejected" class="hidden"></div>
+          <div id="panel-reveal" class="hidden"></div>
+          <div id="panel-buildings" class="hidden"></div>
+          <div id="panel-membership" class="hidden"></div>
+          <div id="panel-users" class="hidden"></div>
+          <div id="panel-companies" class="hidden"></div>
+          <div id="panel-capex" class="hidden"></div>
+          <div id="panel-analytics" class="hidden"></div>
+        </div>
       </div>
-      <div id="panel-overview"></div>
-      <div id="panel-pending" class="hidden"></div>
-      <div id="panel-batches" class="hidden"></div>
-      <div id="panel-approved" class="hidden"></div>
-      <div id="panel-rejected" class="hidden"></div>
-      <div id="panel-reveal" class="hidden"></div>
-      <div id="panel-buildings" class="hidden"></div>
-      <div id="panel-membership" class="hidden"></div>
-      <div id="panel-users" class="hidden"></div>
-      <div id="panel-companies" class="hidden"></div>
-      <div id="panel-capex" class="hidden"></div>
-      <div id="panel-analytics" class="hidden"></div>
     </div>
     <div class="mbg" id="reject-modal">
       <div class="modal">
@@ -97,7 +110,7 @@ async function adminFetch(path, method, body) {
 function showTab(t) {
   TABS.forEach(x => {
     document.getElementById('panel-' + x).classList.toggle('hidden', x !== t);
-    document.getElementById('tab-' + x).className = 'chip' + (x === t ? ' on' : '');
+    document.getElementById('tab-' + x).className = 'admin-navbtn' + (x === t ? ' on' : '');
   });
   try { history.replaceState(null, '', location.pathname + '?tab=' + t); } catch (e) {}
   (LOADERS[t] || function () {})();
@@ -127,12 +140,18 @@ async function loadOverview() {
 }
 
 // ── Pending single listings ──────────────────────────────────────────────────
+let PENDING_BLD_OPTS = '<option value="">— Create a new building from this submission —</option>';
 async function loadPending() {
   const panel = document.getElementById('panel-pending');
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/pending-listings', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   if (!j.listings.length) { panel.innerHTML = emptyBox('No pending listing submissions.'); return; }
+  // Fetch the approved-building inventory once so each card can offer "assign to existing".
+  try {
+    const bj = await adminFetch('/api/admin/buildings?status=approved', 'GET');
+    if (bj.ok && bj.buildings) PENDING_BLD_OPTS = '<option value="">— Create a new building from this submission —</option>' + bj.buildings.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.submarket ? ' — ' + esc(b.submarket) : ''}</option>`).join('');
+  } catch (e) {}
   panel.innerHTML = j.listings.map(L => {
     const p = L.payload || {};
     const photoCount = Array.isArray(p.photoPaths) ? p.photoPaths.length : 0;
@@ -157,18 +176,27 @@ async function loadPending() {
       </div>
       ${L.message ? `<div style="margin-top:8px;font-size:12.5px;"><span style="color:var(--text-2);">Notes:</span> ${esc(L.message)}</div>` : ''}
       ${mediaPaths.length ? `<div style="margin-top:8px;font-size:11px;color:var(--text-2);word-break:break-all;"><strong>Media paths (${esc(p.mediaBucket || 'listing-media')}):</strong><br>${mediaPaths.map(esc).join('<br>')}</div>` : ''}
-      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-navy btn-sm" onclick="approveListing('${L.id}',this)">Approve</button>
-        <button class="btn btn-outline btn-sm" onclick="openReject('listing','${L.id}')">Reject</button>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+        <label class="fl" style="display:block;margin-bottom:6px;">Assign to a building${(p.existingBuildingId ? ' (uploader picked an existing one)' : '')}</label>
+        <select class="fi fi-sel" id="assign-${L.id}" style="max-width:420px;">${PENDING_BLD_OPTS}</select>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-navy btn-sm" onclick="approveListing('${L.id}',this)">Approve</button>
+          <button class="btn btn-outline btn-sm" onclick="openReject('listing','${L.id}')">Reject</button>
+        </div>
       </div>
     </div>`;
   }).join('');
+  // Preselect the uploader's chosen building where one was provided.
+  j.listings.forEach(L => { const p = L.payload || {}; if (p.existingBuildingId) { const sel = document.getElementById('assign-' + L.id); if (sel) sel.value = p.existingBuildingId; } });
 }
 
 async function approveListing(id, btn) {
-  if (!confirm('Approve this listing? It will go live publicly.')) return;
+  const sel = document.getElementById('assign-' + id);
+  const buildingId = sel ? sel.value : '';
+  const msg = buildingId ? 'Approve and attach this unit to the selected existing building?' : 'Approve this listing? A new building will be created and it will go live publicly.';
+  if (!confirm(msg)) return;
   setBtnBusy(btn, true, 'Approving…');
-  const j = await adminFetch('/api/admin/approve-listing', 'POST', { requestId: id });
+  const j = await adminFetch('/api/admin/approve-listing', 'POST', { requestId: id, buildingId: buildingId || null });
   setBtnBusy(btn, false);
   if (j.ok) { showToast('Listing approved and published'); loadPending(); }
   else showToast('Approve failed: ' + (j.error || 'error') + (j.detail ? ' — ' + j.detail : ''), 'error');
@@ -373,17 +401,62 @@ async function revokeGrant(id, btn) { if (!confirm('Revoke this access grant? Th
 let BLD_STATUS = 'approved';
 async function loadBuildings() {
   const panel = document.getElementById('panel-buildings');
-  panel.innerHTML = `<div class="chips" style="margin-bottom:16px;">
-    ${['approved', 'pending', 'rejected', 'draft', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}
+  panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}</div>
+    <button class="btn btn-navy btn-sm" onclick="openCreateBuilding()">+ Add building</button>
   </div><div id="bld-list">${loadingBox()}</div>`;
   const q = BLD_STATUS ? '/api/admin/buildings?status=' + encodeURIComponent(BLD_STATUS) : '/api/admin/buildings';
   const j = await adminFetch(q, 'GET');
   const list = document.getElementById('bld-list');
   if (!j.ok) { list.innerHTML = errBox(j); return; }
   if (!j.buildings || !j.buildings.length) { list.innerHTML = emptyBox('No buildings for this status.'); return; }
-  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name || '')}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button></td></tr>`).join('')}</tbody></table></div>`;
+  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name || '')}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> ${b.status === 'archived' ? `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',true,this)">Restore</button>` : `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',false,this)">Archive</button>`}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function fieldInput(label, id, val, type) { return `<div class="fg"><label class="fl">${esc(label)}</label><input type="${type || 'text'}" class="fi" id="${id}" value="${esc(val == null ? '' : val)}"></div>`; }
+
+// Create a new building manually (admin inventory entry).
+function openCreateBuilding() {
+  const panel = document.getElementById('panel-buildings');
+  const marketOpts = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  panel.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="loadBuildings()" style="margin-bottom:14px;">← Back to buildings</button>
+    <h3 style="font-size:20px;margin-bottom:14px;">Add a building to inventory</h3>
+    <div class="card" style="padding:22px;">
+      <div class="fgs">${fieldInput('Name *', 'nb-name', '')}<div class="fg"><label class="fl">Market *</label><select class="fi fi-sel" id="nb-market"><option value="">Select...</option>${marketOpts}</select></div></div>
+      <div class="fgs">${fieldInput('Submarket / district', 'nb-submarket', '')}${fieldInput('Grade', 'nb-grade', '')}</div>
+      <div class="fgs">${fieldInput('Address', 'nb-address', '')}${fieldInput('Google Maps URL', 'nb-maps', '')}</div>
+      <div class="fgs">${fieldInput('Year built', 'nb-year', '', 'number')}${fieldInput('Floors', 'nb-floors', '', 'number')}</div>
+      <div class="fgs">${fieldInput('Building height (m)', 'nb-height', '', 'number')}${fieldInput('Total GLA (sqm)', 'nb-gla', '', 'number')}</div>
+      <div class="fgs">${fieldInput('Typical floor plate (sqm)', 'nb-plate', '', 'number')}${fieldInput('Certifications (; separated)', 'nb-certs', '')}</div>
+      <div class="fg"><label class="fl">Amenities (; separated)</label><input type="text" class="fi" id="nb-amenities"></div>
+      <div class="fgs">${fieldInput('Parking spaces', 'nb-pk-spaces', '', 'number')}${fieldInput('Parking arrangement (free/paid/mixed/none)', 'nb-pk-arrangement', '')}</div>
+      <div class="fg"><label class="fl">Status</label><select class="fi fi-sel" id="nb-status"><option value="approved">Approved (live + assignable)</option><option value="draft">Draft (inventory only)</option></select></div>
+      <button class="btn btn-navy btn-sm" onclick="createBuilding(this)">Create building</button>
+    </div>`;
+}
+async function createBuilding(btn) {
+  const fields = {
+    name: gv('nb-name'), market: gv('nb-market'), submarket: gv('nb-submarket') || null, grade: gv('nb-grade') || null,
+    address: gv('nb-address') || null, google_maps_url: gv('nb-maps') || null,
+    year_built: gv('nb-year'), floors: gv('nb-floors'), building_height_m: gv('nb-height'),
+    total_gla_sqm: gv('nb-gla'), typical_floorplate_sqm: gv('nb-plate'),
+    certifications: gv('nb-certs'), amenities: gv('nb-amenities'),
+    parking_spaces_available: gv('nb-pk-spaces'), parking_arrangement: gv('nb-pk-arrangement') || null,
+    status: gv('nb-status'),
+  };
+  if (!fields.name || !fields.market) { showToast('Name and market are required', 'error'); return; }
+  setBtnBusy(btn, true, 'Creating…');
+  const j = await adminFetch('/api/admin/create-building', 'POST', { fields });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Building added to inventory'); loadBuildings(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+async function archiveBuilding(id, restore, btn) {
+  if (!confirm(restore ? 'Restore this building (set back to approved)?' : 'Archive this building? It will be hidden from public listings and pickers but kept and restorable.')) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/archive-building', 'POST', { buildingId: id, restore: !!restore });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast(restore ? 'Building restored' : 'Building archived'); loadBuildings(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
 async function openBuilding(id) {
   const panel = document.getElementById('panel-buildings');
   panel.innerHTML = loadingBox();
