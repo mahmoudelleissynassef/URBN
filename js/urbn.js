@@ -35,8 +35,9 @@ const URBNAuth = {
           this.user = (this.session && this.session.user) || null;
           this.client.auth.onAuthStateChange((_e, sess) => {
             URBNAuth.session = sess; URBNAuth.user = sess ? sess.user : null; updateAuthNav();
+            URBNAuth.checkAdmin();
           });
-          if (this.user) hydrateSaved();
+          if (this.user) { hydrateSaved(); this.checkAdmin(); }
         } catch (e) {}
       } else {
         console.warn('[auth] Supabase not configured (set SUPABASE_URL + SUPABASE_ANON_KEY)');
@@ -45,10 +46,22 @@ const URBNAuth = {
     })();
     return this._ready;
   },
+  admin: false,
+  // Check admin status server-side (admin_users table) and reveal admin nav.
+  async checkAdmin() {
+    if (!this.user || !this.session) { this.admin = false; updateAdminNav(); return false; }
+    try {
+      const res = await fetch('/api/admin/me', { headers: { Authorization: 'Bearer ' + this.session.access_token } });
+      const j = await res.json();
+      this.admin = !!(j && j.admin);
+    } catch (e) { this.admin = false; }
+    updateAdminNav();
+    return this.admin;
+  },
   async signOut() {
     await this.init();
     if (this.client) { try { await this.client.auth.signOut(); } catch (e) {} }
-    this.session = null; this.user = null; updateAuthNav();
+    this.session = null; this.user = null; this.admin = false; updateAuthNav();
   },
   // Gate a page: resolves to the user, or redirects to sign-in.
   async requireAuth(redirect = '/pages/signin.html') {
@@ -63,6 +76,12 @@ function updateAuthNav() {
   const signedIn = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user);
   document.querySelectorAll('[data-auth="in"]').forEach(el => { el.style.display = signedIn ? '' : 'none'; });
   document.querySelectorAll('[data-auth="out"]').forEach(el => { el.style.display = signedIn ? 'none' : ''; });
+  updateAdminNav();
+}
+// Admin nav links show only for verified admins (server-checked).
+function updateAdminNav() {
+  const show = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user && URBNAuth.admin);
+  document.querySelectorAll('[data-admin]').forEach(el => { el.style.display = show ? '' : 'none'; });
 }
 
 // Pull the user's saved building ids into USER.saved (best-effort).
@@ -128,6 +147,7 @@ function injectNav(base='') {
       </div>
       <div class="nav-right">
         <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+        <a href="${base}pages/dashboards/admin.html" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
         <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
         <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
         <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>
@@ -156,6 +176,7 @@ function injectNav(base='') {
     <a href="${base}pages/market-scan.html">Contact</a>
     <div class="mobile-nav-actions">
       <a href="${base}pages/signin.html" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+      <a href="${base}pages/dashboards/admin.html" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
       <a href="${base}pages/dashboards/tenant.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
       <a href="${base}pages/account.html" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
       <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='${base}index.html')">Sign Out</button>

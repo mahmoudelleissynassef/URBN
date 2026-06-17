@@ -441,22 +441,27 @@ async function getAuthUser(token) {
 
 function validateBatchRow(r) {
   const num = (x) => x !== '' && x != null && !isNaN(Number(x));
+  const isUrl = (x) => /^https?:\/\/\S+$/i.test(String(x || '').trim());
   const DESK = ['Coworking desks', 'Serviced office suite'];
   const AREA = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
   const errs = [];
+  // Required
   if (!r.building_name) errs.push('building_name');
   const marketOk = !!MARKET_CURRENCY[r.market] || FRANCOPHONE_WA_MARKETS.includes(r.market);
   if (!marketOk) errs.push('market');
+  if (!r.submarket) errs.push('submarket');
   if (!r.offering_type) errs.push('offering_type');
   if (!r.fit_out) errs.push('fit_out');
   if (!num(r.asking_rent)) errs.push('asking_rent');
-  if (!r.pricing_basis) errs.push('pricing_basis');
   if (marketOk && (!r.currency || !allowedCurrenciesForMarket(r.market).includes(r.currency))) errs.push('currency');
+  if (!r.pricing_basis) errs.push('pricing_basis');
+  // Conditional: traditional offerings need size_sqm; coworking/serviced need desks.
   if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
-  if (AREA.includes(r.offering_type) && !num(r.unit_size_sqm)) errs.push('unit_size_sqm');
-  if (r.service_charge && !num(r.service_charge)) errs.push('service_charge');
-  // Photo / floorplan URLs are optional but must be valid URLs if present.
-  const isUrl = (x) => /^https?:\/\/\S+$/i.test(String(x || '').trim());
+  if (AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  // Numeric if present
+  ['year_built', 'floors', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge'].forEach((k) => { if (r[k] && !num(r[k])) errs.push(k); });
+  // URLs if present
+  ['google_maps_url', 'main_photo_url'].forEach((k) => { if (r[k] && !isUrl(r[k])) errs.push(k); });
   for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
   for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }
   return errs;
@@ -475,6 +480,173 @@ async function insertSupabaseTable(table, rowOrRows) {
   }, payload);
   if (r.status < 200 || r.status >= 300) throw new Error(`supabase_${r.status}:${r.body.slice(0, 300)}`);
   return JSON.parse(r.body || '[]');
+}
+
+// ── Admin: service-role REST helpers + approval workflow ─────────────────────
+function sbHeaders() {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+}
+async function sbGet(pathWithQuery) {
+  const base = process.env.SUPABASE_URL;
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${pathWithQuery}`, { method: 'GET', headers: sbHeaders() });
+  if (r.status < 200 || r.status >= 300) throw new Error(`sb_get_${r.status}:${r.body.slice(0, 200)}`);
+  return JSON.parse(r.body || '[]');
+}
+async function sbPatch(table, query, patch) {
+  const base = process.env.SUPABASE_URL, body = JSON.stringify(patch);
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: { ...sbHeaders(), Prefer: 'return=representation', 'Content-Length': Buffer.byteLength(body) } }, body);
+  if (r.status < 200 || r.status >= 300) throw new Error(`sb_patch_${r.status}:${r.body.slice(0, 200)}`);
+  return JSON.parse(r.body || '[]');
+}
+async function sbUpsert(table, rows) {
+  const base = process.env.SUPABASE_URL, body = JSON.stringify(rows);
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${table}`, { method: 'POST', headers: { ...sbHeaders(), Prefer: 'resolution=merge-duplicates,return=representation', 'Content-Length': Buffer.byteLength(body) } }, body);
+  if (r.status < 200 || r.status >= 300) throw new Error(`sb_upsert_${r.status}:${r.body.slice(0, 200)}`);
+  return JSON.parse(r.body || '[]');
+}
+async function isAdmin(userId) {
+  if (!userId) return false;
+  try { const rows = await sbGet(`admin_users?user_id=eq.${userId}&select=user_id`); return Array.isArray(rows) && rows.length > 0; }
+  catch (e) { return false; }
+}
+function readJsonBody(req, max = 64 * 1024) {
+  return new Promise((resolve) => {
+    let body = '', tooLarge = false;
+    req.on('data', (c) => { if (body.length <= max) body += c; if (body.length > max) tooLarge = true; });
+    req.on('end', () => { if (tooLarge) return resolve(null); try { resolve(JSON.parse(body || '{}')); } catch (e) { resolve(null); } });
+    req.on('error', () => resolve(null));
+  });
+}
+const numOrNull = (x) => (x === '' || x == null || isNaN(Number(x))) ? null : Number(x);
+const arrOrNull = (s) => { const a = String(s || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean); return a.length ? a : null; };
+const dateOrNull = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '').trim()) ? String(s).trim() : null;
+
+async function sendApprovalEmail(to, name, buildingName, approved, note) {
+  if (!to) return;
+  const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+  const title = approved ? 'Your listing has been approved' : 'Your listing was not approved';
+  const badge = approved ? 'Approved' : 'Not Approved';
+  const hi = name || 'there';
+  const msg = approved
+    ? `Good news — <strong>${escapeHtml(buildingName || 'your building')}</strong> has been verified and is now live on URBN Offices.`
+    : `Thank you for your submission. <strong>${escapeHtml(buildingName || 'Your building')}</strong> was not approved at this time.${note ? ' Reason: ' + escapeHtml(note) : ''}`;
+  const inner = `<tr><td style="padding:20px 24px 8px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(hi)},</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">${msg}</p></td></tr>`;
+  try {
+    await sendResendEmail({
+      subject: `URBN Offices — ${title}`, html: emailShell(title, badge, inner),
+      text: `Hi ${hi},\n\n${approved ? (buildingName || 'Your building') + ' is now live on URBN Offices.' : (buildingName || 'Your building') + ' was not approved.' + (note ? ' Reason: ' + note : '')}\n\n— URBN Offices`,
+      from, to,
+    });
+  } catch (e) { console.error('[admin] approval email failed:', e.message); }
+}
+
+// Approve a manual list-building request -> buildings + units + listing_media.
+async function approveRequestRow(row, adminId) {
+  const p = row.payload || {}, now = new Date().toISOString(), bId = 'b_' + row.id;
+  await sbUpsert('buildings', [{
+    id: bId, name: p.building || row.name || 'Untitled', market: row.market || p.market || null, submarket: p.district || null,
+    address: p.address || null, google_maps_url: p.mapsUrl || null, grade: p.grade || null, image_url: p.mainPhotoUrl || null,
+    status: 'approved', submitted_by: p.submittedBy || null, request_id: row.id, approved_by: adminId, approved_at: now,
+  }]);
+  await sbUpsert('units', [{
+    id: 'u_' + row.id, building_id: bId, unit_floor: p.floor || null, size_sqm: numOrNull(p.area), offering_type: p.offeringType || null,
+    fit_out: p.fitOut || null, desks: numOrNull(p.seats), meeting_rooms: null, asking_rent: numOrNull(p.rent), currency: p.currency || null,
+    pricing_basis: p.pricingBasis || null, service_charge: numOrNull(p.serviceCharge), service_charge_basis: p.serviceChargeBasis || null,
+    availability_date: dateOrNull(p.availabilityDate), min_term: p.minTerm || null, notes: row.message || p.message || null, status: 'approved', request_id: row.id,
+  }]);
+  const media = [];
+  (Array.isArray(p.photoPaths) ? p.photoPaths : []).forEach((path) => media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path, kind: 'photo', uploaded_by: p.submittedBy || null }));
+  if (p.floorplanPath) media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path: p.floorplanPath, kind: 'floorplan', uploaded_by: p.submittedBy || null });
+  if (media.length) { try { await insertSupabaseTable('listing_media', media); } catch (e) { console.error('[admin] media:', e.message); } }
+  await sbPatch('client_requests', `id=eq.${row.id}`, { status: 'approved', reviewed_by: adminId, reviewed_at: now });
+}
+
+// Approve a batch row (external media URLs) -> buildings + units + listing_media.
+async function approveBatchRowRec(row, adminId) {
+  const r = row.raw || {}, now = new Date().toISOString(), bId = 'b_' + row.id;
+  await sbUpsert('buildings', [{
+    id: bId, name: r.building_name || 'Untitled', market: r.market || null, submarket: r.submarket || null, address: r.address || null,
+    google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
+    total_gla_sqm: numOrNull(r.total_gla_sqm), typical_floorplate_sqm: numOrNull(r.typical_floorplate_sqm), parking_ratio: numOrNull(r.parking_ratio),
+    certifications: arrOrNull(r.certifications), amenities: arrOrNull(r.amenities), image_url: r.main_photo_url || null,
+    status: 'approved', approved_by: adminId, approved_at: now,
+  }]);
+  await sbUpsert('units', [{
+    id: 'u_' + row.id, building_id: bId, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null,
+    fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent),
+    currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge),
+    service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved',
+  }]);
+  const media = [];
+  if (r.main_photo_url) media.push({ url: r.main_photo_url, kind: 'photo' });
+  for (let i = 1; i <= 5; i++) if (r['photo_url_' + i]) media.push({ url: r['photo_url_' + i], kind: 'photo' });
+  for (let i = 1; i <= 2; i++) if (r['floorplan_url_' + i]) media.push({ url: r['floorplan_url_' + i], kind: 'floorplan' });
+  media.forEach((m) => { m.building_id = bId; m.path = m.url; m.bucket = 'external'; });
+  if (media.length) { try { await insertSupabaseTable('listing_media', media); } catch (e) { console.error('[admin] batch media:', e.message); } }
+  await sbPatch('listing_batch_rows', `id=eq.${row.id}`, { status: 'approved' });
+  try {
+    const pending = await sbGet(`listing_batch_rows?batch_id=eq.${row.batch_id}&status=eq.pending_review&select=id`);
+    if (Array.isArray(pending) && pending.length === 0) await sbPatch('listing_batches', `id=eq.${row.batch_id}`, { status: 'approved' });
+  } catch (e) {}
+}
+
+function handleAdmin(req, res, urlPath) {
+  (async () => {
+    const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+    const user = await getAuthUser(token);
+    if (!user || !user.id) return sendJson(res, 401, { ok: false, error: 'not_authenticated' });
+    if (!(await isAdmin(user.id))) return sendJson(res, 403, { ok: false, error: 'not_admin' });
+    try {
+      if (req.method === 'GET' && urlPath === '/api/admin/me') return sendJson(res, 200, { ok: true, admin: true, email: user.email });
+      if (req.method === 'GET' && urlPath === '/api/admin/pending-listings') {
+        return sendJson(res, 200, { ok: true, listings: await sbGet(`client_requests?request_type=eq.list-building&status=in.(pending,new)&order=created_at.desc`) });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/listings') {
+        const status = (req.url.split('status=')[1] || 'approved').split('&')[0];
+        if (status === 'rejected') return sendJson(res, 200, { ok: true, listings: await sbGet(`client_requests?request_type=eq.list-building&status=eq.rejected&order=reviewed_at.desc`) });
+        return sendJson(res, 200, { ok: true, buildings: await sbGet(`buildings?status=eq.approved&order=approved_at.desc`) });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/listing-batches') {
+        return sendJson(res, 200, { ok: true, batches: await sbGet(`listing_batches?order=created_at.desc`), rows: await sbGet(`listing_batch_rows?order=row_index.asc`) });
+      }
+      const body = await readJsonBody(req);
+      if (!body) return sendJson(res, 400, { ok: false, error: 'invalid_json' });
+      if (urlPath === '/api/admin/approve-listing') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await approveRequestRow(row, user.id);
+        await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, true);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reject-listing') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
+        await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, false, body.reason);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/approve-batch-row') {
+        const row = (await sbGet(`listing_batch_rows?id=eq.${body.rowId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await approveBatchRowRec(row, user.id);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reject-batch-row') {
+        await sbPatch('listing_batch_rows', `id=eq.${body.rowId}`, { status: 'rejected', errors: [String(body.reason || 'rejected by admin')] });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/approve-valid-batch') {
+        const rows = await sbGet(`listing_batch_rows?batch_id=eq.${body.batchId}&status=eq.pending_review&select=*`);
+        let n = 0; for (const row of rows) { await approveBatchRowRec(row, user.id); n++; }
+        return sendJson(res, 200, { ok: true, approved: n });
+      }
+      return sendJson(res, 404, { ok: false, error: 'unknown_admin_endpoint' });
+    } catch (e) {
+      console.error('[admin] error:', (e && e.stack) || e);
+      return sendJson(res, 500, { ok: false, error: 'admin_error', detail: String((e && e.message) || e).slice(0, 200) });
+    }
+  })();
 }
 
 // Batch listing upload: validate rows server-side, store as pending review.
@@ -565,6 +737,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/batch') {
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handleBatch(req, res);
+  }
+
+  if (urlPath.startsWith('/api/admin/')) {
+    return handleAdmin(req, res, urlPath);
   }
 
   // Public client config for the frontend. Exposes ONLY the Supabase URL and the

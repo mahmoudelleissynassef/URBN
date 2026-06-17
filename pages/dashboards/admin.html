@@ -9,14 +9,21 @@
 </head>
 <body>
 <div id="nav-placeholder"></div>
-<div class="pt-nav" style="padding:60px 0 80px;">
-  <div class="w-sm">
-    <div class="mb32">
-      <span class="overline label-navy">Admin</span>
-      <h1 style="font-size:40px;">Admin Console</h1>
-    </div>
-    <div id="admin-body">
-      <div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">LOADING…</div>
+<div class="pt-nav" style="padding:40px 0 80px;">
+  <div class="w">
+    <div class="mb32"><span class="overline label-navy">Admin</span><h1 style="font-size:40px;">Listing Review Console</h1></div>
+    <div id="admin-gate"><div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">CHECKING ACCESS…</div></div>
+    <div id="admin-app" class="hidden">
+      <div class="chips" style="margin-bottom:22px;">
+        <button class="chip on" id="tab-pending" onclick="showTab('pending')">Pending listings</button>
+        <button class="chip" id="tab-batches" onclick="showTab('batches')">Pending batches</button>
+        <button class="chip" id="tab-approved" onclick="showTab('approved')">Approved</button>
+        <button class="chip" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
+      </div>
+      <div id="panel-pending"></div>
+      <div id="panel-batches" class="hidden"></div>
+      <div id="panel-approved" class="hidden"></div>
+      <div id="panel-rejected" class="hidden"></div>
     </div>
   </div>
 </div>
@@ -28,22 +35,134 @@ document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
   const user = await URBNAuth.requireAuth('/pages/signin.html');
   if (!user) return;
-  document.getElementById('admin-body').innerHTML = `
-    <div class="form-note">
-      <p><strong>Restricted area.</strong> You are signed in as <strong>${esc(user.email)}</strong>. The admin console — for reviewing and approving operator listing submissions and batch uploads before they go live — is in active development and limited to verified URBN administrators.</p>
-    </div>
-    <div class="card" style="padding:30px;margin-top:18px;">
-      <div class="form-sec-title" style="margin-top:0;">Coming to this console</div>
-      <ul style="margin:4px 0 0 18px;color:var(--text-2);font-size:14px;line-height:1.9;">
-        <li>Review pending building &amp; unit submissions (draft → pending review → approved / rejected)</li>
-        <li>Approve or reject batch CSV uploads before publication</li>
-        <li>Manage company subscriptions and tier approvals</li>
-        <li>Audit trail of submissions and introductions</li>
-      </ul>
-      <p style="font-size:12.5px;color:var(--text-2);margin-top:18px;line-height:1.7;">These tools require the platform listing tables to be live. Until then, submissions are stored as <strong>pending review</strong> in Supabase. For admin access, contact <a href="mailto:operators@urbnoffices.com" class="text-navy" style="text-decoration:underline;">operators@urbnoffices.com</a>.</p>
-    </div>`;
+  const me = await adminFetch('/api/admin/me', 'GET');
+  if (!me || !me.ok || !me.admin) {
+    document.getElementById('admin-gate').innerHTML = `<div class="form-note"><p><strong>Access denied.</strong> This console is restricted to URBN administrators. You are signed in as <strong>${esc(user.email)}</strong>.</p></div>`;
+    return;
+  }
+  document.getElementById('admin-gate').classList.add('hidden');
+  document.getElementById('admin-app').classList.remove('hidden');
+  loadPending();
 });
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function fmtDate(s) { try { return new Date(s).toISOString().split('T')[0]; } catch (e) { return s || ''; } }
+function row(label, val) { return (val == null || val === '') ? '' : `<div style="display:flex;gap:8px;padding:2px 0;font-size:12.5px;"><span style="color:var(--text-2);min-width:130px;">${esc(label)}</span><span>${esc(val)}</span></div>`; }
+
+async function adminFetch(path, method, body) {
+  await URBNAuth.init();
+  if (!URBNAuth.session) return { ok: false, error: 'no_session' };
+  try {
+    const res = await fetch(path, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + URBNAuth.session.access_token }, body: body ? JSON.stringify(body) : undefined });
+    let j = {}; try { j = await res.json(); } catch (e) {}
+    return j;
+  } catch (e) { return { ok: false, error: 'network' }; }
+}
+
+function showTab(t) {
+  ['pending', 'batches', 'approved', 'rejected'].forEach(x => {
+    document.getElementById('panel-' + x).classList.toggle('hidden', x !== t);
+    document.getElementById('tab-' + x).className = 'chip' + (x === t ? ' on' : '');
+  });
+  ({ pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected }[t])();
+}
+
+async function loadPending() {
+  const panel = document.getElementById('panel-pending');
+  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);font-size:13px;">Loading…</div>';
+  const j = await adminFetch('/api/admin/pending-listings', 'GET');
+  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load (${esc(j.error || 'error')}).</p></div>`; return; }
+  if (!j.listings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No pending listing submissions.</div>'; return; }
+  panel.innerHTML = j.listings.map(L => {
+    const p = L.payload || {};
+    const photoCount = Array.isArray(p.photoPaths) ? p.photoPaths.length : 0;
+    const mediaPaths = (Array.isArray(p.photoPaths) ? p.photoPaths : []).concat(p.floorplanPath ? [p.floorplanPath] : []);
+    return `<div class="card" style="padding:22px;margin-bottom:16px;">
+      <div class="flex-b" style="margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+        <div><div style="font-family:var(--fd);font-size:20px;">${esc(p.building || '(no name)')}</div><div style="font-size:12px;color:var(--text-2);">${esc(L.name || '')} · ${esc(L.company || '')} · ${esc(L.email || '')}</div></div>
+        <span class="badge badge-gated">${esc(L.status)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 30px;">
+        ${row('Submitted', fmtDate(L.created_at))}${row('Job title', p.title)}
+        ${row('Submitter type', p.submitterType)}${row('Market', L.market)}
+        ${row('District', p.district)}${row('Address', p.address)}
+        ${row('Google Maps', p.mapsUrl)}${row('Floor', p.floor)}
+        ${row('Fit-out', p.fitOut)}${row('Offering', p.offeringType)}
+        ${row('Area (sqm)', p.area)}${row('Desks/seats', p.seats)}
+        ${row('Rent', p.rent)}${row('Currency', p.currency)}
+        ${row('Pricing basis', p.pricingBasis)}${row('Service charge', p.serviceCharge)}
+        ${row('Svc basis', p.serviceChargeBasis)}${row('Availability', p.availabilityDate)}
+        ${row('Min term', p.minTerm)}${row('Photos', photoCount)}
+        ${row('Floorplan', p.floorplanPath ? 'Yes' : 'No')}
+      </div>
+      ${L.message ? `<div style="margin-top:8px;font-size:12.5px;"><span style="color:var(--text-2);">Notes:</span> ${esc(L.message)}</div>` : ''}
+      ${mediaPaths.length ? `<div style="margin-top:8px;font-size:11px;color:var(--text-2);word-break:break-all;"><strong>Media paths (${esc(p.mediaBucket || 'listing-media')}):</strong><br>${mediaPaths.map(esc).join('<br>')}</div>` : ''}
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-navy btn-sm" onclick="approveListing('${L.id}',this)">Approve</button>
+        <button class="btn btn-outline btn-sm" onclick="rejectListing('${L.id}','reject',this)">Reject</button>
+        <button class="btn btn-ghost btn-sm" onclick="rejectListing('${L.id}','info',this)">Request more info</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveListing(id, btn) {
+  if (!confirm('Approve this listing? It will go live publicly.')) return;
+  setBtnBusy(btn, true, 'Approving…');
+  const j = await adminFetch('/api/admin/approve-listing', 'POST', { requestId: id });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Listing approved and published'); loadPending(); }
+  else showToast('Approve failed: ' + (j.error || 'error') + (j.detail ? ' — ' + j.detail : ''), 'error');
+}
+async function rejectListing(id, mode, btn) {
+  const reason = prompt(mode === 'info' ? 'What information is needed? (emailed to submitter)' : 'Reason for rejection (emailed to submitter):');
+  if (reason === null) return;
+  setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/reject-listing', 'POST', { requestId: id, reason });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast(mode === 'info' ? 'Sent to submitter' : 'Listing rejected'); loadPending(); }
+  else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+
+async function loadBatches() {
+  const panel = document.getElementById('panel-batches');
+  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  const j = await adminFetch('/api/admin/listing-batches', 'GET');
+  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load (${esc(j.error || 'error')}).</p></div>`; return; }
+  if (!j.batches.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No batch uploads.</div>'; return; }
+  panel.innerHTML = j.batches.map(B => {
+    const rows = j.rows.filter(r => r.batch_id === B.id);
+    return `<div class="card" style="padding:22px;margin-bottom:18px;">
+      <div class="flex-b" style="flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+        <div><div style="font-family:var(--fd);font-size:18px;">${esc(B.filename || 'batch')}</div><div style="font-size:12px;color:var(--text-2);">${fmtDate(B.created_at)} · processed ${B.rows_processed} · accepted ${B.rows_accepted} · rejected ${B.rows_rejected}</div></div>
+        <div style="display:flex;gap:8px;align-items:center;"><span class="badge badge-gated">${esc(B.status)}</span><button class="btn btn-navy btn-sm" onclick="approveValidBatch('${B.id}',this)">Approve all valid</button></div>
+      </div>
+      <div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>#</th><th>Building</th><th>Market</th><th>Offering</th><th>Status</th><th></th></tr></thead><tbody>
+      ${rows.map(r => { const d = r.raw || {}; return `<tr><td>${r.row_index}</td><td>${esc(d.building_name || '—')}</td><td>${esc(d.market || '—')}</td><td>${esc(d.offering_type || '—')}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status)}</span>${(r.errors && r.errors.length) ? ' <span style="font-size:10px;color:#B42318;">' + esc(r.errors.join(', ')) + '</span>' : ''}</td><td>${r.status === 'pending_review' ? `<button class="btn btn-navy btn-sm" onclick="approveRow('${r.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectRow('${r.id}',this)">Reject</button>` : ''}</td></tr>`; }).join('')}
+      </tbody></table></div>
+    </div>`;
+  }).join('');
+}
+async function approveRow(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-batch-row', 'POST', { rowId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Row approved'); loadBatches(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }
+async function rejectRow(id, btn) { const reason = prompt('Reason (optional):') || ''; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-batch-row', 'POST', { rowId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Row rejected'); loadBatches(); } else showToast('Failed', 'error'); }
+async function approveValidBatch(id, btn) { if (!confirm('Approve all valid (pending) rows in this batch? They go live.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-valid-batch', 'POST', { batchId: id }); setBtnBusy(btn, false); if (j.ok) { showToast(j.approved + ' rows approved'); loadBatches(); } else showToast('Failed', 'error'); }
+
+async function loadApproved() {
+  const panel = document.getElementById('panel-approved');
+  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  const j = await adminFetch('/api/admin/listings?status=approved', 'GET');
+  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load.</p></div>`; return; }
+  if (!j.buildings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No approved listings yet.</div>'; return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>District</th><th>Approved</th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.market)}</td><td>${esc(b.submarket || '')}</td><td>${fmtDate(b.approved_at)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+async function loadRejected() {
+  const panel = document.getElementById('panel-rejected');
+  panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">Loading…</div>';
+  const j = await adminFetch('/api/admin/listings?status=rejected', 'GET');
+  if (!j.ok) { panel.innerHTML = `<div class="form-note"><p>Could not load.</p></div>`; return; }
+  if (!j.listings.length) { panel.innerHTML = '<div style="padding:30px 0;color:var(--text-2);">No rejected listings.</div>'; return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Submitter</th><th>Reason</th><th>Date</th></tr></thead><tbody>${j.listings.map(L => `<tr><td>${esc((L.payload && L.payload.building) || '')}</td><td>${esc(L.email || '')}</td><td>${esc(L.review_note || '')}</td><td>${fmtDate(L.reviewed_at)}</td></tr>`).join('')}</tbody></table></div>`;
+}
 </script>
 </body>
 </html>

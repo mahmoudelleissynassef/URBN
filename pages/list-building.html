@@ -377,14 +377,16 @@ function bulkValidate(r) {
   const errs = [], num = x => x !== '' && x != null && !isNaN(Number(x)), isUrl = x => /^https?:\/\/\S+$/i.test(String(x || '').trim());
   if (!r.building_name) errs.push('building_name');
   const mk = URBN_DATA.markets.some(m => m.id === r.market); if (!mk) errs.push('market');
+  if (!r.submarket) errs.push('submarket');
   if (!r.offering_type) errs.push('offering_type');
   if (!r.fit_out) errs.push('fit_out');
   if (!num(r.asking_rent)) errs.push('asking_rent');
-  if (!r.pricing_basis) errs.push('pricing_basis');
   if (mk && (!r.currency || !allowedCurrencies(r.market).includes(r.currency))) errs.push('currency');
+  if (!r.pricing_basis) errs.push('pricing_basis');
   if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
-  if (BULK_AREA.includes(r.offering_type) && !num(r.unit_size_sqm)) errs.push('unit_size_sqm');
-  if (r.service_charge && !num(r.service_charge)) errs.push('service_charge');
+  if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  ['year_built', 'floors', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge'].forEach(k => { if (r[k] && !num(r[k])) errs.push(k); });
+  ['google_maps_url', 'main_photo_url'].forEach(k => { if (r[k] && !isUrl(r[k])) errs.push(k); });
   for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
   for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }
   return errs;
