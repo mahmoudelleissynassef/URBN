@@ -1201,18 +1201,28 @@ function handlePublicListings(req, res) {
   (async () => {
     try {
       const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-      let grantedIds = new Set();
-      if (token) { const user = await getAuthUser(token); if (user && user.id) grantedIds = await approvedGrantsFor(user.id); }
+      let grantedIds = new Set(), admin = false;
+      if (token) { const user = await getAuthUser(token); if (user && user.id) { admin = await isAdmin(user.id); if (!admin) grantedIds = await approvedGrantsFor(user.id); } }
       const [buildings, units, media] = await Promise.all([
         sbGet('buildings?status=eq.approved&select=*'),
         sbGet('units?status=eq.approved&select=*'),
-        // Isolated: if the media flag columns don't exist yet (pre-migration),
-        // don't blank the whole listing set — just treat as no public images.
-        sbGet('listing_media?select=building_id,approved_for_public,is_main').catch(() => []),
+        // Include path/bucket/kind so revealed/admin viewers get the real photo.
+        sbGet('listing_media?select=building_id,bucket,path,kind,approved_for_public,is_main').catch(() => []),
       ]);
       const unitsByB = {}; units.forEach((u) => { (unitsByB[u.building_id] = unitsByB[u.building_id] || []).push(u); });
       const mediaByB = {}; media.forEach((m) => { (mediaByB[m.building_id] = mediaByB[m.building_id] || []).push(m); });
-      const out = buildings.map((b) => shapeListingServer(b, unitsByB[b.id] || [], mediaByB, grantedIds.has(b.id)));
+      const out = [];
+      for (const b of buildings) {
+        const granted = admin || grantedIds.has(b.id);   // admins see full identity everywhere
+        const shaped = shapeListingServer(b, unitsByB[b.id] || [], mediaByB, granted);
+        if (granted) {
+          // Reveal the real main photo (signed) rather than the public-safe-only endpoint.
+          const ms = (mediaByB[b.id] || []).filter((m) => m.kind !== 'floorplan');
+          const main = ms.find((m) => m.is_main) || ms.find((m) => m.approved_for_public) || ms[0];
+          if (main && main.path) { const url = await signStorageUrl(main.bucket, main.path, 3600); if (url) shaped.image = url; }
+        }
+        out.push(shaped);
+      }
       return sendJson(res, 200, { ok: true, buildings: out });
     } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [] }); }
   })();
