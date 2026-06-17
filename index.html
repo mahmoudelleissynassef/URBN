@@ -18,6 +18,12 @@
   <meta name="twitter:description" content="Verified Grade A office options for corporate occupiers and multinationals across Africa & MENA."/>
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="css/urbn.css"/>
+  <style>
+    /* Hero background slideshow (cross-fade carousel) */
+    #hero-bg .hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.4s ease-in-out;z-index:0;}
+    #hero-bg .hero-slide.on{opacity:1;}
+    #hero-bg .hero-overlay{position:absolute;inset:0;z-index:1;}
+  </style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -35,8 +41,8 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-bg">
-    <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85" alt="Corporate office tower" loading="eager">
+  <div class="hero-bg" id="hero-bg">
+    <!-- Slides injected by the carousel script from HERO_IMAGES below. -->
     <div class="hero-overlay"></div>
   </div>
   <div class="w hero-c">
@@ -47,8 +53,8 @@
     <h1>Find Office Space in<br><em>Opaque Markets</em><br>Before You Land.</h1>
     <p class="hero-sub">Verified Grade A office options for corporate occupiers, multinationals, and expansion teams across Africa and MENA.</p>
     <div class="hero-actions">
-      <a href="pages/market-scan.html" class="btn btn-inv btn-xl">Request Market Scan</a>
-      <a href="pages/search.html" class="btn btn-inv-o btn-xl">Browse Offices</a>
+      <a href="/market-scan" class="btn btn-inv btn-xl">Request Market Scan</a>
+      <a href="/offices" class="btn btn-inv-o btn-xl">Browse Offices</a>
     </div>
     <p class="hero-help">Want a verified shortlist in 48 hours? Request a Market Scan. Already know what you&#39;re looking for? Browse offices.</p>
   </div>
@@ -189,8 +195,43 @@
 <script src="js/urbn.js"></script>
 <script src="js/listings.js"></script>
 <script>
+// ── Hero background slideshow ────────────────────────────────────────────────
+// To add/replace photos: drop image files in /assets/hero/ and edit this list.
+// The first entry is a built-in fallback so the hero is never blank. Any image
+// that fails to load is skipped automatically.
+const HERO_IMAGES = [
+  'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85',
+  '/assets/hero/hero-1.webp',
+  '/assets/hero/hero-2.webp',
+  '/assets/hero/hero-3.webp',
+  '/assets/hero/hero-4.webp',
+  '/assets/hero/hero-5.webp',
+];
+function initHeroCarousel(){
+  const bg = document.getElementById('hero-bg');
+  if (!bg) return;
+  const overlay = bg.querySelector('.hero-overlay');
+  HERO_IMAGES.forEach((src, i) => {
+    const img = document.createElement('img');
+    img.className = 'hero-slide' + (i === 0 ? ' on' : '');
+    img.src = src; img.alt = ''; img.loading = i === 0 ? 'eager' : 'lazy';
+    img.onerror = () => img.remove();         // skip missing/broken images
+    bg.insertBefore(img, overlay);
+  });
+  function live(){ return Array.from(bg.querySelectorAll('.hero-slide')).filter(s => s.complete && s.naturalWidth > 0); }
+  let idx = 0;
+  setInterval(() => {
+    const s = live();
+    if (s.length < 2) return;                  // nothing to rotate yet
+    s.forEach(x => x.classList.remove('on'));
+    idx = (idx + 1) % s.length;
+    s[idx].classList.add('on');
+  }, 6000);
+}
+
 document.addEventListener('DOMContentLoaded',async ()=>{
   injectNav(''); injectFooter('');
+  initHeroCarousel();
   await URBN_LISTINGS.load();
 
   // Ticker
@@ -209,17 +250,19 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   URBN_DATA.markets.slice(0,8).forEach(m=>{
     const s=URBN_DATA.marketStats[m.id];
     const bc=URBN_LISTINGS.count(m.id);
+    const live=bc>0;
     const subs=m.submarkets.slice(0,2).join(', ');
-    mg.innerHTML+=`<a href="pages/search.html?m=${m.id}" class="city-card">
+    const href=live?`/offices?m=${m.id}`:'/market-scan';
+    mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}>
       <div class="city-card-region">${m.region}</div>
-      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-name">${m.name}, ${m.country} ${live?'':'<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">Coming soon</span>'}</div>
       <div class="city-card-divider"></div>
       <div class="city-card-data">
-        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${bc} listed</span></div>
+        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${live?bc+' listed':'Coming soon'}</span></div>
         <div class="city-card-row"><span class="city-card-label">Districts</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:110px;">${subs}</span></div>
         ${s?`<div class="city-card-row"><span class="city-card-label">Avg Rent</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>`:''}
       </div>
-      <div class="city-card-footer">View offices →</div>
+      <div class="city-card-footer">${live?'View offices &rarr;':'Request a Market Scan &rarr;'}</div>
     </a>`;
   });
 

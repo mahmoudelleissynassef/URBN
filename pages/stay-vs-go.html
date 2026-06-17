@@ -57,14 +57,15 @@
 
       <!-- Results -->
       <div>
-        <div id="sg-results"></div>
+        <div id="sg-capex"></div>
+        <div id="sg-results" style="margin-top:18px;"></div>
         <div class="card" style="padding:22px;margin-top:18px;">
           <div class="form-sec-title" style="margin-top:0;">Assumptions &amp; notes</div>
           <ul id="sg-notes" style="font-size:12.5px;color:var(--text-2);line-height:1.9;padding-left:18px;margin:0;"></ul>
         </div>
         <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;">
-          <a href="market-scan.html" class="btn btn-navy">Request a Market Scan →</a>
-          <a href="market-scan.html" class="btn btn-outline">Speak to URBN</a>
+          <a href="/market-scan" class="btn btn-navy">Request a Market Scan →</a>
+          <a href="/market-scan" class="btn btn-outline">Speak to URBN</a>
         </div>
         <p style="font-size:11px;color:var(--text-2);margin-top:14px;line-height:1.7;">Indicative only. Figures are estimates for early-stage comparison and are not a quote, valuation, or financial advice. Confirm all costs with URBN and your advisors before committing.</p>
       </div>
@@ -78,17 +79,37 @@
 let COSTS = null;           // construction costs row for the selected market (or null)
 let CURRENCY = '';
 
-document.addEventListener('DOMContentLoaded', () => {
+let SG_COST_MARKETS = {};  // id -> { name, currency }
+
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../'); injectFooter('../');
   const sel = document.getElementById('sg-market');
-  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
-  // Preselect from ?m= if present
-  const m = p('m'); if (m) { sel.value = m; }
+  // The market list is driven by which markets we actually have CAPEX data for,
+  // so the analysis always has figures to show. Markets without data (or without
+  // listings yet) are intentionally excluded here and shown as "coming soon"
+  // elsewhere on the site.
+  try {
+    const j = await fetch('/api/construction-costs').then(r => r.json());
+    const costs = (j && j.costs) || [];
+    costs.sort((a, b) => (a.marketName || a.market).localeCompare(b.marketName || b.market));
+    costs.forEach(c => {
+      SG_COST_MARKETS[c.market] = { name: c.marketName || c.market, currency: c.currency || 'USD' };
+      sel.innerHTML += `<option value="${c.market}">${c.marketName || c.market}</option>`;
+    });
+  } catch (e) {}
+  if (!Object.keys(SG_COST_MARKETS).length) {
+    document.getElementById('sg-cost-status').innerHTML = '<span style="color:var(--text-2);">CAPEX benchmarks are being added for our markets — check back shortly, or request a Market Scan.</span>';
+  }
+  // Preselect from ?m= if present and available, else the first available market.
+  const m = p('m');
+  if (m && SG_COST_MARKETS[m]) sel.value = m;
+  else if (sel.options.length > 1) sel.value = sel.options[1].value;
   loadCosts();
 });
 
 function curOf(marketId) {
-  const m = URBN_DATA.markets.find(x => x.id === marketId);
+  if (SG_COST_MARKETS[marketId]) return SG_COST_MARKETS[marketId].currency;
+  const m = (typeof URBN_DATA !== 'undefined') ? URBN_DATA.markets.find(x => x.id === marketId) : null;
   return (m && m.currency) || 'USD';
 }
 function money(n) { return CURRENCY + ' ' + Math.round(Number(n) || 0).toLocaleString(); }
@@ -169,6 +190,33 @@ function recalc() {
 
   const ranked = scenarios.filter(s => s.avail && s.total != null).sort((a, b) => a.total - b.total);
   const best = ranked.length ? ranked[0].key : null;
+
+  // ── Upfront CAPEX breakdown (so it's clearly visible) ──────────────────────
+  const capexEl = document.getElementById('sg-capex');
+  if (capexEl) {
+    if (haveCapex) {
+      const level = document.getElementById('sg-fitlevel').value;
+      const rows = [
+        ['Fit-out (' + level + ') — ' + money(ci.perSqm) + '/m² × ' + area + ' m²', construction],
+        ['Furniture & IT/AV — ' + money(ci.furniture + ci.itav) + '/desk × ' + desks + ' desks', ffe],
+        ['Professional fees & contingency — ' + ci.feesPct + '%', fees],
+      ];
+      if (ci.moving) rows.push(['Moving allowance', ci.moving]);
+      capexEl.innerHTML = `
+        <div class="card" style="padding:24px;border:1px solid var(--navy,#243A5E);">
+          <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">Upfront CAPEX to fit out</div>
+          <div style="font-family:var(--fd);font-size:40px;font-weight:300;color:var(--navy);line-height:1;">${money(upfrontTraditional)}</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${money(Math.round(upfrontTraditional / (area || 1)))} / m² &middot; ${money(Math.round(upfrontTraditional / (desks || 1)))} / desk — to take a shell/CAT-A space to a fitted ${level} office</div>
+          <div style="margin-top:16px;border-top:1px solid var(--border);">
+            ${rows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-2);">${l}</span><span style="color:var(--text);white-space:nowrap;">${money(v)}</span></div>`).join('')}
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0 0;font-size:14px;font-weight:600;"><span>Total upfront CAPEX</span><span>${money(upfrontTraditional)}</span></div>
+          </div>
+          ${ci.reinstatement ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:12px;">Plus an estimated ${money(reinstatement)} reinstatement at lease end (${money(ci.reinstatement)}/m²).</p>` : ''}
+        </div>`;
+    } else {
+      capexEl.innerHTML = `<div class="card" style="padding:22px;"><div class="form-sec-title" style="margin-top:0;">Upfront CAPEX</div><p style="font-size:13px;color:var(--text-2);">CAPEX assumptions aren't available for this market yet — enter your own in the form to estimate the fit-out cost.</p></div>`;
+    }
+  }
 
   document.getElementById('sg-results').innerHTML = `
     <div class="card" style="padding:0;overflow:auto;">
