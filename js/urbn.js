@@ -129,22 +129,7 @@ function injectNav(base='') {
       </a>
       <div class="nav-links">
         <a href="/offices">Offices</a>
-        <div class="nav-dd">
-          <a href="/markets">Markets</a>
-          <div class="nav-dd-panel">
-            <a href="/offices-in-cairo">Cairo</a>
-            <a href="/offices-in-nairobi">Nairobi</a>
-            <a href="/offices-in-casablanca">Casablanca</a>
-            <a href="/offices-in-accra">Accra</a>
-            <a href="/offices-in-addis-ababa">Addis Ababa</a>
-            <a href="/offices-in-johannesburg">Johannesburg</a>
-            <a href="/offices-in-cape-town">Cape Town</a>
-            <a href="/offices-in-kigali">Kigali</a>
-            <a href="/offices-in-abidjan">Abidjan</a>
-          </div>
-        </div>
-        <a href="/buildings">Buildings</a>
-        <a href="/districts">Districts</a>
+        <a href="/list-building">List Your Space</a>
         <a href="/industrial">Industrial</a>
         <div class="nav-dd">
           <a href="/stay-vs-go">Tools</a>
@@ -155,7 +140,6 @@ function injectNav(base='') {
             <a href="/saved" data-auth="in" style="display:none;">Saved Properties</a>
           </div>
         </div>
-        <a href="/list-building">List Your Building</a>
         <a href="/pricing">Pricing</a>
         <div class="nav-sep"></div>
         <a href="/contact">Contact</a>
@@ -175,18 +159,10 @@ function injectNav(base='') {
   </nav>
   <div class="mobile-nav" id="mobile-nav">
     <a href="/offices">Offices</a>
-    <a href="/markets">Markets</a>
-    <a href="/offices-in-cairo">Cairo</a>
-    <a href="/offices-in-nairobi">Nairobi</a>
-    <a href="/offices-in-casablanca">Casablanca</a>
-    <a href="/offices-in-accra">Accra</a>
-    <a href="/offices-in-johannesburg">Johannesburg</a>
-    <a href="/buildings">Buildings</a>
-    <a href="/districts">Districts</a>
+    <a href="/list-building">List Your Space</a>
     <a href="/industrial">Industrial</a>
     <a href="/stay-vs-go">Stay vs Go</a>
     <a href="/insights">Insights</a>
-    <a href="/list-building">List Your Building</a>
     <a href="/pricing">Pricing</a>
     <a href="/contact">Contact</a>
     <div class="mobile-nav-actions">
