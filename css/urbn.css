@@ -646,7 +646,13 @@ textarea.fi { resize: vertical; min-height: 100px; }
   html, body { overflow-x: hidden; max-width: 100vw; }
   :root { --nav-h: 64px; --section: 64px; }
   .nav-links { display: none; }
+  .nav-right { display: none; }            /* auth buttons live in the hamburger menu on mobile */
+  .nav-i { padding: 0 16px; }              /* full 48px padding overflowed narrow screens */
   .nav-hamburger { display: flex !important; }
+  /* Collapse fixed multi-column grids that would overflow on phones. */
+  #sg-tool { grid-template-columns: 1fr !important; }
+  #bdetail { grid-template-columns: 1fr !important; }
+  #results { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important; }
   .mobile-nav {
     display: flex; flex-direction: column;
     position: fixed; top: var(--nav-h); left: 0; right: 0; bottom: 0;
