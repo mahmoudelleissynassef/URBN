@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Request Market Scan — URBN</title>
-  <meta name="description" content="Request a managed Market Scan — describe your requirements and URBN returns a curated shortlist of verified Grade A buildings within 48 hours."/>
-  <link rel="canonical" href="https://urbnoffices.com/pages/market-scan.html"/>
+  <title>Request Market Scan â€” URBN</title>
+  <meta name="description" content="Request a managed Market Scan â€” describe your requirements and URBN returns a curated shortlist of verified Grade A buildings within 48 hours."/>
+  <link rel="canonical" href="https://urbnoffices.com/market-scan"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="URBN"/>
-  <meta property="og:title" content="Request a Market Scan — URBN"/>
+  <meta property="og:title" content="Request a Market Scan â€” URBN"/>
   <meta property="og:description" content="Describe your requirements and URBN returns a curated shortlist of verified buildings within 48 hours."/>
-  <meta property="og:url" content="https://urbnoffices.com/pages/market-scan.html"/>
+  <meta property="og:url" content="https://urbnoffices.com/market-scan"/>
   <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="Request a Market Scan — URBN"/>
+  <meta name="twitter:title" content="Request a Market Scan â€” URBN"/>
   <meta name="twitter:description" content="A curated shortlist of verified buildings within 48 hours."/>
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
@@ -53,9 +53,9 @@
         <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" id="sc-area" placeholder="e.g. 1,200"><div class="fld-err" id="err-area">Enter an approximate area in sqm.</div></div>
         <div class="fg"><label class="fl">Target Commencement</label>
           <select class="fi fi-sel" id="sc-timeline">
-            <option>Immediately (0–3 months)</option>
-            <option>3–6 months</option>
-            <option>6–12 months</option>
+            <option>Immediately (0â€“3 months)</option>
+            <option>3â€“6 months</option>
+            <option>6â€“12 months</option>
             <option>12+ months</option>
           </select>
         </div>
@@ -73,7 +73,7 @@
           <button class="chip" onclick="this.classList.toggle('on')">Flexible</button>
         </div>
       </div>
-      <div class="fg"><label class="fl">Preferred Districts (optional)</label><input type="text" class="fi" id="sc-districts" placeholder="e.g. New Cairo, CBD — or leave blank for all"></div>
+      <div class="fg"><label class="fl">Preferred Districts (optional)</label><input type="text" class="fi" id="sc-districts" placeholder="e.g. New Cairo, CBD â€” or leave blank for all"></div>
       <div class="fg"><label class="fl">Power / Connectivity Requirements</label>
         <div class="chips" id="sc-power" style="margin-top:4px;">
           <button class="chip" onclick="this.classList.toggle('on')">Backup Generator</button>
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
 });
 async function submitScan(btn) {
-  // Honeypot — drop silently if a bot filled the hidden field.
+  // Honeypot â€” drop silently if a bot filled the hidden field.
   if (botFilled('sc-website')) return;
 
   const market  = document.getElementById('sc-market').value;
@@ -149,7 +149,7 @@ async function submitScan(btn) {
   setBtnBusy(btn, false);
 
   if (!result.ok) {
-    toast('Submission failed — please try again.', 'error');
+    toast('Submission failed â€” please try again.', 'error');
     let f = document.getElementById('sc-fail');
     if (!f) { f = document.createElement('div'); f.id = 'sc-fail'; f.className = 'fld-err show'; f.style.marginTop = '12px'; btn.after(f); }
     f.innerHTML = requestFailHTML();
