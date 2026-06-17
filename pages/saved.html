@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Saved Offices — URBN</title>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="/css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:48px 0 80px;">
+  <div class="w">
+    <div class="flex-b" style="align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:24px;">
+      <div>
+        <span class="overline label-navy">Your shortlist</span>
+        <h1 style="font-size:40px;">Saved offices</h1>
+        <p style="font-size:14px;color:var(--text-2);margin-top:8px;" id="sv-count">—</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div class="fg" style="margin:0;"><label class="fl">Country</label><select class="fi fi-sel" id="sv-country" onchange="onCountry()"><option value="">All countries</option></select></div>
+        <div class="fg" style="margin:0;"><label class="fl">City</label><select class="fi fi-sel" id="sv-city" onchange="renderSaved()"><option value="">All cities</option></select></div>
+      </div>
+    </div>
+    <div id="sv-gate"><div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">LOADING…</div></div>
+    <div class="g3" id="sv-grid"></div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="/data/data.js"></script>
+<script src="/js/urbn.js"></script>
+<script src="/js/listings.js"></script>
+<script>
+let SAVED = [];   // resolved saved building objects
+
+document.addEventListener('DOMContentLoaded', async () => {
+  injectNav(); injectFooter();
+  const user = await URBNAuth.requireAuth('/sign-in');
+  if (!user) return;
+  await URBN_LISTINGS.load();
+  let ids = [];
+  try { const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', user.id); ids = Array.isArray(data) ? data.map(r => r.building_id) : []; } catch (e) {}
+  USER.saved = ids.slice();
+  SAVED = ids.map(id => URBN_LISTINGS.find(id)).filter(Boolean);
+  document.getElementById('sv-gate').classList.add('hidden');
+  buildFilters();
+  renderSaved();
+});
+
+function countryOf(marketId) { const m = URBN_DATA.markets.find(x => x.id === marketId); return m ? m.country : ''; }
+function cityOf(marketId) { const m = URBN_DATA.markets.find(x => x.id === marketId); return m ? m.name : marketId; }
+
+function buildFilters() {
+  const countries = [...new Set(SAVED.map(b => countryOf(b.market)).filter(Boolean))].sort();
+  const csel = document.getElementById('sv-country');
+  csel.innerHTML = '<option value="">All countries</option>' + countries.map(c => `<option value="${c}">${c}</option>`).join('');
+  fillCities('');
+}
+function fillCities(country) {
+  const cities = [...new Map(SAVED.filter(b => !country || countryOf(b.market) === country).map(b => [b.market, cityOf(b.market)])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const sel = document.getElementById('sv-city');
+  sel.innerHTML = '<option value="">All cities</option>' + cities.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+}
+function onCountry() { fillCities(document.getElementById('sv-country').value); renderSaved(); }
+
+function renderSaved() {
+  const country = document.getElementById('sv-country').value;
+  const city = document.getElementById('sv-city').value;
+  const list = SAVED.filter(b => (!country || countryOf(b.market) === country) && (!city || b.market === city));
+  const grid = document.getElementById('sv-grid');
+  document.getElementById('sv-count').textContent = SAVED.length
+    ? `${list.length} of ${SAVED.length} saved ${SAVED.length === 1 ? 'office' : 'offices'}`
+    : 'No saved offices yet';
+  if (!SAVED.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:56px 24px;color:var(--text-2);">
+      <div style="font-family:var(--fd);font-size:24px;color:var(--text);margin-bottom:10px;">Nothing saved yet</div>
+      <p style="max-width:440px;margin:0 auto 20px;line-height:1.7;">Browse offices and tap the heart to save them here, then compare them in Stay vs Go.</p>
+      <a href="/offices" class="btn btn-navy">Browse offices →</a></div>`;
+    return;
+  }
+  grid.innerHTML = list.length ? list.map(b => renderCard(b, '')).join('')
+    : `<div style="grid-column:1/-1;padding:40px 0;text-align:center;color:var(--text-2);">No saved offices in this filter.</div>`;
+}
+</script>
+</body>
+</html>

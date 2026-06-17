@@ -3,6 +3,7 @@ Allow: /
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /account
+Disallow: /saved
 Disallow: /batch-upload
 Disallow: /pages/dashboards/
 Disallow: /api/
