@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard — URBN</title>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="../../css/urbn.css"/>
 </head>
 <body>
@@ -10,149 +12,167 @@
 <div class="pt-nav dl">
   <!-- Sidebar -->
   <div class="da">
-    <div style="padding:16px 12px 20px;border-bottom:1px solid var(--border);margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);margin-bottom:6px;">Corporate Tenant</div>
-      <div style="font-size:14px;font-weight:600;color:var(--text);">Demo User</div>
-      <div style="font-size:12px;color:var(--text-2);">Acme Corporation</div>
-      <div style="margin-top:8px;"><span class="badge badge-exclusive" style="font-size:9px;">Membership</span></div>
+    <div style="padding:16px 12px 20px;border-bottom:1px solid var(--border);margin-bottom:12px;" id="dash-id">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);margin-bottom:6px;">Account</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);" id="dash-name">—</div>
+      <div style="font-size:12px;color:var(--text-2);" id="dash-company">—</div>
+      <div style="margin-top:8px;"><span class="badge badge-grade" id="dash-tier" style="text-transform:capitalize;">—</span></div>
     </div>
-    <div class="dn on" onclick="show('overview',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview
-    </div>
-    <div class="dn" onclick="show('shortlist',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Shortlist
-    </div>
-    <div class="dn" onclick="show('intros',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>Introductions
-    </div>
-    <div class="dn" onclick="show('alerts',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Alerts
-    </div>
-    <div class="dn" onclick="window.location.href='../documents.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documents
-    </div>
-    <div class="dn" onclick="window.location.href='../market-scan.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Market Scan
-    </div>
-    <div class="dn" onclick="window.location.href='../subscription.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Membership
-    </div>
+    <div class="dn on" onclick="show('overview',this)">Overview</div>
+    <div class="dn" onclick="show('shortlist',this)">Saved Properties</div>
+    <div class="dn" onclick="show('requests',this)">My Requests</div>
+    <div class="dn" onclick="show('listings',this)">My Listings</div>
+    <div class="dn" onclick="window.location.href='/pages/operator/batch-upload.html'">Batch Upload</div>
+    <div class="dn" onclick="window.location.href='../account.html'">Account</div>
+    <div class="dn" onclick="window.location.href='../subscription.html'">Membership</div>
+    <div class="dn" onclick="URBNAuth.signOut().then(()=>location.href='/index.html')">Sign Out</div>
   </div>
 
   <!-- Main -->
   <div class="dm" style="background:var(--bg);">
+    <div id="dash-notice"></div>
 
     <!-- Overview -->
     <div id="s-overview">
       <div style="margin-bottom:36px;">
-        <span class="label">Corporate Tenant Portal</span>
-        <h2 style="font-size:32px;">Good morning, Demo User</h2>
-        <p style="color:var(--text-2);margin-top:6px;font-size:14px;">Acme Corporation · Membership · All 13 markets active</p>
+        <span class="label">Corporate Portal</span>
+        <h2 style="font-size:32px;" id="dash-greeting">Welcome</h2>
+        <p style="color:var(--text-2);margin-top:6px;font-size:14px;" id="dash-sub">—</p>
       </div>
-
-      <div class="ms" style="grid-template-columns:repeat(4,1fr);">
-        <div class="mc"><div class="mc-l">Shortlisted</div><div class="mc-v">3</div><div class="mc-s">buildings saved</div></div>
-        <div class="mc"><div class="mc-l">Introductions</div><div class="mc-v">1</div><div class="mc-s up">Protected · 24 months</div></div>
-        <div class="mc"><div class="mc-l">Active Alerts</div><div class="mc-v">1</div><div class="mc-s">New Cairo</div></div>
-        <div class="mc"><div class="mc-l">Markets Active</div><div class="mc-v">13</div><div class="mc-s">Full membership</div></div>
+      <div class="ms" style="grid-template-columns:repeat(3,1fr);">
+        <div class="mc"><div class="mc-l">Saved Properties</div><div class="mc-v" id="kpi-saved">0</div><div class="mc-s">in your shortlist</div></div>
+        <div class="mc"><div class="mc-l">Requests Submitted</div><div class="mc-v" id="kpi-requests">0</div><div class="mc-s">scans, access & listings</div></div>
+        <div class="mc"><div class="mc-l">Membership</div><div class="mc-v" id="kpi-tier" style="font-size:22px;text-transform:capitalize;">—</div><div class="mc-s" id="kpi-tier-status">—</div></div>
       </div>
-
-      <!-- Recent activity table -->
       <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:18px 22px;border-bottom:1px solid var(--border);">
-          <span style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);">Recent Activity</span>
-        </div>
-        <table class="data-table">
-          <thead><tr><th>Date</th><th>Action</th><th>Property</th><th>Market</th></tr></thead>
-          <tbody>
-            <tr><td style="color:var(--text-2);">Mar 10</td><td>Building viewed</td><td>Nile Business City</td><td>Cairo CBD</td></tr>
-            <tr><td style="color:var(--text-2);">Mar 8</td><td>Site visit requested</td><td>Gate Village 8</td><td>Dubai · DIFC</td></tr>
-            <tr><td style="color:var(--text-2);">Mar 3</td><td>Building shortlisted</td><td>KAFD Tower 3</td><td>Riyadh</td></tr>
-            <tr><td style="color:var(--text-2);">Feb 28</td><td>Market scan requested</td><td>Cairo Office Market</td><td>Cairo</td></tr>
-          </tbody>
-        </table>
+        <div style="padding:18px 22px;border-bottom:1px solid var(--border);"><span style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);">Recent Requests</span></div>
+        <div id="recent-requests"></div>
       </div>
     </div>
 
     <!-- Shortlist -->
     <div id="s-shortlist" class="hidden">
-      <div style="margin-bottom:32px;">
-        <span class="label">Saved Properties</span>
-        <h2 style="font-size:32px;">Shortlist</h2>
-      </div>
+      <div style="margin-bottom:32px;"><span class="label">Saved Properties</span><h2 style="font-size:32px;">Shortlist</h2></div>
       <div class="g3" id="shortlist-grid"></div>
+      <div id="shortlist-empty"></div>
     </div>
 
-    <!-- Introductions -->
-    <div id="s-intros" class="hidden">
-      <div style="margin-bottom:32px;">
-        <span class="label">Commission Protected</span>
-        <h2 style="font-size:32px;">Introductions</h2>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden;" id="intros-table"></div>
+    <!-- Requests -->
+    <div id="s-requests" class="hidden">
+      <div style="margin-bottom:32px;"><span class="label">From client_requests</span><h2 style="font-size:32px;">My Requests</h2></div>
+      <div class="card" style="padding:0;overflow:hidden;" id="requests-table"></div>
     </div>
 
-    <!-- Alerts -->
-    <div id="s-alerts" class="hidden">
-      <div style="margin-bottom:32px;">
-        <span class="label">Notifications</span>
-        <h2 style="font-size:32px;">Availability Alerts</h2>
-      </div>
-      <div id="alerts-grid"></div>
-      <button class="btn btn-navy mt24" onclick="showToast('Alert configuration available in full membership')">+ Add Alert</button>
+    <!-- Listings -->
+    <div id="s-listings" class="hidden">
+      <div style="margin-bottom:32px;"><span class="label">Supply-side</span><h2 style="font-size:32px;">My Listings</h2><p style="color:var(--text-2);margin-top:6px;font-size:14px;">Buildings you submitted via List Your Building. Listings are reviewed before publication.</p></div>
+      <div class="card" style="padding:0;overflow:hidden;" id="listings-table"></div>
     </div>
-
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../../data/data.js"></script>
 <script src="../../js/urbn.js"></script>
+<script src="../../js/listings.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  injectNav('../../');
-  injectFooter('../../');
-
-  // Shortlist
-  const sg = document.getElementById('shortlist-grid');
-  USER.saved.forEach(id => {
-    const b = URBN_DATA.buildings.find(x=>x.id===id);
-    if (b) sg.innerHTML += renderCard(b,'../');
-  });
-
-  // Introductions table
-  const it = document.getElementById('intros-table');
-  it.innerHTML = `<div style="padding:16px 22px;border-bottom:1px solid var(--border);"><span style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);">Protected Introductions</span></div>
-  <table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Date</th><th>Status</th><th>Protected Until</th></tr></thead><tbody>` +
-    USER.intros.map(i => {
-      const b = URBN_DATA.buildings.find(x=>x.id===i.bid);
-      if (!b) return '';
-      const pDate = new Date(new Date(i.date).setFullYear(new Date(i.date).getFullYear()+2)).toISOString().split('T')[0];
-      const mkt = URBN_DATA.markets.find(m=>m.id===b.market);
-      return `<tr>
-        <td style="font-weight:500;">${b.name}</td>
-        <td style="color:var(--text-2);">${b.submarket} · ${mkt?.country}</td>
-        <td style="color:var(--text-2);">${i.date}</td>
-        <td><span class="badge badge-protected"><span class="badge-dot"></span>Introduced</span></td>
-        <td style="color:var(--text-2);">${pDate}</td>
-      </tr>`;
-    }).join('') + '</tbody></table>';
-
-  // Alerts
-  const ag = document.getElementById('alerts-grid');
-  USER.alerts.forEach(a => {
-    ag.innerHTML += `<div class="card mb16" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-      <div>
-        <div style="font-size:15px;font-weight:600;">${a.sub}, ${a.market}</div>
-        <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Min ${a.minSz} sqm · Max rent ${a.maxRent.toLocaleString()}</div>
-      </div>
-      <span class="badge badge-available"><span class="badge-dot"></span>Active</span>
-    </div>`;
-  });
+document.addEventListener('DOMContentLoaded', async () => {
+  injectNav('../../'); injectFooter('../../');
+  const user = await URBNAuth.requireAuth('/pages/signin.html');
+  if (!user) return;
+  await URBN_LISTINGS.load();
+  await loadDashboard(user);
 });
+function unavailableCard(id) {
+  return `<div class="lc" style="opacity:.7;"><div class="lc-body"><div class="lc-name">Saved building</div><div class="lc-district">No longer available</div><p style="font-size:12px;color:var(--text-2);margin-top:10px;line-height:1.6;">This building is no longer approved/live. Reference: ${String(id).replace(/[^a-zA-Z0-9_-]/g,'')}</p></div></div>`;
+}
+
+function fmtDate(s) { try { return new Date(s).toISOString().split('T')[0]; } catch (e) { return s || ''; } }
+function tableEmpty(msg) { return `<div style="padding:40px 22px;text-align:center;color:var(--text-2);font-size:13px;">${msg}</div>`; }
+
+async function loadDashboard(user) {
+  const c = URBNAuth.client;
+  let profile = null, company = null, sub = null, subsList = [], saved = [], requests = [], tablesMissing = false;
+
+  try {
+    const { data: p } = await c.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    profile = p || null;
+    if (p && p.company_id) {
+      const { data: co } = await c.from('companies').select('*').eq('id', p.company_id).maybeSingle();
+      company = co || null;
+      const { data: subs } = await c.from('company_subscriptions').select('*').eq('company_id', p.company_id).order('created_at', { ascending: false }).limit(20);
+      subsList = Array.isArray(subs) ? subs : [];
+      sub = subsList[0] || null;
+    }
+  } catch (e) { tablesMissing = true; }
+
+  try {
+    const { data: sp } = await c.from('saved_properties').select('building_id').eq('user_id', user.id);
+    saved = Array.isArray(sp) ? sp.map(r => r.building_id) : [];
+  } catch (e) { tablesMissing = true; }
+
+  try {
+    const { data: rq } = await c.from('client_requests').select('*').eq('email', user.email).order('created_at', { ascending: false });
+    requests = Array.isArray(rq) ? rq : [];
+  } catch (e) { /* RLS may block until policy added */ }
+
+  // Identity
+  const name = (profile && profile.full_name) || user.email;
+  const companyName = (company && company.name) || (profile && profile.company_id ? '' : '');
+  const activeSub = subsList.find(x => x.status === 'active') || null;
+  const requestedSub = subsList.find(x => x.status === 'requested') || null;
+  const currentTier = (activeSub && activeSub.tier) || (!subsList.length && profile && profile.requested_tier) || 'free';
+  const requestedTier = requestedSub ? requestedSub.tier : null;
+  const status = sub ? sub.status : '—';
+  const requestDate = sub ? fmtDate(sub.created_at) : '—';
+  document.getElementById('dash-name').textContent = name;
+  document.getElementById('dash-company').textContent = companyName || '—';
+  document.getElementById('dash-tier').textContent = currentTier;
+  document.getElementById('dash-greeting').textContent = 'Welcome, ' + name.split('@')[0];
+  document.getElementById('dash-sub').textContent = (companyName ? companyName + ' · ' : '') + 'Current: ' + currentTier + (requestedTier ? ' · Requested: ' + requestedTier + ' (' + status + ')' : '');
+  document.getElementById('kpi-saved').textContent = saved.length;
+  document.getElementById('kpi-requests').textContent = requests.length;
+  document.getElementById('kpi-tier').textContent = currentTier;
+  document.getElementById('kpi-tier-status').textContent = requestedTier ? ('Requested ' + requestedTier + ' · ' + status + ' · ' + requestDate) : (status === '—' ? 'No active request' : status + ' · ' + requestDate);
+
+  if (tablesMissing && !profile) {
+    document.getElementById('dash-notice').innerHTML =
+      `<div class="form-note" style="margin-bottom:24px;"><p><strong>Platform tables not found.</strong> You are signed in as <strong>${user.email}</strong>, but the account tables (profiles, companies, subscriptions, saved_properties) aren&#39;t created yet. Run the platform SQL in Supabase to enable saved properties, company details, and membership.</p></div>`;
+  }
+
+  // Saved properties (joined with current building data source)
+  const grid = document.getElementById('shortlist-grid');
+  grid.innerHTML = saved.map(id => {
+    const b = URBN_LISTINGS.find(id);
+    return b ? renderCard(b, '../') : unavailableCard(id);
+  }).join('');
+  document.getElementById('shortlist-empty').innerHTML = saved.length ? '' :
+    `<div style="padding:30px 0;color:var(--text-2);font-size:14px;">No saved properties yet. Browse <a href="../search.html" class="text-navy" style="text-decoration:underline;">offices</a> and tap the heart to save.</div>`;
+
+  // Requests table
+  const reqRows = requests.map(r => `<tr>
+    <td style="color:var(--text-2);">${fmtDate(r.created_at)}</td>
+    <td style="text-transform:capitalize;">${(r.request_type || '').replace('-', ' ')}</td>
+    <td>${r.market || '—'}</td>
+    <td><span class="badge badge-gated" style="text-transform:capitalize;">${r.status || 'new'}</span></td>
+  </tr>`).join('');
+  const reqTable = requests.length
+    ? `<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Market</th><th>Status</th></tr></thead><tbody>${reqRows}</tbody></table>`
+    : tableEmpty('No requests yet. Submit a <a href="../market-scan.html" class="text-navy" style="text-decoration:underline;">Market Scan</a> or <a href="../list-building.html" class="text-navy" style="text-decoration:underline;">list a building</a>.<br><span style="font-size:11px;">(If you have submitted requests but see none here, the read policy on client_requests may not be enabled yet.)</span>');
+  document.getElementById('requests-table').innerHTML = reqTable;
+  document.getElementById('recent-requests').innerHTML = requests.length
+    ? `<table class="data-table"><tbody>${requests.slice(0, 5).map(r => `<tr><td style="color:var(--text-2);">${fmtDate(r.created_at)}</td><td style="text-transform:capitalize;">${(r.request_type || '').replace('-', ' ')}</td><td>${r.company || r.email || ''}</td></tr>`).join('')}</tbody></table>`
+    : tableEmpty('No recent activity.');
+
+  // Listings (supply-side submissions)
+  const listings = requests.filter(r => r.request_type === 'list-building');
+  document.getElementById('listings-table').innerHTML = listings.length
+    ? `<table class="data-table"><thead><tr><th>Date</th><th>Building</th><th>Market</th><th>Status</th></tr></thead><tbody>${listings.map(r => `<tr><td style="color:var(--text-2);">${fmtDate(r.created_at)}</td><td>${(r.payload && r.payload.building) || '—'}</td><td>${r.market || '—'}</td><td><span class="badge badge-gated" style="text-transform:capitalize;">${r.status || 'pending'}</span></td></tr>`).join('')}</tbody></table>`
+    : tableEmpty('No listing submissions yet. <a href="../list-building.html" class="text-navy" style="text-decoration:underline;">List your building</a>.');
+}
 
 function show(id, btn) {
   document.querySelectorAll('[id^=s-]').forEach(s => s.classList.add('hidden'));
-  document.getElementById('s-'+id)?.classList.remove('hidden');
+  document.getElementById('s-' + id)?.classList.remove('hidden');
   document.querySelectorAll('.dn').forEach(n => n.classList.remove('on'));
   if (btn) btn.classList.add('on');
 }

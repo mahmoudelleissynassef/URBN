@@ -94,7 +94,10 @@ h4 { font-size: 18px; }
 /* ── Layout ───────────────────────────────────────────── */
 .w    { max-width: var(--maxw);    margin: 0 auto; padding: 0 48px; }
 .w-sm { max-width: var(--maxw-sm); margin: 0 auto; padding: 0 48px; }
-.pt-nav { padding-top: var(--nav-h); }
+/* Offset page content below the fixed navbar. Uses margin (not padding) so
+   pages that set an inline `padding` shorthand can't override the nav clearance
+   and slide under the navbar — their padding now stacks on top of this. */
+.pt-nav { margin-top: var(--nav-h); }
 .section { padding: var(--section) 0; }
 .section-sm { padding: 80px 0; }
 .divider { height: 1px; background: var(--border); }
@@ -211,6 +214,7 @@ h4 { font-size: 18px; }
   max-width: 480px; line-height: 1.78; margin-bottom: 36px;
 }
 .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero-help { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.6); max-width: 460px; line-height: 1.6; }
 
 /* ── Ticker ───────────────────────────────────────────── */
 .ticker-wrap {
@@ -426,6 +430,9 @@ textarea.fi { resize: vertical; min-height: 100px; }
 .chip { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; color: var(--text-2); background: var(--bg-white); cursor: pointer; transition: all .15s; white-space: nowrap; }
 .chip:hover { color: var(--navy); border-color: var(--navy-bdr); }
 .chip.on { color: var(--navy); border-color: var(--navy); background: var(--navy-dim); font-weight: 600; }
+.chip-count { display: inline-block; font-size: 10px; font-weight: 600; color: var(--text-3); margin-left: 3px; }
+.chip.on .chip-count { color: var(--navy); }
+.chip-empty { opacity: 0.55; }
 
 /* ── Filter panel ─────────────────────────────────────── */
 .fp {
@@ -556,6 +563,61 @@ textarea.fi { resize: vertical; min-height: 100px; }
 .toast { background: var(--bg-white); border: 1px solid var(--border); border-left: 3px solid var(--navy); border-radius: var(--r); padding: 12px 18px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh-lg); animation: fu .22s ease; min-width: 260px; }
 @keyframes fu { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .tm { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.toast-error   { border-left-color: #B42318; }
+.toast-info    { border-left-color: var(--text-2); }
+.toast-success { border-left-color: var(--navy); }
+
+/* ── Badges ───────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  font-family: var(--fi); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 2px; line-height: 1.4;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.badge-grade    { background: var(--navy); color: #fff; }
+.badge-verified { background: var(--navy-dim); color: var(--navy); border-color: var(--navy-bdr); }
+.badge-available{ background: #E7F1EA; color: #1E6B3F; border-color: #C5E0CF; }
+.badge-gated    { background: var(--bg-off); color: var(--text-2); border-color: var(--border-2); }
+
+/* ── Legal / long-form pages ──────────────────────────── */
+.legal-s { padding: 22px 0; border-top: 1px solid var(--border); }
+.legal-s:first-of-type { border-top: none; }
+.legal-s h2 { font-size: 22px; margin-bottom: 12px; }
+.legal-s p { font-size: 14px; color: var(--text-2); line-height: 1.8; margin-bottom: 12px; }
+.legal-s p:last-child { margin-bottom: 0; }
+.legal-s ul { margin: 4px 0 12px 20px; }
+.legal-s li { font-size: 14px; color: var(--text-2); line-height: 1.8; margin-bottom: 6px; }
+.legal-s a { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
+.legal-s strong { color: var(--text); font-weight: 600; }
+
+/* ── Forms: validation + success ──────────────────────── */
+.fi.fi-err { border-color: #B42318; background: #FEF3F2; }
+.fld-err { display: none; color: #B42318; font-size: 11.5px; margin-top: 5px; }
+.fld-err.show { display: block; }
+.form-success {
+  background: var(--navy-dim); border: 1px solid var(--navy-bdr);
+  border-left: 3px solid var(--navy); padding: 28px 30px; border-radius: var(--r);
+}
+.form-success h3 { font-size: 22px; margin-bottom: 8px; }
+.form-success p { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+.consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 4px; }
+.consent input { margin-top: 3px; flex-shrink: 0; }
+.consent span { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+.consent a { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
+.hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.form-sec-title {
+  font-family: var(--fi); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--navy);
+  margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.form-sec-title:first-child { margin-top: 0; }
+.form-note {
+  background: var(--navy-dim); border: 1px solid var(--navy-bdr); border-left: 3px solid var(--navy);
+  border-radius: var(--r); padding: 14px 16px; margin-bottom: 18px;
+}
+.form-note p { font-size: 12.5px; color: var(--text-2); line-height: 1.65; }
+.form-note strong { color: var(--text); }
 
 /* ── Utilities ────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In — URBN</title>
+  <meta name="description" content="Sign in to the URBN corporate office intelligence platform."/>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:40px;">
+  <div style="width:100%;max-width:400px;">
+    <div class="text-center mb32">
+      <div style="width:44px;height:44px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:20px;font-style:italic;color:#fff;margin:0 auto 18px;font-weight:500;border-radius:3px;">U</div>
+      <h2 style="font-size:32px;">Welcome back</h2>
+      <p style="font-size:13px;color:var(--text-2);margin-top:8px;">Sign in to your URBN account</p>
+    </div>
+    <div class="card" style="padding:32px;">
+      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="si-email" placeholder="you@company.com"></div>
+      <div class="fg"><label class="fl">Password</label><input type="password" class="fi" id="si-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitSignIn(document.getElementById('si-btn'))"></div>
+      <div class="fld-err" id="si-err" style="margin-bottom:8px;"></div>
+      <button class="btn btn-navy w-full mt16" id="si-btn" onclick="submitSignIn(this)">Sign In</button>
+      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-2);">
+        No account? <a href="signup.html" style="color:var(--navy);">Create one</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-3);">Access to building details, pricing, and introductions requires a verified corporate account.</p>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => { injectNav('../'); injectFooter('../'); });
+
+async function submitSignIn(btn) {
+  const email = document.getElementById('si-email').value.trim();
+  const pw = document.getElementById('si-pw').value;
+  const err = document.getElementById('si-err');
+  err.classList.remove('show'); err.textContent = '';
+
+  if (!isCorporateEmail(email)) { err.textContent = 'Enter a valid corporate email (free webmail is not accepted).'; err.classList.add('show'); return; }
+  if (!pw) { err.textContent = 'Enter your password.'; err.classList.add('show'); return; }
+
+  setBtnBusy(btn, true, 'Signing in…');
+  await URBNAuth.init();
+  if (!URBNAuth.client) { setBtnBusy(btn, false); err.textContent = 'Authentication is not configured yet. Please try again shortly.'; err.classList.add('show'); return; }
+
+  const { error } = await URBNAuth.client.auth.signInWithPassword({ email, password: pw });
+  setBtnBusy(btn, false);
+  if (error) { err.textContent = error.message || 'Sign in failed.'; err.classList.add('show'); return; }
+
+  const next = new URLSearchParams(location.search).get('next') || '/pages/dashboards/tenant.html';
+  location.href = next;
+}
+</script>
+</body>
+</html>

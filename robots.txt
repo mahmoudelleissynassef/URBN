@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /pages/dashboards/
+Disallow: /pages/login.html
+
+Sitemap: https://urbnoffices.com/sitemap.xml

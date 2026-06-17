@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Legal Documents — URBN</title>
+  <meta name="description" content="Legal agreements governing use of the URBN platform — Terms of Use, Commission Agreement, Non-Circumvention and Privacy Policy."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/documents.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
@@ -14,31 +17,36 @@
       <h1 style="font-size:44px;">Platform Documents</h1>
       <p style="font-size:14px;color:var(--text-2);margin-top:12px;line-height:1.8;">All legal agreements governing URBN platform usage. Acceptance is timestamped and version-controlled per user.</p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:0;" class="card">
-      ${[
-        ['Terms of Use','All users','v2.1','Accepted Mar 1, 2026','Governs platform access, information architecture, and user conduct.'],
-        ['Commission & Success Fee Agreement','Corporate Tenants','v1.3','Accepted Mar 1, 2026','States that a success fee is payable for any transaction closed for a property introduced via the platform, within 24 months of introduction.'],
-        ['Non-Circumvention Agreement','Corporate Tenants','v1.1','Accepted per introduction','Tenants may not contact landlords introduced through the platform without URBN\'s written involvement.'],
-        ['Landlord Referral Agreement','Landlords & Representatives','v1.0','—','Recognition of introduction, bi-weekly update obligation, fee protection, and non-circumvention clause.'],
-        ['Privacy Policy','All users','v1.2','Accepted Mar 1, 2026','Data handling, analytics consent, and user rights under applicable laws.'],
-      ].map(([t,f,v,a,d]) => `<div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;">
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;">${t}</div>
-          <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">${f} · ${v}</div>
-          <p style="font-size:12.5px;color:var(--text-2);line-height:1.68;">${d}</p>
-          ${a !== '—' ? `<div style="font-family:var(--fm);font-size:9.5px;color:var(--text-2);margin-top:8px;letter-spacing:.08em;">Accepted: ${a}</div>` : ''}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-          ${a !== '—' ? '<span class="badge badge-verified">Accepted</span>' : '<span class="badge badge-gated">Pending</span>'}
-          <button class="btn btn-ghost btn-sm" onclick="showToast('Document download — available in full membership')">Download PDF</button>
-        </div>
-      </div>`).join('')}
-    </div>
+    <div id="docs-list" class="card" style="display:flex;flex-direction:column;gap:0;"></div>
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
-<script>document.addEventListener('DOMContentLoaded',()=>{injectNav('../');injectFooter('../');});</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../'); injectFooter('../');
+  const DOCS = [
+    { title: 'Terms of Use', audience: 'All users', version: 'v2.1', desc: 'Governs platform access, information architecture, and user conduct.', href: 'terms.html' },
+    { title: 'Commission & Success Fee Agreement', audience: 'Corporate tenants', version: 'v1.3', desc: 'A success fee is payable for any transaction closed for a property introduced via the platform, within 24 months of introduction.', href: null },
+    { title: 'Non-Circumvention Agreement', audience: 'Corporate tenants', version: 'v1.1', desc: 'Tenants may not contact landlords introduced through the platform without URBN’s written involvement.', href: null },
+    { title: 'Landlord Referral Agreement', audience: 'Landlords & representatives', version: 'v1.0', desc: 'Recognition of introduction, update obligations, fee protection, and non-circumvention.', href: null },
+    { title: 'Privacy Policy', audience: 'All users', version: 'v1.2', desc: 'What we collect, why, retention, sharing, and your data rights.', href: 'privacy.html' },
+  ];
+  document.getElementById('docs-list').innerHTML = DOCS.map(d => `
+    <div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;">${d.title}</div>
+        <div style="font-size:10px;color:var(--text-2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">${d.audience} · ${d.version}</div>
+        <p style="font-size:12.5px;color:var(--text-2);line-height:1.68;">${d.desc}</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+        ${d.href
+          ? `<span class="badge badge-available">Published</span><a class="btn btn-ghost btn-sm" href="${d.href}">Read</a>`
+          : `<span class="badge badge-gated">Verified access</span><button class="btn btn-ghost btn-sm" onclick="showToast('This agreement is provided to verified members during onboarding.')">Request copy</button>`}
+      </div>
+    </div>`).join('');
+});
+</script>
 </body>
 </html>

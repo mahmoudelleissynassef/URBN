@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>List Your Building — URBN</title>
+  <meta name="description" content="For landlords and office operators: list a verified Grade A building with URBN to reach qualified corporate demand through protected, commission-secured introductions."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/list-building.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="List Your Building — URBN"/>
+  <meta property="og:description" content="Reach qualified corporate demand through protected, commission-secured introductions."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/list-building.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="List Your Building — URBN"/>
+  <meta name="twitter:description" content="Reach qualified corporate demand through protected, commission-secured introductions."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w-sm">
+    <div class="mb48">
+      <span class="overline label-navy">For Operators &amp; Landlords</span>
+      <h1 style="font-size:44px;">List Your<br><em>Building</em></h1>
+      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;">URBN connects verified Grade A and A+ buildings with corporate occupiers and multinationals entering Africa &amp; MENA. Every enquiry is a qualified corporate requirement, and every introduction is protected.</p>
+    </div>
+
+    <div class="g3" style="margin-bottom:44px;">
+      <div class="reason"><div class="reason-num">01</div><h4>Qualified corporate demand</h4><p>Occupiers reach you with a defined market, area, and timeline — not speculative enquiries.</p></div>
+      <div class="reason"><div class="reason-num">02</div><h4>Protected introductions</h4><p>Each introduction is timestamped, logged, and commission-protected for 24 months. No disputed origination.</p></div>
+      <div class="reason"><div class="reason-num">03</div><h4>Verified, not recycled</h4><p>Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
+    </div>
+
+    <!-- Submitting as (from the signed-in profile; populated by JS) -->
+    <div id="ll-submitter" style="margin-bottom:18px;">
+      <div style="padding:34px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">LOADING ACCOUNT…</div>
+    </div>
+
+    <!-- Choose how to add listings -->
+    <div id="ll-modes" class="hidden" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+      <button class="btn btn-dark btn-sm" id="mode-manual-btn" onclick="setMode('manual')">Add one listing</button>
+      <button class="btn btn-ghost btn-sm" id="mode-bulk-btn" onclick="setMode('bulk')">Bulk upload (CSV)</button>
+    </div>
+
+    <!-- Manual single-listing panel -->
+    <div id="ll-manual" class="hidden">
+    <div id="ll-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
+
+      <div class="form-sec-title">Building &amp; location</div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name"><div class="fld-err" id="err-ll-building">Enter the building name.</div></div>
+        <div class="fg"><label class="fl">Market</label>
+          <select class="fi fi-sel" id="ll-market" onchange="llMarketChanged()"><option value="">Select market...</option></select>
+          <div class="fld-err" id="err-ll-market">Select the building&#39;s market.</div>
+        </div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"><div class="fld-err" id="err-ll-district">Enter the district / submarket.</div></div>
+        <div class="fg"><label class="fl">Google Maps URL (pin)</label><input type="url" class="fi" id="ll-maps" placeholder="https://maps.google.com/..."><div class="fld-err" id="err-ll-maps">Enter a valid URL (or leave blank).</div></div>
+      </div>
+      <div class="fg"><label class="fl">Floor Number / Range (optional)</label><input type="text" class="fi" id="ll-floor" placeholder="e.g. 12, or 8–14"></div>
+
+      <div class="form-sec-title">Space &amp; offering</div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Fit-Out Condition</label>
+          <select class="fi fi-sel" id="ll-fitout">
+            <option value="">Select condition...</option>
+            <option>Shell &amp; Core</option><option>CAT A</option><option>CAT B</option>
+            <option>Fitted</option><option>Furnished</option>
+            <option>Serviced / Managed</option><option>Coworking / Flexible workspace</option>
+          </select>
+          <div class="fld-err" id="err-ll-fitout">Select the fit-out condition.</div>
+        </div>
+        <div class="fg"><label class="fl">Offering Type</label>
+          <select class="fi fi-sel" id="ll-offering">
+            <option value="">Select offering...</option>
+            <option>Whole building</option><option>Full floor</option><option>Partial floor</option>
+            <option>Private office</option><option>Coworking desks</option><option>Serviced office suite</option>
+          </select>
+          <div class="fld-err" id="err-ll-offering">Select the offering type.</div>
+        </div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"><div class="fld-err" id="err-ll-area">Enter the available area in sqm.</div></div>
+        <div class="fg"><label class="fl">Available Desks / Seats</label><input type="number" class="fi" id="ll-seats" placeholder="e.g. 40"><div class="fld-err" id="err-ll-seats">Enter the number of desks / seats.</div></div>
+      </div>
+      <p style="font-size:11px;color:var(--text-2);margin:-6px 0 4px;">Area is required for whole-building / floor / private-office offerings; desks &amp; seats are required for coworking / serviced-office offerings.</p>
+
+      <div class="form-sec-title">Commercials</div>
+      <div class="fr3">
+        <div class="fg"><label class="fl">Asking Rent / Price</label><input type="number" class="fi" id="ll-rent" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-rent">Enter a numeric price.</div></div>
+        <div class="fg"><label class="fl">Currency</label>
+          <select class="fi fi-sel" id="ll-currency"><option value="">Select market first</option></select>
+          <div class="fld-err" id="err-ll-currency">Select a valid currency for the market.</div>
+        </div>
+        <div class="fg"><label class="fl">Pricing Basis</label>
+          <select class="fi fi-sel" id="ll-basis">
+            <option value="">Select basis...</option>
+            <option>per sqm / year</option><option>per sqm / month</option><option>per desk / month</option>
+            <option>per office / month</option><option>total monthly rent</option>
+          </select>
+          <div class="fld-err" id="err-ll-basis">Select a pricing basis.</div>
+        </div>
+      </div>
+      <div class="fr3">
+        <div class="fg"><label class="fl">Service Charge (optional)</label><input type="number" class="fi" id="ll-svc" placeholder="e.g. 150"><div class="fld-err" id="err-ll-svc">Service charge must be numeric.</div></div>
+        <div class="fg"><label class="fl">Service Charge Basis</label>
+          <select class="fi fi-sel" id="ll-svcbasis">
+            <option value="">—</option>
+            <option>per sqm / year</option><option>per sqm / month</option><option>Included in rent</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Availability Date</label><input type="date" class="fi" id="ll-avail"></div>
+      </div>
+      <div class="fg"><label class="fl">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
+
+      <div class="form-sec-title">Photos &amp; floorplans</div>
+      <div class="form-note">
+        <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="signin.html" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="signup.html" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
+      </div>
+      <div class="fg"><label class="fl">Photos — at least 3 (JPG / PNG / WEBP)</label><input type="file" class="fi" id="ll-photos" accept="image/jpeg,image/png,image/webp" multiple><div class="fld-err" id="err-ll-photos">Select at least 3 photos (JPG/PNG/WEBP, max 8 MB each).</div></div>
+      <div class="fg"><label class="fl">Floorplan (optional — PDF / image)</label><input type="file" class="fi" id="ll-floorplan" accept="application/pdf,image/jpeg,image/png,image/webp"><div class="fld-err" id="err-ll-floorplan">Floorplan must be PDF / JPG / PNG / WEBP, max 15 MB.</div></div>
+
+      <div class="fg"><label class="fl">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Certifications, amenities, parking, current availability, context..."></textarea></div>
+
+      <!-- Honeypot -->
+      <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="ll-website" tabindex="-1" autocomplete="off"></label></div>
+
+      <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
+        <label class="consent">
+          <input type="checkbox" id="ll-consent" required aria-required="true">
+          <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</span>
+        </label>
+        <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Listing for Review</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and verifies the listing at source before publishing. Typical response within 3 business days.</p>
+      </div>
+    </div>
+    </div><!-- /#ll-manual -->
+
+    <!-- Bulk upload panel -->
+    <div id="ll-bulk" class="hidden">
+      <div class="card" style="padding:28px;">
+        <div class="form-sec-title" style="margin-top:0;">Bulk upload multiple listings</div>
+        <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px;">Add many buildings/units at once. Download the template, fill <strong>one row per unit</strong>, then upload. For photos &amp; floorplans, paste shareable links (Google Drive, Dropbox, SharePoint, OneDrive, or direct image/PDF URLs) in the <code>photo_url_*</code> / <code>floorplan_url_*</code> columns — no file uploads needed in bulk. Every row is validated server-side and stored as <strong>pending review</strong>; nothing publishes directly.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">
+          <a class="btn btn-outline" href="/templates/urbn-listing-template.csv" download>Download CSV Template</a>
+          <label class="btn btn-navy" style="cursor:pointer;">Choose CSV…<input type="file" id="bulk-file" accept=".csv,text/csv" style="display:none;" onchange="bulkParse()"></label>
+          <span id="bulk-filename" style="font-size:13px;color:var(--text-2);"></span>
+        </div>
+        <div id="bulk-preview"></div>
+        <div id="bulk-actions" class="hidden" style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-navy btn-lg" id="bulk-submit" onclick="bulkSubmit(this)">Submit Batch for Review</button>
+          <span style="font-size:12px;color:var(--text-2);">Only valid rows are stored. Invalid rows are reported, not uploaded.</span>
+        </div>
+        <div class="fld-err" id="bulk-err" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+let LL_PROFILE = null;
+const USER_TYPE_LABELS = { occupier: 'Occupier', broker: 'Broker', developer: 'Developer', landlord_owner: 'Landlord / Owner', coworking_operator: 'Coworking Operator', serviced_office_operator: 'Serviced Office Operator', advisor: 'Advisor', other: 'Other' };
+
+document.addEventListener('DOMContentLoaded', async () => {
+  injectNav('../');
+  injectFooter('../');
+  const sel = document.getElementById('ll-market');
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+  const user = await URBNAuth.requireAuth('/pages/signin.html');   // listing requires sign-in
+  if (!user) return;
+  await loadSubmitter(user);
+});
+
+function llEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+async function loadSubmitter(user) {
+  let profile = null, company = null;
+  try {
+    const { data: p } = await URBNAuth.client.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    profile = p || null;
+    if (p && p.company_id) { const { data: co } = await URBNAuth.client.from('companies').select('*').eq('id', p.company_id).maybeSingle(); company = co || null; }
+  } catch (e) {}
+
+  const name = profile && profile.full_name, email = user.email;
+  const companyName = company && company.name, title = profile && profile.job_title, stype = profile && profile.user_type;
+  const stypeLabel = USER_TYPE_LABELS[stype] || stype || '';
+  const card = document.getElementById('ll-submitter');
+
+  const incomplete = !profile || !name || !companyName || !title || !stype || !isCorporateEmail(email || '');
+  if (incomplete) {
+    card.innerHTML = `<div class="form-note"><p><strong>Please complete your account details before submitting a listing.</strong> We need your full name, company, job title and user type on file (with a verified corporate email). <a href="account.html" style="text-decoration:underline;">Edit account details →</a></p></div>`;
+    return; // modes and panels stay hidden
+  }
+
+  LL_PROFILE = { name, email, company: companyName, title, submitterType: stypeLabel || 'Other' };
+  card.innerHTML = `
+    <div class="card" style="padding:20px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Submitting as</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">${llEsc(name)}</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:2px;">${llEsc(title)} · ${llEsc(companyName)}</div>
+        <div style="font-size:12px;color:var(--text-2);margin-top:4px;">${llEsc(email)} · <span style="text-transform:capitalize;">${llEsc(stypeLabel)}</span></div>
+      </div>
+      <a class="btn btn-ghost btn-sm" href="account.html">Edit account details</a>
+    </div>`;
+  document.getElementById('ll-modes').classList.remove('hidden');
+  setMode('manual');
+}
+
+function setMode(mode) {
+  document.getElementById('ll-manual').classList.toggle('hidden', mode !== 'manual');
+  document.getElementById('ll-bulk').classList.toggle('hidden', mode !== 'bulk');
+  document.getElementById('mode-manual-btn').className = 'btn btn-sm ' + (mode === 'manual' ? 'btn-dark' : 'btn-ghost');
+  document.getElementById('mode-bulk-btn').className = 'btn btn-sm ' + (mode === 'bulk' ? 'btn-dark' : 'btn-ghost');
+}
+
+// Currency options depend on the selected market (local + USD, +EUR for XOF/Francophone WA).
+function llMarketChanged() {
+  const market = document.getElementById('ll-market').value;
+  const cur = document.getElementById('ll-currency');
+  if (!market) { cur.innerHTML = '<option value="">Select market first</option>'; return; }
+  cur.innerHTML = '<option value="">Select currency...</option>' + allowedCurrencies(market).map(c => `<option>${c}</option>`).join('');
+}
+
+const LL_DESK_TYPES = ['Coworking desks', 'Serviced office suite'];
+const LL_AREA_TYPES = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const FLOORPLAN_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const MAX_PHOTO = 8 * 1024 * 1024;       // 8 MB per photo
+const MAX_FLOORPLAN = 15 * 1024 * 1024;  // 15 MB floorplan
+
+async function submitListing(btn) {
+  if (botFilled('ll-website')) return; // honeypot
+
+  // Submitter details come from the authenticated profile, not repeated fields.
+  if (!LL_PROFILE) { showFail('Your account details are incomplete. <a href="account.html">Complete them</a> and resubmit.'); return; }
+  const { name, email, company, title, submitterType } = LL_PROFILE;
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const building = v('ll-building'), market = v('ll-market'), district = v('ll-district'), maps = v('ll-maps'), floor = v('ll-floor');
+  const fitOut = v('ll-fitout'), offering = v('ll-offering'), area = v('ll-area'), seats = v('ll-seats');
+  const rent = v('ll-rent'), currency = v('ll-currency'), basis = v('ll-basis');
+  const svc = v('ll-svc'), svcBasis = v('ll-svcbasis'), avail = v('ll-avail'), term = v('ll-term');
+  const notes = v('ll-notes');
+  const consent = document.getElementById('ll-consent').checked;
+
+  const photoFiles = [...document.getElementById('ll-photos').files];
+  const floorplanFile = (document.getElementById('ll-floorplan').files || [])[0] || null;
+
+  const isNum = x => x !== '' && !isNaN(Number(x));
+  const isUrl = x => /^https?:\/\/\S+$/i.test(x);
+  const photosBad = photoFiles.length < 3 || photoFiles.some(f => !PHOTO_TYPES.includes(f.type) || f.size > MAX_PHOTO);
+  const floorplanBad = !!floorplanFile && (!FLOORPLAN_TYPES.includes(floorplanFile.type) || floorplanFile.size > MAX_FLOORPLAN);
+
+  let ok = true;
+  const set = (id, errId, bad) => { fldErr(id, errId, bad); if (bad) ok = false; };
+  set('ll-building', 'err-ll-building', !building);
+  set('ll-market', 'err-ll-market', !market);
+  set('ll-district', 'err-ll-district', !district);
+  set('ll-maps', 'err-ll-maps', maps !== '' && !isUrl(maps));
+  set('ll-fitout', 'err-ll-fitout', !fitOut);
+  set('ll-offering', 'err-ll-offering', !offering);
+  if (LL_DESK_TYPES.includes(offering)) set('ll-seats', 'err-ll-seats', !isNum(seats));
+  if (LL_AREA_TYPES.includes(offering)) set('ll-area', 'err-ll-area', !isNum(area));
+  set('ll-rent', 'err-ll-rent', !isNum(rent));
+  set('ll-currency', 'err-ll-currency', !currency || !allowedCurrencies(market).includes(currency));
+  set('ll-basis', 'err-ll-basis', !basis);
+  set('ll-svc', 'err-ll-svc', svc !== '' && !isNum(svc));
+  set('ll-photos', 'err-ll-photos', photosBad);
+  set('ll-floorplan', 'err-ll-floorplan', floorplanBad);
+  document.getElementById('err-ll-consent').classList.toggle('show', !consent);
+  if (!consent) ok = false;
+
+  if (!ok) { toast('Please complete the highlighted fields.', 'error'); return; }
+
+  // Uploads target a PRIVATE bucket, so an authenticated user is required.
+  await URBNAuth.init();
+  if (!URBNAuth.user) { showFail('You must be signed in to upload listing photos. <a href="signin.html?next=' + encodeURIComponent(location.pathname) + '">Sign in</a> or <a href="signup.html">create an account</a>, then resubmit. Nothing was submitted.'); return; }
+  if (!URBNAuth.client) { showFail(requestFailHTML()); return; }
+
+  setBtnBusy(btn, true, 'Uploading…');
+  const photoPaths = []; let floorplanPath = null;
+  try {
+    const stamp = Date.now();
+    const safe = s => s.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+    for (let i = 0; i < photoFiles.length; i++) {
+      const f = photoFiles[i];
+      const path = `${URBNAuth.user.id}/${stamp}/photo_${i + 1}_${safe(f.name)}`;
+      const { error } = await URBNAuth.client.storage.from('listing-media').upload(path, f, { upsert: false, contentType: f.type });
+      if (error) throw error;
+      photoPaths.push(path);
+    }
+    if (floorplanFile) {
+      const fpath = `${URBNAuth.user.id}/${stamp}/floorplan_${safe(floorplanFile.name)}`;
+      const { error } = await URBNAuth.client.storage.from('listing-media').upload(fpath, floorplanFile, { upsert: false, contentType: floorplanFile.type });
+      if (error) throw error;
+      floorplanPath = fpath;
+    }
+  } catch (e) {
+    setBtnBusy(btn, false);
+    showFail('Photo upload failed (' + (e.message || 'storage error') + '). Your listing was NOT submitted. Please try again, or email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.');
+    return;
+  }
+
+  // Success only after photos uploaded AND the request row is stored.
+  const result = await postRequest({
+    requestType: 'list-building', sourcePage: location.pathname,
+    website: document.getElementById('ll-website').value,
+    consent: true,
+    name, email, company, title, submitterType,
+    building, market, district, mapsUrl: maps, floor,
+    fitOut, offeringType: offering, area, seats,
+    rent, currency, pricingBasis: basis,
+    serviceCharge: svc, serviceChargeBasis: svcBasis,
+    availabilityDate: avail, minTerm: term,
+    mediaBucket: 'listing-media', photoPaths, floorplanPath, photoCount: photoPaths.length,
+    submittedBy: URBNAuth.user.id,
+    message: notes,
+  });
+  setBtnBusy(btn, false);
+
+  if (!result.ok) {
+    // Roll back uploaded files so failed submissions don't orphan storage objects.
+    let rolledBack = false;
+    try {
+      const paths = [...photoPaths]; if (floorplanPath) paths.push(floorplanPath);
+      if (paths.length && URBNAuth.client) { await URBNAuth.client.storage.from('listing-media').remove(paths); rolledBack = true; }
+    } catch (e) { rolledBack = false; }
+
+    const j = result.json || {};
+    let reason;
+    if (j.error === 'validation') reason = 'The server rejected these fields: <strong>' + (j.fields || []).join(', ') + '</strong>.';
+    else if (j.error === 'rate_limited') reason = 'Too many submissions in a short time — wait about a minute, then resubmit.';
+    else if (j.error === 'storage_failed') reason = 'The server could not save the listing (database error' + (j.detail ? ': ' + j.detail : '') + ').';
+    else if (j.error === 'payload_too_large') reason = 'The submission was too large to send.';
+    else if (j.error) reason = 'Server error: <strong>' + j.error + '</strong>' + (j.detail ? ' — ' + j.detail : '') + ' (HTTP ' + (result.status || '?') + ').';
+    else reason = 'The listing could not be saved (HTTP ' + (result.status || 'network error') + ').';
+
+    const fileNote = rolledBack
+      ? 'Your uploaded photos were removed, so nothing is orphaned — fix the above and resubmit.'
+      : 'Note: your photos may already be uploaded; resubmitting re-uploads them.';
+    showFail(reason + '<br>' + fileNote + '<br>If this persists, email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.');
+    return;
+  }
+
+  const form = document.getElementById('ll-form');
+  form.innerHTML = `
+    <div class="form-success">
+      <h3>Listing submitted for review</h3>
+      <p><strong style="color:var(--navy);">${building}</strong> and <strong>${photoPaths.length} photo(s)</strong> were uploaded and logged as a <strong>pending supply-side request</strong>. URBN verifies every listing before publication and will respond to <strong style="color:var(--navy);">${email}</strong> within 3 business days.</p>
+      <p style="margin-top:10px;">Questions? Email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.</p>
+    </div>`;
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function showFail(html) {
+  toast('Submission failed', 'error');
+  let f = document.getElementById('ll-fail');
+  if (!f) { f = document.createElement('div'); f.id = 'll-fail'; f.className = 'fld-err show'; f.style.marginTop = '12px'; document.querySelector('#ll-form button').after(f); }
+  f.innerHTML = html;
+}
+
+// ── Bulk upload (CSV) ───────────────────────────────────────────────
+let BULK_ROWS = [];
+const BULK_DESK = ['Coworking desks', 'Serviced office suite'];
+const BULK_AREA = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
+
+function bulkSplit(line) { const out = []; let cur = '', q = false; for (let i = 0; i < line.length; i++) { const c = line[i]; if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; } else { if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c; } } out.push(cur); return out; }
+function bulkParseCSV(text) { const lines = text.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim() !== ''); if (!lines.length) return []; const headers = bulkSplit(lines[0]).map(h => h.trim()); return lines.slice(1).map(line => { const cells = bulkSplit(line); const o = {}; headers.forEach((h, i) => o[h] = (cells[i] || '').trim()); return o; }); }
+function bulkValidate(r) {
+  const errs = [], num = x => x !== '' && x != null && !isNaN(Number(x)), isUrl = x => /^https?:\/\/\S+$/i.test(String(x || '').trim());
+  if (!r.building_name) errs.push('building_name');
+  const mk = URBN_DATA.markets.some(m => m.id === r.market); if (!mk) errs.push('market');
+  if (!r.submarket) errs.push('submarket');
+  if (!r.offering_type) errs.push('offering_type');
+  if (!r.fit_out) errs.push('fit_out');
+  if (!num(r.asking_rent)) errs.push('asking_rent');
+  if (mk && (!r.currency || !allowedCurrencies(r.market).includes(r.currency))) errs.push('currency');
+  if (!r.pricing_basis) errs.push('pricing_basis');
+  if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
+  if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  ['year_built', 'floors', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge'].forEach(k => { if (r[k] && !num(r[k])) errs.push(k); });
+  ['google_maps_url', 'main_photo_url'].forEach(k => { if (r[k] && !isUrl(r[k])) errs.push(k); });
+  for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
+  for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }
+  return errs;
+}
+function bulkParse() {
+  const file = document.getElementById('bulk-file').files[0]; if (!file) return;
+  document.getElementById('bulk-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = () => { BULK_ROWS = bulkParseCSV(reader.result).map((r, i) => ({ index: i + 1, data: r, errors: bulkValidate(r) })); bulkRender(); };
+  reader.readAsText(file);
+}
+function bulkRender() {
+  const valid = BULK_ROWS.filter(r => r.errors.length === 0).length, invalid = BULK_ROWS.length - valid;
+  const rows = BULK_ROWS.map(r => `<tr><td>${r.index}</td><td>${llEsc(r.data.building_name || '—')}</td><td>${llEsc(r.data.market || '—')}</td><td>${llEsc(r.data.offering_type || '—')}</td><td>${r.errors.length === 0 ? '<span class="badge badge-available">valid</span>' : '<span class="badge badge-gated">invalid</span> <span style="font-size:11px;color:#B42318;">' + llEsc(r.errors.join(', ')) + '</span>'}</td></tr>`).join('');
+  document.getElementById('bulk-preview').innerHTML = `<div style="display:flex;gap:18px;margin-bottom:12px;font-size:13px;"><span><strong>${BULK_ROWS.length}</strong> rows</span><span style="color:#1E6B3F;"><strong>${valid}</strong> valid</span><span style="color:#B42318;"><strong>${invalid}</strong> invalid</span></div><div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>#</th><th>Building</th><th>Market</th><th>Offering</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  document.getElementById('bulk-actions').classList.toggle('hidden', valid === 0);
+}
+async function bulkSubmit(btn) {
+  const err = document.getElementById('bulk-err'); err.classList.remove('show'); err.textContent = '';
+  const valid = BULK_ROWS.filter(r => r.errors.length === 0);
+  if (!valid.length) { err.textContent = 'No valid rows to submit.'; err.classList.add('show'); return; }
+  await URBNAuth.init();
+  if (!URBNAuth.session) { err.textContent = 'Your session expired — please sign in again.'; err.classList.add('show'); return; }
+  setBtnBusy(btn, true, 'Submitting…');
+  let res;
+  try {
+    res = await fetch('/api/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + URBNAuth.session.access_token },
+      body: JSON.stringify({ filename: document.getElementById('bulk-file').files[0].name, rows: BULK_ROWS.map(r => r.data) }),
+    });
+  } catch (e) { setBtnBusy(btn, false); err.textContent = 'Network error — please try again.'; err.classList.add('show'); return; }
+  setBtnBusy(btn, false);
+  let j = {}; try { j = await res.json(); } catch (e) {}
+  if (!res.ok || !j.ok) { err.innerHTML = 'Batch was not stored. ' + (j.error ? '(' + llEsc(j.error) + ') ' : '') + 'Please try again or email <a href="mailto:operators@urbnoffices.com">operators@urbnoffices.com</a>.'; err.classList.add('show'); return; }
+  document.getElementById('bulk-preview').innerHTML = `<div class="form-success"><h3>Batch submitted for review</h3><p><strong>${j.accepted}</strong> of <strong>${j.processed}</strong> rows accepted and stored as <strong>pending review</strong> (${j.rejected} rejected). Nothing publishes until an admin approves it. A confirmation email has been sent.</p></div>`;
+  document.getElementById('bulk-actions').classList.add('hidden');
+}
+</script>
+</body>
+</html>

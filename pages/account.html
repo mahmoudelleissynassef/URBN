@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account — URBN</title>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:60px 0 80px;">
+  <div class="w-sm">
+    <div class="mb32">
+      <span class="overline label-navy">Account</span>
+      <h1 style="font-size:40px;">Your Account</h1>
+    </div>
+    <div id="acct-body">
+      <div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">LOADING…</div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+let ACCT = { profile: null, company: null, sub: null };
+
+document.addEventListener('DOMContentLoaded', async () => {
+  injectNav('../'); injectFooter('../');
+  const user = await URBNAuth.requireAuth('/pages/signin.html');
+  if (!user) return;
+  await loadAccount(user);
+});
+
+async function loadAccount(user) {
+  const c = URBNAuth.client;
+  try {
+    const { data: p } = await c.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    ACCT.profile = p || null;
+    if (p && p.company_id) {
+      const { data: co } = await c.from('companies').select('*').eq('id', p.company_id).maybeSingle();
+      ACCT.company = co || null;
+      const { data: sub } = await c.from('company_subscriptions').select('*').eq('company_id', p.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      ACCT.sub = sub || null;
+    }
+  } catch (e) { /* tables may not exist yet */ }
+  renderAccount(user);
+}
+
+function renderAccount(user) {
+  const p = ACCT.profile, co = ACCT.company, sub = ACCT.sub;
+  const body = document.getElementById('acct-body');
+  if (!p) {
+    body.innerHTML = `<div class="form-note"><p><strong>Your profile isn&#39;t set up yet.</strong> This usually means the platform database tables haven&#39;t been created. Once the platform SQL is run, your profile is created automatically on sign-up. You are signed in as <strong>${user.email}</strong>.</p></div>`;
+    return;
+  }
+  const tier = (sub && sub.tier) || (p.requested_tier || 'free');
+  const status = (sub && sub.status) || 'requested';
+  body.innerHTML = `
+    <div class="card" style="padding:30px;margin-bottom:18px;">
+      <div class="form-sec-title" style="margin-top:0;">Profile</div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Full Name</label><input type="text" class="fi" id="ac-name" value="${esc(p.full_name)}"></div>
+        <div class="fg"><label class="fl">Email</label><input type="email" class="fi" value="${esc(user.email)}" disabled></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Job Title</label><input type="text" class="fi" id="ac-title" value="${esc(p.job_title)}"></div>
+        <div class="fg"><label class="fl">User Type</label><input type="text" class="fi" value="${esc(p.user_type)}" disabled></div>
+      </div>
+      <div class="fg"><label class="fl">Company</label><input type="text" class="fi" id="ac-company" value="${esc(co ? co.name : '')}"></div>
+      <div class="fld-err" id="ac-err" style="margin-top:4px;"></div>
+      <button class="btn btn-navy" id="ac-btn" style="margin-top:12px;" onclick="saveAccount(this)">Save Changes</button>
+    </div>
+
+    <div class="card" style="padding:30px;">
+      <div class="form-sec-title" style="margin-top:0;">Membership</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span class="badge badge-grade" style="text-transform:capitalize;">${esc(tier)}</span>
+        <span class="badge ${status==='active'?'badge-available':'badge-gated'}" style="text-transform:capitalize;">${esc(status)}</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-2);margin-top:14px;line-height:1.7;">Paid tiers are activated manually after verification. To request a different tier, visit <a href="subscription.html" class="text-navy" style="text-decoration:underline;">Pricing</a>.</p>
+    </div>`;
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+async function saveAccount(btn) {
+  const err = document.getElementById('ac-err'); err.classList.remove('show'); err.textContent = '';
+  const name = document.getElementById('ac-name').value.trim();
+  const title = document.getElementById('ac-title').value.trim();
+  const companyName = document.getElementById('ac-company').value.trim();
+  if (!name) { err.textContent = 'Name cannot be empty.'; err.classList.add('show'); return; }
+  setBtnBusy(btn, true, 'Saving…');
+  try {
+    await URBNAuth.client.from('profiles').update({ full_name: name, job_title: title }).eq('id', URBNAuth.user.id);
+    if (ACCT.company) await URBNAuth.client.from('companies').update({ name: companyName }).eq('id', ACCT.company.id);
+    setBtnBusy(btn, false);
+    showToast('Account updated');
+  } catch (e) {
+    setBtnBusy(btn, false);
+    err.textContent = 'Could not save — please try again.'; err.classList.add('show');
+  }
+}
+</script>
+</body>
+</html>

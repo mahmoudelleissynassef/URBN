@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Building — URBN</title>
+  <meta name="description" content="Verified Grade A office building — floor-by-floor availability, floor plates, asking rents, amenities and protected introductions via URBN."/>
+  <link rel="canonical" href="https://urbnoffices.com/pages/building.html"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="URBN"/>
+  <meta property="og:title" content="Verified Office Building — URBN"/>
+  <meta property="og:description" content="Floor-by-floor availability, asking rents, amenities and protected introductions via URBN."/>
+  <meta property="og:url" content="https://urbnoffices.com/pages/building.html"/>
+  <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Verified Office Building — URBN"/>
+  <meta name="twitter:description" content="Floor-by-floor availability, asking rents and protected introductions via URBN."/>
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
 <body>
@@ -75,19 +88,21 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
 let B = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
+  await URBN_LISTINGS.load();
   const id = p('id');
-  B = URBN_DATA.buildings.find(b => b.id === id);
-  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not found</div><a href="search.html" class="btn btn-navy">Back to Search</a></div>'; return; }
+  B = URBN_LISTINGS.find(id);
+  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not available</div><p style="color:var(--text-2);margin-bottom:20px;">This building isn’t currently available, or it hasn’t been approved for listing yet.</p><a href="search.html" class="btn btn-navy">Browse Offices</a></div>'; return; }
 
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
   const saved = USER.saved.includes(B.id);
-  const img = getImg(B.market);
+  const img = imgFor(B);
   document.title = B.name + ' — URBN';
 
   document.getElementById('bpage').innerHTML = `
@@ -203,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let currentUnit = null;
 function setUnit(uid) {
-  currentUnit = URBN_DATA.buildings.flatMap(b=>b.units).find(u=>u.id===uid);
+  currentUnit = URBN_LISTINGS.buildings.flatMap(b=>b.units).find(u=>u.id===uid);
   if (currentUnit && B) {
     document.getElementById('sv-unit-display').innerHTML = `
     <div style="background:var(--bg-white);border:1px solid var(--border);padding:12px 14px;">
