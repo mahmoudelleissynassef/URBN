@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   B = URBN_LISTINGS.find(id);
   if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not available</div><p style="color:var(--text-2);margin-bottom:20px;">This building isn’t currently available, or it hasn’t been approved for listing yet.</p><a href="search.html" class="btn btn-navy">Browse Offices</a></div>'; return; }
 
+  try {
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
   const saved = USER.saved.includes(B.id);
   const img = imgFor(B);
@@ -116,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           ${gradeB(B.grade)}
           <span class="badge badge-verified">Verified Listing</span>
-          ${B.sustainability.slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
+          ${(B.sustainability||[]).slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
         </div>
         <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;">${B.name}</h1>
         <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
@@ -141,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <h3 style="font-size:22px;margin-bottom:6px;">Available Spaces</h3>
           <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">Floor-by-floor availability — registered corporate occupiers only</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
-            ${B.units.map(u=>{const us=USER.saved.includes(u.id);return `
+            ${(B.units||[]).map(u=>{const us=USER.saved.includes(u.id);return `
             <div class="card card-lift" id="unit-${u.id}" style="padding:20px;cursor:pointer;" onclick="setUnit('${u.id}');openModal('sv-modal')">
               <div class="flex-b mb12">
                 <div>
@@ -169,7 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <!-- Amenities -->
         <div class="mb32">
           <h3 style="font-size:22px;margin-bottom:16px;">Building Amenities</h3>
-          ${B.amenities.length ? `<div class="chips">${B.amenities.map(a=>`<span class="chip on" style="cursor:default;">${a}</span>`).join('')}</div>` : `<p style="font-size:13px;color:var(--text-2);">Amenities not specified.</p>`}
+          ${(B.amenities||[]).length ? `<div class="chips">${(B.amenities||[]).map(a=>`<span class="chip on" style="cursor:default;">${a}</span>`).join('')}</div>` : `<p style="font-size:13px;color:var(--text-2);">Amenities not specified.</p>`}
         </div>
 
         <!-- Parking -->
@@ -182,10 +183,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>` : ''}
 
         <!-- Sustainability -->
-        ${B.sustainability.length?`
+        ${(B.sustainability||[]).length?`
         <div>
           <h3 style="font-size:22px;margin-bottom:16px;">Certifications</h3>
-          <div class="chips">${B.sustainability.map(s=>`<span class="badge badge-available" style="font-size:10px;">${s}</span>`).join('')}</div>
+          <div class="chips">${(B.sustainability||[]).map(s=>`<span class="badge badge-available" style="font-size:10px;">${s}</span>`).join('')}</div>
         </div>`:''} 
       </div>
 
@@ -203,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span>Year Built</span><span style="color:var(--text);">${B.yearBuilt}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:5px 0;">
-              <span>Available Units</span><span style="color:var(--text);">${B.units.length}</span>
+              <span>Available Units</span><span style="color:var(--text);">${(B.units||[]).length}</span>
             </div>
           </div>
         </div>
@@ -229,6 +230,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     </div>
   </div>`;
   loadGallery();   // populate the photo gallery now that the page has rendered
+  } catch (err) {
+    // Surface the real cause in the console, but never leave the user on an
+    // endless "LOADING" — show a usable fallback with a route back to Offices.
+    console.error('[building] render failed:', err);
+    document.getElementById('bpage').innerHTML = '<div style="text-align:center;padding:120px 24px;"><div style="font-family:var(--fd);font-size:26px;margin-bottom:12px;">We couldn\'t display this building</div><p style="color:var(--text-2);margin-bottom:22px;max-width:440px;margin-left:auto;margin-right:auto;line-height:1.7;">Something went wrong rendering this listing. Please try again, or browse other verified offices.</p><a href="/offices" class="btn btn-navy">Browse Offices</a></div>';
+  }
 });
 
 let currentUnit = null;
