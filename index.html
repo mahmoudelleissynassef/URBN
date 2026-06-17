@@ -209,17 +209,19 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   URBN_DATA.markets.slice(0,8).forEach(m=>{
     const s=URBN_DATA.marketStats[m.id];
     const bc=URBN_LISTINGS.count(m.id);
+    const live=bc>0;
     const subs=m.submarkets.slice(0,2).join(', ');
-    mg.innerHTML+=`<a href="pages/search.html?m=${m.id}" class="city-card">
+    const href=live?`/offices?m=${m.id}`:'/market-scan';
+    mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}>
       <div class="city-card-region">${m.region}</div>
-      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-name">${m.name}, ${m.country} ${live?'':'<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">Coming soon</span>'}</div>
       <div class="city-card-divider"></div>
       <div class="city-card-data">
-        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${bc} listed</span></div>
+        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${live?bc+' listed':'Coming soon'}</span></div>
         <div class="city-card-row"><span class="city-card-label">Districts</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:110px;">${subs}</span></div>
         ${s?`<div class="city-card-row"><span class="city-card-label">Avg Rent</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>`:''}
       </div>
-      <div class="city-card-footer">View offices →</div>
+      <div class="city-card-footer">${live?'View offices &rarr;':'Request a Market Scan &rarr;'}</div>
     </a>`;
   });
 

@@ -126,7 +126,7 @@ const MARKET_NAMES = {
   cairo: 'Cairo', dubai: 'Dubai', riyadh: 'Riyadh', casablanca: 'Casablanca', rabat: 'Rabat',
   amman: 'Amman', tunis: 'Tunis', algiers: 'Algiers', addis: 'Addis Ababa', nairobi: 'Nairobi',
   accra: 'Accra', lagos: 'Lagos', abuja: 'Abuja', johannesburg: 'Johannesburg', capetown: 'Cape Town', luanda: 'Luanda',
-  dakar: 'Dakar', abidjan: 'Abidjan',
+  dakar: 'Dakar', abidjan: 'Abidjan', kigali: 'Kigali',
 };
 function marketName(id) { return MARKET_NAMES[id] || (id ? String(id) : ''); }
 const FRANCOPHONE_WA_MARKETS = ['dakar', 'abidjan', 'bamako', 'ouagadougou', 'lome', 'cotonou', 'niamey'];
@@ -1361,7 +1361,10 @@ function handleConstructionCosts(req, res) {
       }
       const rows = await sbGet('market_construction_costs?order=market.asc,effective_date.desc.nullslast,created_at.desc&select=*');
       const latest = {}; rows.forEach((r) => { if (!latest[r.market]) latest[r.market] = r; });
-      return sendJson(res, 200, { ok: true, costs: Object.values(latest) });
+      // Include a display name so consumers (Stay vs Go) can label markets that
+      // aren't in the client-side market list (e.g. Kigali, Abidjan).
+      const costs = Object.values(latest).map((r) => ({ ...r, marketName: marketName(r.market) }));
+      return sendJson(res, 200, { ok: true, costs });
     } catch (e) { return sendJson(res, 200, { ok: true, costs: market ? null : [] }); }
   })();
 }
