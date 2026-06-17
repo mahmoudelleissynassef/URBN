@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user) return;
   await URBN_LISTINGS.load();
   await loadDashboard(user);
-  // Deep-link to a section via ?tab= (used by user.urbnoffices.com routes).
+  // Deep-link to a dashboard section via ?tab= on the main domain.
   const tab = new URLSearchParams(location.search).get('tab');
   const map = { overview: 'overview', shortlist: 'shortlist', saved: 'shortlist', requests: 'requests', listings: 'listings' };
   if (tab && map[tab]) {

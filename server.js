@@ -1301,31 +1301,10 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  // ── Subdomain-aware routing ────────────────────────────────────────────────
-  // admin.<domain> and user.<domain> map clean routes to the real page files via
-  // redirect (so relative asset paths keep working). Public host is unaffected.
-  // Staging (urbn-staging.up.railway.app) keeps serving every file directly.
-  const host = String(req.headers.host || '').toLowerCase();
-  if (host.startsWith('admin.')) {
-    const m = {
-      '/': '/pages/dashboards/admin.html', '/dashboard': '/pages/dashboards/admin.html',
-      '/pending-listings': '/pages/dashboards/admin.html?tab=pending', '/batch-uploads': '/pages/dashboards/admin.html?tab=batches',
-      '/approved-listings': '/pages/dashboards/admin.html?tab=approved', '/rejected-listings': '/pages/dashboards/admin.html?tab=rejected',
-      '/users': '/pages/dashboards/admin.html?tab=users', '/companies': '/pages/dashboards/admin.html?tab=companies',
-      '/membership-requests': '/pages/dashboards/admin.html?tab=membership', '/analytics': '/pages/dashboards/admin.html?tab=analytics',
-      '/settings': '/pages/dashboards/admin.html?tab=overview',
-    };
-    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
-  } else if (host.startsWith('user.')) {
-    const m = {
-      '/': '/pages/dashboards/tenant.html', '/dashboard': '/pages/dashboards/tenant.html',
-      '/account': '/pages/account.html', '/saved': '/pages/dashboards/tenant.html?tab=shortlist',
-      '/requests': '/pages/dashboards/tenant.html?tab=requests', '/listings': '/pages/list-building.html',
-      '/batch-upload': '/pages/operator/batch-upload.html', '/membership': '/pages/subscription.html',
-    };
-    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
-  }
-
+  // Path-based routing only. The whole app — public site, signed-in portal and
+  // admin console — is served from the single main domain (urbnoffices.com).
+  // There is NO subdomain/host-aware behavior: admin access is enforced
+  // server-side via the admin_users lookup in the /api/admin layer, never by host.
   let reqPath = urlPath;
   if (reqPath === '/') reqPath = '/index.html';
   let filePath = path.join(__dirname, reqPath);
