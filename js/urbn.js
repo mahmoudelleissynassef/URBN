@@ -131,7 +131,6 @@ function injectNav(base='') {
       <div class="nav-links">
         <a href="/offices">Offices</a>
         <a href="/list-building">List Your Space</a>
-        <a href="/industrial">Industrial</a>
         <div class="nav-dd">
           <a href="/stay-vs-go">Tools</a>
           <div class="nav-dd-panel">
@@ -161,7 +160,6 @@ function injectNav(base='') {
   <div class="mobile-nav" id="mobile-nav">
     <a href="/offices">Offices</a>
     <a href="/list-building">List Your Space</a>
-    <a href="/industrial">Industrial</a>
     <a href="/stay-vs-go">Stay vs Go</a>
     <a href="/insights">Insights</a>
     <a href="/pricing">Pricing</a>
@@ -220,7 +218,6 @@ function injectFooter(base='') {
             <li><a href="/markets">Markets</a></li>
             <li><a href="/buildings">Buildings</a></li>
             <li><a href="/districts">Districts</a></li>
-            <li><a href="/industrial">Industrial</a></li>
             <li><a href="/stay-vs-go">Stay vs Go</a></li>
             <li><a href="/insights">Insights</a></li>
           </ul>
@@ -511,7 +508,7 @@ function renderCard(b, base='', opts={}) {
   return `
   <div class="lc" onclick="window.location.href='/building?id=${b.id}'">
     <div class="lc-img">
-      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
+      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name} — verified office space in ${mkt?.name||b.market||''}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
@@ -560,7 +557,7 @@ function renderListingCard(L, base='') {
   return `
   <div class="lc" onclick="window.location.href='/building?id=${L.buildingId}&u=${L.id}'">
     <div class="lc-img">
-      <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${L.name}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
+      <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${L.name} — verified office space in ${mkt?.name||L.market||''}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(L.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}

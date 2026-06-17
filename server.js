@@ -28,7 +28,6 @@ const ROUTES = {
   '/buildings': '/pages/buildings.html',
   '/building': '/pages/building.html',
   '/districts': '/pages/districts.html',
-  '/industrial': '/pages/industrial.html',
   '/stay-vs-go': '/pages/stay-vs-go.html',
   '/list-building': '/pages/list-building.html',
   '/batch-upload': '/pages/operator/batch-upload.html',

@@ -506,12 +506,6 @@ textarea.fi { resize: vertical; min-height: 100px; }
 .rb { font-size: 12.5px; color: var(--text-2); }
 .rb-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
 
-/* ── Industrial ───────────────────────────────────────── */
-.ind-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-.ind-c { background: var(--bg-off); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
-.ind-cv { font-size: 16px; font-weight: 600; color: var(--text); }
-.ind-ck { font-size: 11px; color: var(--text-2); margin-top: 2px; }
-
 /* ── Plans ────────────────────────────────────────────── */
 .plan-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--gap); }
 .plan-c { background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px 24px; }
@@ -749,6 +743,28 @@ textarea:focus-visible {
    so no-JS and unsupported browsers always render content fully visible. */
 .reveal-init { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; will-change: opacity, transform; }
 .reveal-init.reveal-in { opacity: 1; transform: none; }
+
+/* Segmented toggle (e.g. Cards / Map on the offices page). */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.seg-btn { font-family: var(--fi); font-size: 12px; font-weight: 600; padding: 7px 14px; background: var(--bg-white); color: var(--text-2); border: none; cursor: pointer; min-height: 32px; transition: background .15s, color .15s; }
+.seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+.seg-btn.on { background: var(--navy); color: #fff; }
+.seg-btn:hover:not(.on) { color: var(--navy); }
+/* Leaflet popups inherit the site font. */
+.leaflet-container { font-family: var(--fs, system-ui, sans-serif); }
+
+/* CAPEX waterfall (Stay vs Go) — pure-CSS floating-bar chart. */
+.wf { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+.wf-cap { font-family: var(--fm); font-size: 9px; letter-spacing: .16em; color: var(--text-2); text-transform: uppercase; margin-bottom: 10px; }
+.wf-row { display: grid; grid-template-columns: 160px 1fr 88px; align-items: center; gap: 10px; padding: 3px 0; }
+.wf-label { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wf-track { position: relative; height: 16px; background: var(--bg-off); border-radius: 3px; }
+.wf-bar { position: absolute; top: 0; height: 16px; border-radius: 3px; min-width: 2px; transition: width .45s ease, margin-left .45s ease; }
+.wf-val { font-size: 11.5px; text-align: right; color: var(--text); white-space: nowrap; }
+.wf-total { margin-top: 4px; border-top: 1px dashed var(--border); padding-top: 7px; }
+.wf-total .wf-label { color: var(--text); font-weight: 600; }
+.wf-total .wf-val { font-weight: 600; }
+@media (max-width: 560px) { .wf-row { grid-template-columns: 104px 1fr 66px; } .wf-label, .wf-val { font-size: 10.5px; } }
 
 /* Skeleton shimmer utility for loading states. */
 .skeleton { position: relative; overflow: hidden; background: var(--bg-off); border-radius: var(--r); }
