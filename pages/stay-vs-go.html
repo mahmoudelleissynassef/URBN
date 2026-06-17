@@ -113,6 +113,15 @@ function curOf(marketId) {
   return (m && m.currency) || 'USD';
 }
 function money(n) { return CURRENCY + ' ' + Math.round(Number(n) || 0).toLocaleString(); }
+// "2025-12-01" -> "December 2025"
+function fmtAsOf(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }); } catch (e) { return d; } }
+// Short, escaped source line from the cost row's notes (first sentence).
+function costSource() {
+  const n = (COSTS && COSTS.notes) ? String(COSTS.notes) : '';
+  if (!n) return '';
+  let s = n.split('. ')[0]; if (s.length > 160) s = s.slice(0, 157) + '…';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+}
 
 async function loadCosts() {
   const market = document.getElementById('sg-market').value;
@@ -126,7 +135,7 @@ async function loadCosts() {
   } catch (e) { COSTS = null; }
   if (COSTS) {
     if (COSTS.currency) CURRENCY = COSTS.currency;
-    status.innerHTML = `<span style="color:#1E6B3F;">✓ URBN CAPEX benchmarks loaded${COSTS.effective_date ? ' (as of ' + COSTS.effective_date + ')' : ''}.</span>`;
+    status.innerHTML = `<span style="color:#1E6B3F;">✓ CAPEX benchmarks loaded</span>${COSTS.effective_date ? ' &middot; prices as of <strong>' + fmtAsOf(COSTS.effective_date) + '</strong>' : ''}`;
     document.getElementById('sg-manual').classList.add('hidden');
   } else {
     status.innerHTML = `<span style="color:#B42318;">CAPEX assumptions not available for this market yet.</span> Enter your own below to compare.`;
@@ -204,9 +213,13 @@ function recalc() {
       if (ci.moving) rows.push(['Moving allowance', ci.moving]);
       capexEl.innerHTML = `
         <div class="card" style="padding:24px;border:1px solid var(--navy,#243A5E);">
-          <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">Upfront CAPEX to fit out</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">Upfront CAPEX to fit out</div>
+            ${COSTS && COSTS.effective_date ? `<span class="badge badge-grade" style="font-size:9px;">Prices as of ${fmtAsOf(COSTS.effective_date)}</span>` : ''}
+          </div>
           <div style="font-family:var(--fd);font-size:40px;font-weight:300;color:var(--navy);line-height:1;">${money(upfrontTraditional)}</div>
           <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${money(Math.round(upfrontTraditional / (area || 1)))} / m² &middot; ${money(Math.round(upfrontTraditional / (desks || 1)))} / desk — to take a shell/CAT-A space to a fitted ${level} office</div>
+          ${costSource() ? `<div style="font-size:11px;color:var(--text-2);margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">Source: ${costSource()}</div>` : ''}
           <div style="margin-top:16px;border-top:1px solid var(--border);">
             ${rows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-2);">${l}</span><span style="color:var(--text);white-space:nowrap;">${money(v)}</span></div>`).join('')}
             <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0 0;font-size:14px;font-weight:600;"><span>Total upfront CAPEX</span><span>${money(upfrontTraditional)}</span></div>

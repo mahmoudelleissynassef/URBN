@@ -26,3 +26,13 @@ values
 ('casablanca','USD','2025-06-01',428,713,523,713,950,850,800,10,8,190,'Indicative estimate; benchmarked to North African / regional averages. USD.'),
 ('cairo','USD','2025-06-01',383,638,468,638,850,800,750,10,8,170,'Indicative estimate; benchmarked below regional average (Egypt EGP cost base). USD.'),
 ('addis','USD','2025-06-01',338,563,413,563,750,750,700,10,8,150,'Indicative estimate; benchmarked to lower East African cost base. USD.');
+
+-- Egypt updated from the supplied PDF (C:\Dev\Construction Costs\Egypt\): Gleeds
+-- Egypt Construction Market Report Q3/Q4 2025 (period read from inside the file).
+-- That report is a materials/items price index (no headline office fit-out/m2),
+-- so the per-m2 fit-out below stays an indicative estimate; only the period +
+-- source are from Gleeds. Latest row wins (effective_date), preserving history.
+insert into public.market_construction_costs
+(market, currency, effective_date, shell_core_to_cat_a_per_sqm, cat_a_to_cat_b_per_sqm, fitout_basic_per_sqm, fitout_standard_per_sqm, fitout_premium_per_sqm, furniture_per_workstation, it_av_per_workstation, professional_fees_pct, contingency_pct, reinstatement_per_sqm, notes)
+values
+('cairo','USD','2025-12-01',383,638,468,638,850,800,750,10,8,170,'Source period: Gleeds Egypt Construction Market Report Q3/Q4 2025 (Q4 2025). Gleeds benchmarks: rebar EGP 30,700-34,200/t; OPC cement >EGP 3,600/t; FX USD~EGP 48.08; VAT 14%. Per-m2 fit-out is an indicative estimate, not a Gleeds headline.');
