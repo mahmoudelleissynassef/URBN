@@ -29,7 +29,18 @@
         </div>
         <div class="fgs">
           <div class="fg"><label class="fl">Lease term (months)</label><input type="number" class="fi" id="sg-term" value="36" oninput="recalc()"></div>
-          <div class="fg"><label class="fl">Fit-out level</label><select class="fi fi-sel" id="sg-fitlevel" onchange="recalc()"><option value="basic">Basic</option><option value="standard" selected>Standard</option><option value="premium">Premium</option></select></div>
+          <div class="fg"><label class="fl">Fit-out quality</label><select class="fi fi-sel" id="sg-fitlevel" onchange="recalc()"><option value="basic">Basic</option><option value="standard" selected>Standard</option><option value="premium">Premium</option></select></div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">What's already in place? (tick what the space includes)</label>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="sg-cond-cata" checked onchange="recalc()"><span><strong>CAT A done</strong> — raised floors, ceilings, base M&amp;E, lifts (typical landlord handover)</span></label>
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="sg-cond-fitted" onchange="recalc()"><span><strong>Fitted to CAT B</strong> — partitions, meeting rooms, finishes already done</span></label>
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="sg-cond-furniture" onchange="recalc()"><span><strong>Furniture included</strong></span></label>
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" id="sg-cond-it" onchange="recalc()"><span><strong>IT / AV / cabling included</strong></span></label>
+          </div>
+          <p style="font-size:11px;color:var(--text-2);margin-top:6px;">Untick everything for a bare <strong>core &amp; shell</strong>; tick all for a <strong>plug-and-play</strong> fitted, furnished office. We only cost what isn't already provided.</p>
         </div>
         <div class="fgs">
           <div class="fg"><label class="fl">Rent (per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="1200" oninput="recalc()"></div>
@@ -53,10 +64,17 @@
             <div class="fg"><label class="fl">Prof. fees + contingency (%)</label><input type="number" class="fi" id="sg-m-fees" placeholder="e.g. 18" oninput="recalc()"></div>
           </div>
         </div>
+
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+          <div class="form-sec-title" style="margin-top:0;">Compare your saved offices</div>
+          <p style="font-size:11.5px;color:var(--text-2);margin:-4px 0 10px;">Pick up to 3 saved offices to compare side by side using the brief above.</p>
+          <div id="sg-saved"><p style="font-size:12px;color:var(--text-2);">Loading your saved offices…</p></div>
+        </div>
       </div>
 
       <!-- Results -->
       <div>
+        <div id="sg-compare"></div>
         <div id="sg-capex"></div>
         <div id="sg-results" style="margin-top:18px;"></div>
         <div class="card" style="padding:22px;margin-top:18px;">
@@ -75,11 +93,14 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
 let COSTS = null;           // construction costs row for the selected market (or null)
 let CURRENCY = '';
 
-let SG_COST_MARKETS = {};  // id -> { name, currency }
+let SG_COST_MARKETS = {};   // id -> { name, currency }
+let COST_BY_MARKET = {};    // id -> full cost row
+let SELECTED_SAVED = [];    // building ids selected for comparison (max 3)
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../'); injectFooter('../');
@@ -93,6 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const costs = (j && j.costs) || [];
     costs.sort((a, b) => (a.marketName || a.market).localeCompare(b.marketName || b.market));
     costs.forEach(c => {
+      COST_BY_MARKET[c.market] = c;
       SG_COST_MARKETS[c.market] = { name: c.marketName || c.market, currency: c.currency || 'USD' };
       sel.innerHTML += `<option value="${c.market}">${c.marketName || c.market}</option>`;
     });
@@ -105,14 +127,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (m && SG_COST_MARKETS[m]) sel.value = m;
   else if (sel.options.length > 1) sel.value = sel.options[1].value;
   loadCosts();
+  renderSavedPicker();
 });
 
+function sgEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 function curOf(marketId) {
   if (SG_COST_MARKETS[marketId]) return SG_COST_MARKETS[marketId].currency;
   const m = (typeof URBN_DATA !== 'undefined') ? URBN_DATA.markets.find(x => x.id === marketId) : null;
   return (m && m.currency) || 'USD';
 }
-function money(n) { return CURRENCY + ' ' + Math.round(Number(n) || 0).toLocaleString(); }
+function marketLabel(id) {
+  if (SG_COST_MARKETS[id]) return SG_COST_MARKETS[id].name;
+  const m = (typeof URBN_DATA !== 'undefined') ? URBN_DATA.markets.find(x => x.id === id) : null;
+  return (m && m.name) || id;
+}
+function fmtMoney(cur, v) { return (cur || '') + ' ' + Math.round(Number(v) || 0).toLocaleString(); }
+function money(n) { return fmtMoney(CURRENCY, n); }
 // "2025-12-01" -> "December 2025"
 function fmtAsOf(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }); } catch (e) { return d; } }
 // Short, escaped source line from the cost row's notes (first sentence).
@@ -123,16 +153,11 @@ function costSource() {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
-async function loadCosts() {
+function loadCosts() {
   const market = document.getElementById('sg-market').value;
   CURRENCY = market ? curOf(market) : 'USD';
   const status = document.getElementById('sg-cost-status');
-  COSTS = null;
-  if (!market) { status.textContent = 'Select a market to begin.'; document.getElementById('sg-manual').classList.add('hidden'); recalc(); return; }
-  try {
-    const j = await fetch('/api/construction-costs?market=' + encodeURIComponent(market)).then(r => r.json());
-    COSTS = (j && j.costs) || null;
-  } catch (e) { COSTS = null; }
+  COSTS = market ? (COST_BY_MARKET[market] || null) : null;
   if (COSTS) {
     if (COSTS.currency) CURRENCY = COSTS.currency;
     status.innerHTML = `<span style="color:#1E6B3F;">✓ CAPEX benchmarks loaded</span>${COSTS.effective_date ? ' &middot; prices as of <strong>' + fmtAsOf(COSTS.effective_date) + '</strong>' : ''}`;
@@ -145,45 +170,65 @@ async function loadCosts() {
 }
 
 function n(id) { const el = document.getElementById(id); return el ? Number(el.value) || 0 : 0; }
+function conditionFlags() {
+  return {
+    catA: document.getElementById('sg-cond-cata').checked,
+    fitted: document.getElementById('sg-cond-fitted').checked,
+    furn: document.getElementById('sg-cond-furniture').checked,
+    it: document.getElementById('sg-cond-it').checked,
+  };
+}
 
-// Resolve per-sqm fit-out cost + per-desk furniture/IT + fees%, from admin costs or manual inputs.
-function capexInputs() {
-  const level = document.getElementById('sg-fitlevel').value;
-  if (COSTS) {
-    const perSqm = level === 'premium' ? COSTS.fitout_premium_per_sqm : level === 'basic' ? COSTS.fitout_basic_per_sqm : COSTS.fitout_standard_per_sqm;
-    const feesPct = (Number(COSTS.professional_fees_pct) || 0) + (Number(COSTS.contingency_pct) || 0);
+// Per-unit cost rates from a given cost row (or the manual inputs when row is null).
+function costRowInputs(costRow, level) {
+  if (costRow) {
+    const perSqm = level === 'premium' ? costRow.fitout_premium_per_sqm : level === 'basic' ? costRow.fitout_basic_per_sqm : costRow.fitout_standard_per_sqm;
     return {
-      perSqm: Number(perSqm) || 0,
-      furniture: Number(COSTS.furniture_per_workstation) || 0,
-      itav: Number(COSTS.it_av_per_workstation) || 0,
-      feesPct, reinstatement: Number(COSTS.reinstatement_per_sqm) || 0,
-      moving: Number(COSTS.moving_cost_allowance) || 0, source: 'URBN benchmarks',
+      perSqm: Number(perSqm) || 0, shellToCatA: Number(costRow.shell_core_to_cat_a_per_sqm) || 0,
+      furniture: Number(costRow.furniture_per_workstation) || 0, itav: Number(costRow.it_av_per_workstation) || 0,
+      feesPct: (Number(costRow.professional_fees_pct) || 0) + (Number(costRow.contingency_pct) || 0),
+      reinstatement: Number(costRow.reinstatement_per_sqm) || 0, moving: Number(costRow.moving_cost_allowance) || 0,
+      currency: costRow.currency || 'USD', source: 'URBN benchmarks',
     };
   }
   return {
-    perSqm: n('sg-m-fitout'), furniture: n('sg-m-furniture'), itav: n('sg-m-itav'),
-    feesPct: n('sg-m-fees'), reinstatement: 0, moving: 0, source: 'your manual assumptions',
+    perSqm: n('sg-m-fitout'), shellToCatA: 0, furniture: n('sg-m-furniture'), itav: n('sg-m-itav'),
+    feesPct: n('sg-m-fees'), reinstatement: 0, moving: 0, currency: CURRENCY, source: 'your manual assumptions',
   };
 }
+
+// Condition-aware CAPEX: only cost the works that aren't already in place.
+function computeCapex(ci, area, desks, cond) {
+  const catAWorks = cond.catA ? 0 : ci.shellToCatA * area;     // core&shell → CAT A
+  const fitoutWorks = cond.fitted ? 0 : ci.perSqm * area;      // CAT A → CAT B fit-out
+  const construction = catAWorks + fitoutWorks;
+  const furn = cond.furn ? 0 : ci.furniture * desks;
+  const it = cond.it ? 0 : ci.itav * desks;
+  const ffe = furn + it;
+  const fees = (construction + ffe) * (ci.feesPct / 100);
+  const upfront = construction + ffe + fees + ci.moving;
+  const reinstatement = fitoutWorks > 0 ? ci.reinstatement * area : 0;
+  return { catAWorks, fitoutWorks, construction, furn, it, ffe, fees, upfront, reinstatement, haveCapex: (construction + ffe) > 0 };
+}
+
+// Resolve the active rates for the selected market (admin costs or manual).
+function capexInputs() { return costRowInputs(COSTS, document.getElementById('sg-fitlevel').value); }
 
 function recalc() {
   const area = n('sg-area'), desks = n('sg-desks'), term = n('sg-term');
   const rent = n('sg-rent'), svc = n('sg-svc'), parking = n('sg-parking');
   const cowork = n('sg-cowork'), stayMonthly = n('sg-stay');
   const ci = capexInputs();
-  const haveCapex = ci.perSqm > 0 || ci.furniture > 0 || ci.itav > 0;
+  const cond = conditionFlags();
+  const cap = computeCapex(ci, area, desks, cond);
+  const haveCapex = (ci.perSqm > 0 || ci.furniture > 0 || ci.itav > 0);
+  const construction = cap.construction, ffe = cap.ffe, fees = cap.fees;
+  const upfrontTraditional = cap.upfront, reinstatement = cap.reinstatement;
 
-  const monthlyLease = (rent + svc) * area + parking;       // traditional shell + service + parking
+  const monthlyLease = (rent + svc) * area + parking;       // shell + service + parking
   const fittedRent = rent * 1.2;                             // fitted assumption: +20% on rent
   const monthlyFitted = (fittedRent + svc) * area + parking;
   const monthlyCowork = cowork * desks;
-
-  // Traditional + CAPEX upfront
-  const construction = ci.perSqm * area;
-  const ffe = (ci.furniture + ci.itav) * desks;
-  const fees = (construction + ffe) * (ci.feesPct / 100);
-  const upfrontTraditional = construction + ffe + fees + ci.moving;
-  const reinstatement = ci.reinstatement * area;
 
   const scenarios = [
     { key: 'stay', name: 'Stay (current office)', upfront: 0, monthly: stayMonthly, end: 0,
@@ -200,31 +245,38 @@ function recalc() {
   const ranked = scenarios.filter(s => s.avail && s.total != null).sort((a, b) => a.total - b.total);
   const best = ranked.length ? ranked[0].key : null;
 
-  // ── Upfront CAPEX breakdown (so it's clearly visible) ──────────────────────
+  // ── Upfront CAPEX breakdown (condition-aware; only costs what's not in place) ─
   const capexEl = document.getElementById('sg-capex');
   if (capexEl) {
-    if (haveCapex) {
+    const haveRates = !!COSTS || ci.perSqm > 0 || ci.furniture > 0 || ci.itav > 0;
+    if (haveRates) {
       const level = document.getElementById('sg-fitlevel').value;
-      const rows = [
-        ['Fit-out (' + level + ') — ' + money(ci.perSqm) + '/m² × ' + area + ' m²', construction],
-        ['Furniture & IT/AV — ' + money(ci.furniture + ci.itav) + '/desk × ' + desks + ' desks', ffe],
-        ['Professional fees & contingency — ' + ci.feesPct + '%', fees],
-      ];
+      const rows = [];
+      if (!cond.catA) rows.push(['Core &amp; shell → CAT A — ' + money(ci.shellToCatA) + '/m² × ' + area + ' m²', cap.catAWorks]);
+      if (!cond.fitted) rows.push(['Fit-out CAT A → CAT B (' + level + ') — ' + money(ci.perSqm) + '/m² × ' + area + ' m²', cap.fitoutWorks]);
+      if (!cond.furn) rows.push(['Furniture — ' + money(ci.furniture) + '/desk × ' + desks + ' desks', cap.furn]);
+      if (!cond.it) rows.push(['IT / AV / cabling — ' + money(ci.itav) + '/desk × ' + desks + ' desks', cap.it]);
+      if (fees) rows.push(['Professional fees &amp; contingency — ' + ci.feesPct + '%', fees]);
       if (ci.moving) rows.push(['Moving allowance', ci.moving]);
+      const provided = [];
+      if (cond.catA) provided.push('CAT A'); if (cond.fitted) provided.push('CAT B fit-out');
+      if (cond.furn) provided.push('furniture'); if (cond.it) provided.push('IT/AV');
+      const plug = upfrontTraditional <= (ci.moving + 1);
       capexEl.innerHTML = `
         <div class="card" style="padding:24px;border:1px solid var(--navy,#243A5E);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-            <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">Upfront CAPEX to fit out</div>
+            <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">Upfront CAPEX you'd spend</div>
             ${COSTS && COSTS.effective_date ? `<span class="badge badge-grade" style="font-size:9px;">Prices as of ${fmtAsOf(COSTS.effective_date)}</span>` : ''}
           </div>
           <div style="font-family:var(--fd);font-size:40px;font-weight:300;color:var(--navy);line-height:1;">${money(upfrontTraditional)}</div>
-          <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${money(Math.round(upfrontTraditional / (area || 1)))} / m² &middot; ${money(Math.round(upfrontTraditional / (desks || 1)))} / desk — to take a shell/CAT-A space to a fitted ${level} office</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${plug ? 'This space is effectively plug-and-play — minimal upfront beyond moving in.' : money(Math.round(upfrontTraditional / (area || 1))) + ' / m² &middot; ' + money(Math.round(upfrontTraditional / (desks || 1))) + ' / desk for the works still required'}</div>
           ${costSource() ? `<div style="font-size:11px;color:var(--text-2);margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">Source: ${costSource()}</div>` : ''}
           <div style="margin-top:16px;border-top:1px solid var(--border);">
-            ${rows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-2);">${l}</span><span style="color:var(--text);white-space:nowrap;">${money(v)}</span></div>`).join('')}
+            ${rows.length ? rows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-2);">${l}</span><span style="color:var(--text);white-space:nowrap;">${money(v)}</span></div>`).join('') : '<div style="padding:7px 0;font-size:13px;color:var(--text-2);">No fit-out works required for this condition.</div>'}
             <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0 0;font-size:14px;font-weight:600;"><span>Total upfront CAPEX</span><span>${money(upfrontTraditional)}</span></div>
           </div>
-          ${ci.reinstatement ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:12px;">Plus an estimated ${money(reinstatement)} reinstatement at lease end (${money(ci.reinstatement)}/m²).</p>` : ''}
+          ${provided.length ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:10px;">Already provided (no cost): ${provided.join(', ')}.</p>` : ''}
+          ${reinstatement ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:6px;">Plus an estimated ${money(reinstatement)} reinstatement at lease end (${money(ci.reinstatement)}/m²).</p>` : ''}
         </div>`;
     } else {
       capexEl.innerHTML = `<div class="card" style="padding:22px;"><div class="form-sec-title" style="margin-top:0;">Upfront CAPEX</div><p style="font-size:13px;color:var(--text-2);">CAPEX assumptions aren't available for this market yet — enter your own in the form to estimate the fit-out cost.</p></div>`;
@@ -255,6 +307,67 @@ function recalc() {
     `All figures exclude VAT/taxes, agency fees, and financing. Indicative early-stage comparison only.`,
   ];
   document.getElementById('sg-notes').innerHTML = notes.map(x => `<li>${x}</li>`).join('');
+  renderComparison();
+}
+
+// ── Compare saved offices (up to 3) ──────────────────────────────────────────
+async function renderSavedPicker() {
+  const box = document.getElementById('sg-saved');
+  if (!box) return;
+  try { await URBNAuth.init(); } catch (e) {}
+  if (!URBNAuth.user) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);"><a href="/sign-in" class="text-navy" style="text-decoration:underline;">Sign in</a> and save offices (tap the heart on any listing) to compare them here.</p>'; return; }
+  let ids = [];
+  try { const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', URBNAuth.user.id); ids = Array.isArray(data) ? data.map(r => r.building_id) : []; } catch (e) {}
+  if (!ids.length) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);">You have no saved offices yet. Browse offices and tap the heart to save, then compare up to 3 here.</p>'; return; }
+  try { await URBN_LISTINGS.load(); } catch (e) {}
+  const saved = ids.map(id => URBN_LISTINGS.find(id)).filter(Boolean);
+  if (!saved.length) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);">Your saved offices are not currently live.</p>'; return; }
+  box.innerHTML = saved.map(b => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0;cursor:pointer;"><input type="checkbox" class="sg-saved-cb" value="${sgEsc(b.id)}" onchange="onSavedToggle()"><span>${sgEsc(b.name)} — ${sgEsc(marketLabel(b.market))}</span></label>`).join('');
+}
+function onSavedToggle() {
+  const cbs = [...document.querySelectorAll('.sg-saved-cb')];
+  const checked = cbs.filter(c => c.checked);
+  cbs.forEach(c => { c.disabled = !c.checked && checked.length >= 3; });  // cap at 3
+  SELECTED_SAVED = checked.slice(0, 3).map(c => c.value);
+  renderComparison();
+}
+function renderComparison() {
+  const wrap = document.getElementById('sg-compare'); if (!wrap) return;
+  if (!SELECTED_SAVED.length || typeof URBN_LISTINGS === 'undefined') { wrap.innerHTML = ''; return; }
+  const area = n('sg-area'), desks = n('sg-desks'), term = n('sg-term'), svc = n('sg-svc'), parking = n('sg-parking');
+  const level = document.getElementById('sg-fitlevel').value;
+  const cond = conditionFlags();
+  const cols = SELECTED_SAVED.map(id => {
+    const b = URBN_LISTINGS.find(id); if (!b) return null;
+    const row = COST_BY_MARKET[b.market] || null;
+    const ci = costRowInputs(row, level);
+    const cur = row ? (row.currency || 'USD') : curOf(b.market);
+    const rent = b.rentMin || n('sg-rent');
+    const monthly = (rent + svc) * area + parking;
+    const cap = row ? computeCapex(ci, area, desks, cond) : null;
+    const total = cap ? (cap.upfront + monthly * term + cap.reinstatement) : null;
+    return { b, row, cur, rent, monthly, cap, total };
+  }).filter(Boolean);
+  if (!cols.length) { wrap.innerHTML = ''; return; }
+  const totals = cols.filter(c => c.total != null);
+  const best = totals.length ? totals.reduce((a, b) => a.total < b.total ? a : b) : null;
+  const rowsDef = [
+    ['Market', c => sgEsc(marketLabel(c.b.market))],
+    ['Indicative rent', c => fmtMoney(c.cur, c.rent) + ' /m²/mo'],
+    ['Monthly occupancy', c => fmtMoney(c.cur, c.monthly)],
+    ['Upfront CAPEX', c => c.cap ? fmtMoney(c.cur, c.cap.upfront) : '—'],
+    ['Total over ' + term + ' mo', c => c.total != null ? '<strong>' + fmtMoney(c.cur, c.total) + '</strong>' : 'n/a'],
+    ['Prices as of', c => (c.row && c.row.effective_date) ? fmtAsOf(c.row.effective_date) : '—'],
+  ];
+  wrap.innerHTML = `
+    <div class="card" style="padding:0;overflow:auto;margin-bottom:18px;">
+      <div style="padding:16px 18px 0;"><div class="form-sec-title" style="margin-top:0;">Saved-office comparison</div><p style="font-size:11.5px;color:var(--text-2);margin:-6px 0 8px;">Same brief (${area} m², ${desks} desks, ${term} mo, ${level} fit-out + ticked conditions) applied to each saved office. Identity stays anonymised until reveal.</p></div>
+      <table class="data-table">
+        <thead><tr><th></th>${cols.map(c => `<th>${sgEsc(c.b.name)}${best && c === best ? ' <span class="badge badge-available" style="font-size:8px;">Lowest total</span>' : ''}</th>`).join('')}</tr></thead>
+        <tbody>${rowsDef.map(([label, fn]) => `<tr><td style="color:var(--text-2);">${label}</td>${cols.map(c => `<td>${fn(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      <p style="font-size:11px;color:var(--text-2);padding:10px 18px 14px;">Where a saved office's market has no CAPEX benchmark, upfront shows "—". Columns may be in different currencies where markets differ.</p>
+    </div>`;
 }
 </script>
 </body>
