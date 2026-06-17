@@ -209,63 +209,36 @@ function resetFilters() {
 }
 
 function applyFilters() {
-  let res = [...URBN_LISTINGS.buildings];
-  if (F.market.length) res = res.filter(b => F.market.includes(b.market));
-  if (F.grade.length) res = res.filter(b => F.grade.includes(b.grade));
-  if (F.cert.length) res = res.filter(b => F.cert.some(c => b.sustainability.some(s => s.includes(c))));
+  // Listings (units) are the public entity now — filter and render per unit.
+  let res = [...URBN_LISTINGS.listings];
+  if (F.market.length) res = res.filter(l => F.market.includes(l.market));
+  if (F.grade.length) res = res.filter(l => F.grade.includes(l.grade));
+  if (F.cert.length) res = res.filter(l => (l.sustainability || []).some(s => F.cert.some(c => s.includes(c))));
   const minA = +document.getElementById('minArea')?.value;
   const maxA = +document.getElementById('maxArea')?.value;
-  if (minA) res = res.filter(b => b.availMax >= minA);
-  if (maxA) res = res.filter(b => b.availMin <= maxA);
+  if (minA) res = res.filter(l => (l.size || 0) >= minA);
+  if (maxA) res = res.filter(l => (l.size || 0) <= maxA);
   const minD = +document.getElementById('minDesks')?.value;
-  if (minD) res = res.filter(b => b.units.some(u => u.desks >= minD));
+  if (minD) res = res.filter(l => (l.desks || 0) >= minD);
   const minMR = +document.getElementById('minMR')?.value;
-  if (minMR) res = res.filter(b => b.units.some(u => u.meetingRooms >= minMR));
+  if (minMR) res = res.filter(l => (l.meetingRooms || 0) >= minMR);
 
   const sort = document.getElementById('sort-sel')?.value;
-  if (sort === 'rent-asc') res.sort((a,b) => a.rentMin - b.rentMin);
-  if (sort === 'rent-desc') res.sort((a,b) => b.rentMax - a.rentMax);
-  if (sort === 'size-desc') res.sort((a,b) => b.gla - a.gla);
-  if (sort === 'grade') res.sort((a,b) => a.grade==='A+' ? -1 : 1);
+  if (sort === 'rent-asc') res.sort((a, b) => (a.rent || 0) - (b.rent || 0));
+  if (sort === 'rent-desc') res.sort((a, b) => (b.rent || 0) - (a.rent || 0));
+  if (sort === 'size-desc') res.sort((a, b) => (b.size || 0) - (a.size || 0));
+  if (sort === 'grade') res.sort((a, b) => a.grade === 'A+' ? -1 : 1);
 
-  const mnames = F.market.length ? F.market.map(id => URBN_DATA.markets.find(m=>m.id===id)?.name).join(', ') : 'Browse Offices';
+  const mnames = F.market.length ? F.market.map(id => URBN_DATA.markets.find(m => m.id === id)?.name).join(', ') : 'Browse Offices';
   document.getElementById('search-title').textContent = mnames;
-  document.getElementById('search-count').textContent = `${res.length} building${res.length!==1?'s':''} found`;
+  document.getElementById('search-count').textContent = `${res.length} listing${res.length !== 1 ? 's' : ''} found`;
 
   const grid = document.getElementById('results');
   const noR = document.getElementById('no-results');
   if (!res.length) { grid.innerHTML = ''; noR.classList.remove('hidden'); return; }
   noR.classList.add('hidden');
-
-  if (view === 'buildings') {
-    grid.style.gridTemplateColumns = 'repeat(3,1fr)';
-    grid.innerHTML = res.map(b => renderCard(b, '../')).join('');
-  } else {
-    grid.style.gridTemplateColumns = '1fr';
-    grid.innerHTML = res.flatMap(b => b.units.map(u => {
-      const mkt = URBN_DATA.markets.find(m=>m.id===b.market);
-      return `<div class="card card-lift" style="padding:22px;cursor:pointer;" onclick="window.location.href='building.html?id=${b.id}'">
-        <div class="flex-b mb16">
-          <div>
-            <div style="font-family:var(--fd);font-size:18px;color:var(--text);">${b.name}</div>
-            <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-2);margin-top:3px;text-transform:uppercase;">${b.submarket} Â· ${mkt?.country} Â· Floor ${u.floor}</div>
-          </div>
-          ${gradeB(b.grade)}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.size} sqm</div><div style="font-size:10px;color:var(--text-2);">Area</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.desks}</div><div style="font-size:10px;color:var(--text-2);">Desks</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--text);">${u.meetingRooms}</div><div style="font-size:10px;color:var(--text-2);">Mtg Rooms</div></div>
-          <div><div style="font-family:var(--fm);font-size:14px;color:var(--navy);">${b.rentCurrency} ${u.rent.toLocaleString()}</div><div style="font-size:10px;color:var(--text-2);">per sqm/mo</div></div>
-          <div><span class="badge badge-available">Available</span></div>
-        </div>
-        <div class="flex-b mt16">
-          <span style="font-size:12px;color:var(--text-2);">Floor ${u.floor} Â· ${u.type}</span>
-          <span class="btn btn-dark btn-sm">View Building â†’</span>
-        </div>
-      </div>`;
-    })).join('');
-  }
+  grid.style.gridTemplateColumns = (view === 'list') ? '1fr' : 'repeat(3,1fr)';
+  grid.innerHTML = res.map(l => renderListingCard(l, '../')).join('');
 }
 </script>
 </body>

@@ -40,9 +40,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user) return;
   await URBN_LISTINGS.load();
   let ids = [];
-  try { const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', user.id); ids = Array.isArray(data) ? data.map(r => r.building_id) : []; } catch (e) {}
+  try { const { data } = await URBNAuth.client.from('saved_properties').select('unit_id').eq('user_id', user.id); ids = Array.isArray(data) ? data.map(r => r.unit_id).filter(Boolean) : []; } catch (e) {}
   USER.saved = ids.slice();
-  SAVED = ids.map(id => URBN_LISTINGS.find(id)).filter(Boolean);
+  SAVED = ids.map(id => URBN_LISTINGS.findListing(id)).filter(Boolean);
   document.getElementById('sv-gate').classList.add('hidden');
   buildFilters();
   renderSaved();
@@ -79,7 +79,7 @@ function renderSaved() {
       <a href="/offices" class="btn btn-navy">Browse offices →</a></div>`;
     return;
   }
-  grid.innerHTML = list.length ? list.map(b => renderCard(b, '')).join('')
+  grid.innerHTML = list.length ? list.map(l => renderListingCard(l, '')).join('')
     : `<div style="grid-column:1/-1;padding:40px 0;text-align:center;color:var(--text-2);">No saved offices in this filter.</div>`;
 }
 </script>

@@ -123,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost btn-sm ${saved?'on':''}" id="save-btn-top" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-main').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
           ${B.anonymized ? `<button class="btn btn-navy btn-sm" onclick="requestReveal(this)">Request full details</button>` : `<button class="btn btn-outline btn-sm" onclick="openModal('offer-modal')">Submit Offer</button><button class="btn btn-navy btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>`}
         </div>
       </div>
@@ -147,14 +146,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           <h3 style="font-size:22px;margin-bottom:6px;">Available Spaces</h3>
           <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">Floor-by-floor availability — registered corporate occupiers only</p>
           <div style="display:flex;flex-direction:column;gap:10px;">
-            ${B.units.map(u=>`
-            <div class="card card-lift" style="padding:20px;cursor:pointer;" onclick="setUnit('${u.id}');openModal('sv-modal')">
+            ${B.units.map(u=>{const us=USER.saved.includes(u.id);return `
+            <div class="card card-lift" id="unit-${u.id}" style="padding:20px;cursor:pointer;" onclick="setUnit('${u.id}');openModal('sv-modal')">
               <div class="flex-b mb12">
                 <div>
                   <div style="font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;color:var(--text-2);text-transform:uppercase;">Floor ${u.floor} · ${u.type}</div>
                   <div style="font-family:var(--fd);font-size:18px;color:var(--text);margin-top:2px;">${u.size} sqm</div>
                 </div>
-                <span class="badge badge-available">Available</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="btn btn-ghost btn-sm ${us?'on':''}" title="Save this listing" onclick="event.stopPropagation();toggleSave('${u.id}',this)">${heartSVG(us)} ${us?'Saved':'Save'}</button>
+                  <span class="badge badge-available">Available</span>
+                </div>
               </div>
               <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-top:14px;border-top:1px solid var(--border);">
                 <div><div class="sp-val">${u.desks}</div><div class="sp-key">Desks</div></div>
@@ -165,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <button class="btn btn-dark btn-sm" onclick="event.stopPropagation();openModal('offer-modal')">Offer</button>
                 </div>
               </div>
-            </div>`).join('')}
+            </div>`}).join('')}
           </div>
         </div>
 
@@ -216,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="btn ${B.anonymized?'btn-outline':'btn-navy'} w-full" onclick="openModal('sv-modal')">Request Site Visit</button>
           <button class="btn btn-outline w-full" onclick="openModal('offer-modal')">Submit Offer</button>
           <button class="btn btn-ghost w-full" onclick="requestIntroduction(this)">Request Introduction</button>
-          <button class="btn btn-ghost w-full" id="save-btn-main" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-top').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
+          <p style="font-size:11px;color:var(--text-2);margin-top:4px;text-align:center;">Save individual spaces from the Available Spaces list below.</p>
         </div>
         ${(!B.anonymized && (B.address || B.mapsUrl)) ? `<div class="card" style="padding:16px;margin-bottom:14px;">
           <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--navy);margin-bottom:8px;text-transform:uppercase;">Location</div>

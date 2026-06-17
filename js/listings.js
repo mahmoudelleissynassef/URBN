@@ -28,7 +28,7 @@ function shapeBuilding(b, units) {
 }
 
 const URBN_LISTINGS = {
-  _ready: null, demo: false, loaded: false, buildings: [],
+  _ready: null, demo: false, loaded: false, buildings: [], listings: [], fx: null,
   load() {
     if (this._ready) return this._ready;
     this._ready = (async () => {
@@ -37,6 +37,8 @@ const URBN_LISTINGS = {
       this.demo = cfg.showDemoListings === true;
       if (this.demo) {
         this.buildings = (typeof URBN_DATA !== 'undefined' && URBN_DATA.buildings) ? URBN_DATA.buildings : [];
+        // Flatten demo buildings into per-unit listings too (best-effort).
+        this.listings = this.buildings.flatMap(b => (b.units || []).map(u => ({ id: u.id, buildingId: b.id, name: b.name, market: b.market, submarket: b.submarket, grade: b.grade, image: b.image, floor: u.floor, size: u.size, desks: u.desks, rent: u.rent, rentCurrency: b.rentCurrency, rentUnit: b.rentUnit, offeringType: u.type, parking: b.parking, floors: b.floors, floorplate: b.floorplate })));
         this.loaded = true; return this.buildings;
       }
       // Real listings come from the server, ANONYMIZED by default. Sensitive
@@ -52,15 +54,19 @@ const URBN_LISTINGS = {
         }
         const j = await fetch('/api/listings', { headers }).then(r => r.json());
         this.buildings = (j && Array.isArray(j.buildings)) ? j.buildings : [];
-      } catch (e) { this.buildings = []; }
+        this.listings = (j && Array.isArray(j.listings)) ? j.listings : [];
+        this.fx = (j && j.fx) || null;
+      } catch (e) { this.buildings = []; this.listings = []; }
       this.loaded = true;
       return this.buildings;
     })();
     return this._ready;
   },
-  find(id) { return this.buildings.find(b => b.id === id); },
+  find(id) { return this.buildings.find(b => b.id === id); },          // a building
+  findListing(id) { return this.listings.find(l => l.id === id); },    // a unit (listing)
   byMarket(m) { return this.buildings.filter(b => b.market === m); },
   count(m) { return m ? this.byMarket(m).length : this.buildings.length; },
+  listingCount(m) { return m ? this.listings.filter(l => l.market === m).length : this.listings.length; },
 };
 
 // Shared empty state for listing surfaces.

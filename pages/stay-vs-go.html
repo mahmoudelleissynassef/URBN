@@ -341,12 +341,12 @@ async function renderSavedPicker() {
   try { await URBNAuth.init(); } catch (e) {}
   if (!URBNAuth.user) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);"><a href="/sign-in" class="text-navy" style="text-decoration:underline;">Sign in</a> and save offices (tap the heart on any listing) to compare them here.</p>'; return; }
   let ids = [];
-  try { const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', URBNAuth.user.id); ids = Array.isArray(data) ? data.map(r => r.building_id) : []; } catch (e) {}
+  try { const { data } = await URBNAuth.client.from('saved_properties').select('unit_id').eq('user_id', URBNAuth.user.id); ids = Array.isArray(data) ? data.map(r => r.unit_id).filter(Boolean) : []; } catch (e) {}
   if (!ids.length) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);">You have no saved offices yet. Browse offices and tap the heart to save, then compare up to 3 here.</p>'; return; }
   try { await URBN_LISTINGS.load(); } catch (e) {}
-  const saved = ids.map(id => URBN_LISTINGS.find(id)).filter(Boolean);
+  const saved = ids.map(id => URBN_LISTINGS.findListing(id)).filter(Boolean);
   if (!saved.length) { box.innerHTML = '<p style="font-size:12px;color:var(--text-2);">Your saved offices are not currently live.</p>'; return; }
-  box.innerHTML = saved.map(b => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0;cursor:pointer;"><input type="checkbox" class="sg-saved-cb" value="${sgEsc(b.id)}" onchange="onSavedToggle()"><span>${sgEsc(b.name)} — ${sgEsc(marketLabel(b.market))}</span></label>`).join('');
+  box.innerHTML = saved.map(l => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0;cursor:pointer;"><input type="checkbox" class="sg-saved-cb" value="${sgEsc(l.id)}" onchange="onSavedToggle()"><span>${sgEsc(l.name)} — ${sgEsc(marketLabel(l.market))}${l.size ? ' · ' + l.size + ' m²' : ''}</span></label>`).join('');
 }
 function onSavedToggle() {
   const cbs = [...document.querySelectorAll('.sg-saved-cb')];
@@ -369,15 +369,16 @@ function renderComparison() {
     return;
   }
   const cols = SELECTED_SAVED.map(id => {
-    const b = URBN_LISTINGS.find(id); if (!b) return null;
+    const b = URBN_LISTINGS.findListing(id); if (!b) return null;   // b is a listing (unit)
     const row = COST_BY_MARKET[b.market] || null;
     const ci = costRowInputs(row, level);
     const cur = row ? (row.currency || 'USD') : curOf(b.market);
-    const rent = b.rentMin || n('sg-rent');
-    const monthly = (rent + svc) * area + parking;
-    const cap = row ? computeCapex(ci, area, desks, cond) : null;
+    const lArea = b.size || area;                                   // the listing's own size
+    const rent = b.rent || n('sg-rent');
+    const monthly = (rent + svc) * lArea + parking;
+    const cap = row ? computeCapex(ci, lArea, desks, cond) : null;
     const total = cap ? (cap.upfront + monthly * term + cap.reinstatement) : null;
-    return { b, row, cur, rent, monthly, cap, total };
+    return { b, row, cur, rent, monthly, cap, total, lArea };
   }).filter(Boolean);
   if (!cols.length) { wrap.innerHTML = ''; return; }
   // Relocate mode: prepend the user's current office as the baseline column.
@@ -387,7 +388,7 @@ function renderComparison() {
   const totals = cols.filter(c => c.total != null);
   const best = totals.length ? totals.reduce((a, b) => a.total < b.total ? a : b) : null;
   const fb = (m) => (typeof getImg === 'function') ? getImg(m) : '';
-  const sizeText = (b) => (b.availMin || b.availMax) ? (fmt(b.availMin) + '–' + fmt(b.availMax) + ' m²') : (b.gla ? fmt(b.gla) + ' m²' : '—');
+  const sizeText = (b) => b.size ? (fmt(b.size) + ' m²') : ((b.availMin || b.availMax) ? (fmt(b.availMin) + '–' + fmt(b.availMax) + ' m²') : (b.gla ? fmt(b.gla) + ' m²' : '—'));
   const rowsDef = [
     ['District', c => c.current ? '—' : sgEsc(c.b.submarket || marketLabel(c.b.market))],
     ['Available area', c => c.current ? '—' : sizeText(c.b)],

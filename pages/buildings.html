@@ -63,7 +63,7 @@ function filterBuildings() {
   if (g) res = res.filter(b => b.grade === g);
   const grid = document.getElementById('bd-grid');
   const mktName = m ? (URBN_DATA.markets.find(x => x.id === m) || {}).name : '';
-  grid.innerHTML = res.length ? res.map(b => renderCard(b, '../')).join('') : listingsEmptyState('../', mktName);
+  grid.innerHTML = res.length ? res.map(b => renderCard(b, '../', { noSave: true })).join('') : listingsEmptyState('../', mktName);
 }
 </script>
 </body>
