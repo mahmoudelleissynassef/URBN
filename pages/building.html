@@ -112,19 +112,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,8,.2) 0%,rgba(8,8,8,.85) 100%);"></div>
     <div class="w" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;padding-bottom:36px;">
       <a href="search.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);margin-bottom:20px;transition:color .2s;" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-2)'">← Back to Offices</a>
-      <div class="flex-b" style="align-items:flex-end;flex-wrap:wrap;gap:16px;">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-            ${gradeB(B.grade)}
-            <span class="badge badge-verified">Verified Listing</span>
-            ${B.sustainability.slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
-          </div>
-          <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;">${B.name}</h1>
-          <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          ${gradeB(B.grade)}
+          <span class="badge badge-verified">Verified Listing</span>
+          ${B.sustainability.slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
         </div>
-        <div style="display:flex;gap:8px;">
-          ${B.anonymized ? `<button class="btn btn-navy btn-sm" onclick="requestReveal(this)">Request full details</button>` : `<button class="btn btn-outline btn-sm" onclick="openModal('offer-modal')">Submit Offer</button><button class="btn btn-navy btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>`}
-        </div>
+        <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;">${B.name}</h1>
+        <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
       </div>
     </div>
   </div>
@@ -233,6 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
     </div>
   </div>`;
+  loadGallery();   // populate the photo gallery now that the page has rendered
 });
 
 let currentUnit = null;
@@ -315,7 +311,6 @@ async function loadGallery() {
       </div>`;
   } catch (e) {}
 }
-document.addEventListener('DOMContentLoaded', () => { setTimeout(loadGallery, 400); });
 </script>
 </body>
 </html>
