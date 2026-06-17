@@ -482,7 +482,7 @@ async function openBuilding(id) {
   panel.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="loadBuildings()" style="margin-bottom:14px;">← Back to buildings</button>
     <h3 style="font-size:20px;margin-bottom:6px;">${esc(b.name || '(no name)')}</h3>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:18px;">${esc(b.id)} · <span class="badge badge-gated">${esc(b.status)}</span></div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:18px;">${esc(b.id)} · <span class="badge badge-gated">${esc(b.status)}</span>${b.uploaderEmail ? ' · uploaded by <strong>' + esc(b.uploaderEmail) + '</strong>' : ' · uploaded by URBN (admin)'}</div>
     <div class="card" style="padding:22px;margin-bottom:18px;">
       <div class="form-sec-title" style="margin-top:0;">Building details</div>
       <div class="fgs">${fieldInput('Name', 'bf-name', b.name)}${fieldInput('Grade', 'bf-grade', b.grade)}</div>
@@ -516,14 +516,31 @@ async function openBuilding(id) {
       </div>`).join('')}</div>` : emptyBox('No uploaded media for this building.')}
     </div>
     <div class="card" style="padding:22px;">
-      <div class="form-sec-title" style="margin-top:0;">Units (${(j.units || []).length})</div>
-      ${(j.units || []).length ? (j.units || []).map(u => `<div style="border-top:1px solid var(--border);padding:12px 0;">
+      <div class="form-sec-title" style="margin-top:0;">Units / listings (${(j.units || []).length})</div>
+      <p style="font-size:11.5px;color:var(--text-2);margin:-4px 0 10px;">Each unit is a listing shown to occupiers. Archive or hide them individually.</p>
+      ${(j.units || []).length ? (j.units || []).map((u, i) => `<div style="border-top:1px solid var(--border);padding:14px 0;">
+        <div class="flex-b" style="flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;">Unit ${i + 1}${u.offering_type ? ' · ' + esc(u.offering_type) : ''} <span class="badge ${u.status === 'approved' ? 'badge-available' : 'badge-gated'}" style="font-size:9px;">${esc(u.status || '—')}</span></div>
+          <div style="font-size:11px;color:var(--text-2);">Added by ${esc(u.uploaderName || u.uploaderEmail || 'URBN')}</div>
+        </div>
         <div class="fgs">${fieldInput('Floor', 'uf-floor-' + u.id, u.unit_floor)}${fieldInput('Size (sqm)', 'uf-size-' + u.id, u.size_sqm, 'number')}</div>
         <div class="fgs">${fieldInput('Asking rent', 'uf-rent-' + u.id, u.asking_rent, 'number')}${fieldInput('Service charge', 'uf-svc-' + u.id, u.service_charge, 'number')}</div>
         <div class="fgs">${fieldInput('Allocated parking spaces', 'uf-pk-' + u.id, u.allocated_parking_spaces, 'number')}${fieldInput('Unit parking price', 'uf-pkp-' + u.id, u.unit_parking_price, 'number')}</div>
-        <button class="btn btn-ghost btn-sm" onclick="saveUnit('${esc(u.id)}',this)">Save unit</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="saveUnit('${esc(u.id)}',this)">Save unit</button>
+          ${u.status === 'approved' ? `<button class="btn btn-ghost btn-sm" onclick="setUnitStatus('${esc(u.id)}','${esc(b.id)}','draft',this)">Hide</button>` : `<button class="btn btn-ghost btn-sm" onclick="setUnitStatus('${esc(u.id)}','${esc(b.id)}','approved',this)">Publish</button>`}
+          ${u.status === 'archived' ? `<button class="btn btn-ghost btn-sm" onclick="setUnitStatus('${esc(u.id)}','${esc(b.id)}','approved',this)">Restore</button>` : `<button class="btn btn-ghost btn-sm" onclick="setUnitStatus('${esc(u.id)}','${esc(b.id)}','archived',this)">Archive</button>`}
+        </div>
       </div>`).join('') : emptyBox('No units.')}
     </div>`;
+}
+async function setUnitStatus(id, buildingId, status, btn) {
+  const verb = status === 'archived' ? 'Archive' : status === 'draft' ? 'Hide' : 'Publish';
+  if (!confirm(verb + ' this unit/listing?')) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/update-unit', 'POST', { id, fields: { status } });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Unit ' + status); openBuilding(buildingId); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function numOr(v) { return v === '' ? null : Number(v); }
