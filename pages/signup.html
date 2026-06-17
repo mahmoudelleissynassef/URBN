@@ -51,7 +51,7 @@
       <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="su-website" tabindex="-1" autocomplete="off"></label></div>
       <div class="fld-err" id="su-err" style="margin-top:4px;"></div>
       <button class="btn btn-navy btn-lg w-full" style="margin-top:14px;" id="su-btn" onclick="submitSignUp(this)">Create Account</button>
-      <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.6;">By creating an account you agree to the <a href="terms.html" class="text-navy" style="text-decoration:underline;">Terms of Use</a> and <a href="privacy.html" class="text-navy" style="text-decoration:underline;">Privacy Policy</a>. Already have an account? <a href="signin.html" class="text-navy" style="text-decoration:underline;">Sign in</a>.</p>
+      <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.6;">By creating an account you agree to the <a href="/terms" class="text-navy" style="text-decoration:underline;">Terms of Use</a> and <a href="/privacy" class="text-navy" style="text-decoration:underline;">Privacy Policy</a>. Already have an account? <a href="/sign-in" class="text-navy" style="text-decoration:underline;">Sign in</a>.</p>
     </div>
   </div>
 </div>
@@ -93,11 +93,13 @@ async function submitSignUp(btn) {
   setBtnBusy(btn, false);
   if (error) { topErr.textContent = error.message || 'Sign up failed.'; topErr.classList.add('show'); return; }
 
+  const next = new URLSearchParams(location.search).get('next');
   if (data && data.session) {
-    location.href = '/pages/dashboards/tenant.html';
+    location.href = next || '/dashboard';
   } else {
+    const signInHref = '/sign-in' + (next ? '?next=' + encodeURIComponent(next) : '');
     document.getElementById('su-form').innerHTML =
-      `<div class="form-success"><h3>Account created</h3><p>Check <strong style="color:var(--navy);">${email}</strong> to confirm your address, then <a href="signin.html" class="text-navy" style="text-decoration:underline;">sign in</a>. If you requested a paid tier, URBN will review and activate it after verification.</p></div>`;
+      `<div class="form-success"><h3>Account created</h3><p>Check <strong style="color:var(--navy);">${email}</strong> to confirm your address, then <a href="${signInHref}" class="text-navy" style="text-decoration:underline;">sign in</a>. If you requested a paid tier, URBN will review and activate it after verification.</p></div>`;
   }
 }
 </script>

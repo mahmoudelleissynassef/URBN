@@ -152,7 +152,7 @@
 
       <div class="form-sec-title">Photos &amp; floorplans</div>
       <div class="form-note">
-        <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="signin.html" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="signup.html" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
+        <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="/sign-in" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="/sign-up" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
       </div>
       <div class="fg"><label class="fl">Photos — at least 3 (JPG / PNG / WEBP)</label><input type="file" class="fi" id="ll-photos" accept="image/jpeg,image/png,image/webp" multiple><div class="fld-err" id="err-ll-photos">Select at least 3 photos (JPG/PNG/WEBP, max 8 MB each).</div></div>
       <div class="fg"><label class="fl">Floorplan (optional — PDF / image)</label><input type="file" class="fi" id="ll-floorplan" accept="application/pdf,image/jpeg,image/png,image/webp"><div class="fld-err" id="err-ll-floorplan">Floorplan must be PDF / JPG / PNG / WEBP, max 15 MB.</div></div>
@@ -165,7 +165,7 @@
       <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
         <label class="consent">
           <input type="checkbox" id="ll-consent" required aria-required="true">
-          <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</span>
+          <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
         <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
         <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Listing for Review</button>
@@ -295,7 +295,7 @@ async function loadSubmitter(user) {
 
   const incomplete = !profile || !name || !companyName || !title || !stype || !isCorporateEmail(email || '');
   if (incomplete) {
-    card.innerHTML = `<div class="form-note"><p><strong>Please complete your account details before submitting a listing.</strong> We need your full name, company, job title and user type on file (with a verified corporate email). <a href="account.html" style="text-decoration:underline;">Edit account details →</a></p></div>`;
+    card.innerHTML = `<div class="form-note"><p><strong>Please complete your account details before submitting a listing.</strong> We need your full name, company, job title and user type on file (with a verified corporate email). <a href="/account" style="text-decoration:underline;">Edit account details →</a></p></div>`;
     return; // modes and panels stay hidden
   }
 
@@ -308,7 +308,7 @@ async function loadSubmitter(user) {
         <div style="font-size:13px;color:var(--text-2);margin-top:2px;">${llEsc(title)} · ${llEsc(companyName)}</div>
         <div style="font-size:12px;color:var(--text-2);margin-top:4px;">${llEsc(email)} · <span style="text-transform:capitalize;">${llEsc(stypeLabel)}</span></div>
       </div>
-      <a class="btn btn-ghost btn-sm" href="account.html">Edit account details</a>
+      <a class="btn btn-ghost btn-sm" href="/account">Edit account details</a>
     </div>`;
   document.getElementById('ll-modes').classList.remove('hidden');
   setMode('manual');
@@ -340,7 +340,7 @@ async function submitListing(btn) {
   if (botFilled('ll-website')) return; // honeypot
 
   // Submitter details come from the authenticated profile, not repeated fields.
-  if (!LL_PROFILE) { showFail('Your account details are incomplete. <a href="account.html">Complete them</a> and resubmit.'); return; }
+  if (!LL_PROFILE) { showFail('Your account details are incomplete. <a href="/account">Complete them</a> and resubmit.'); return; }
   const { name, email, company, title, submitterType } = LL_PROFILE;
   const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const building = v('ll-building'), market = v('ll-market'), district = v('ll-district'), maps = v('ll-maps'), floor = v('ll-floor');
@@ -392,7 +392,7 @@ async function submitListing(btn) {
 
   // Uploads target a PRIVATE bucket, so an authenticated user is required.
   await URBNAuth.init();
-  if (!URBNAuth.user) { showFail('You must be signed in to upload listing photos. <a href="signin.html?next=' + encodeURIComponent(location.pathname) + '">Sign in</a> or <a href="signup.html">create an account</a>, then resubmit. Nothing was submitted.'); return; }
+  if (!URBNAuth.user) { showFail('You must be signed in to upload listing photos. <a href="/sign-in?next=' + encodeURIComponent(location.pathname) + '">Sign in</a> or <a href="/sign-up">create an account</a>, then resubmit. Nothing was submitted.'); return; }
   if (!URBNAuth.client) { showFail(requestFailHTML()); return; }
 
   setBtnBusy(btn, true, 'Uploading…');

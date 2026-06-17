@@ -23,7 +23,7 @@
       <div class="fld-err" id="si-err" style="margin-bottom:8px;"></div>
       <button class="btn btn-navy w-full mt16" id="si-btn" onclick="submitSignIn(this)">Sign In</button>
       <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-2);">
-        No account? <a href="signup.html" style="color:var(--navy);">Create one</a>
+        No account? <a href="/sign-up" style="color:var(--navy);">Create one</a>
       </div>
     </div>
     <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-3);">Access to building details, pricing, and introductions requires a verified corporate account.</p>
@@ -52,7 +52,7 @@ async function submitSignIn(btn) {
   setBtnBusy(btn, false);
   if (error) { err.textContent = error.message || 'Sign in failed.'; err.classList.add('show'); return; }
 
-  const next = new URLSearchParams(location.search).get('next') || '/pages/dashboards/tenant.html';
+  const next = new URLSearchParams(location.search).get('next') || '/dashboard';
   location.href = next;
 }
 </script>

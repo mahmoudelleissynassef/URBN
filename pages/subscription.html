@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // with the tier preselected.
 async function requestTier(tier) {
   await URBNAuth.init();
-  if (!URBNAuth.user) { location.href = 'signup.html?tier=' + encodeURIComponent(tier); return; }
+  if (!URBNAuth.user) { location.href = '/sign-up?tier=' + encodeURIComponent(tier); return; }
   try {
     const { data: prof } = await URBNAuth.client.from('profiles').select('company_id, full_name').eq('id', URBNAuth.user.id).maybeSingle();
     let currentTier = 'free', companyId = (prof && prof.company_id) || null, companyName = '';

@@ -150,7 +150,7 @@ function injectNav(base='') {
         <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
         <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
         <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
-        <button class="btn btn-navy btn-sm" data-auth="out" onclick="openModal('access-modal')">Request Access</button>
+        <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out">Sign Up</a>
       </div>
       <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -170,7 +170,7 @@ function injectNav(base='') {
       <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
       <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
       <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
-      <button class="btn btn-navy btn-sm" data-auth="out" onclick="toggleMobileNav();openModal('access-modal')">Request Access</button>
+      <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out" onclick="toggleMobileNav()">Sign Up</a>
     </div>
   </div>`;
   injectAccessModal(base);
@@ -273,9 +273,13 @@ function injectAccessModal(base='') {
   modal.id = 'access-modal';
   modal.innerHTML = `
     <div class="modal">
-      <div class="mh"><div><div class="label mb12">Restricted Access</div><h3>Request Access</h3></div><div class="mx">X</div></div>
+      <div class="mh"><div><div class="label mb12">Get started</div><h3>Create your URBN account</h3></div><div class="mx">X</div></div>
       <div class="mb" id="access-body">
-        <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;line-height:1.7;">Registering unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and the ability to request protected introductions</strong> across all ${markets} markets. Credentials are issued to verified corporate tenants.</p>
+        <p style="font-size:14px;color:var(--text-2);margin-bottom:18px;line-height:1.7;">A free account unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and protected introductions</strong> across all ${markets} markets. A verified corporate email is required.</p>
+        <a href="/sign-up" class="btn btn-navy w-full" style="margin-bottom:8px;">Create a free account →</a>
+        <a href="/sign-in" class="btn btn-ghost w-full" style="margin-bottom:18px;">I already have an account</a>
+        <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;"><strong style="color:var(--text);">Prefer URBN to set you up?</strong> Leave your details and our team will reach out to arrange access.</p>
         <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="reg-email" placeholder="you@company.com"><div class="fld-err" id="err-reg-email">Enter a valid corporate email address.</div></div>
         <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" id="reg-company" placeholder="Your company"><div class="fld-err" id="err-reg-company">Enter your company name.</div></div>
         <div class="fg"><label class="fl">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select><div class="fld-err" id="err-reg-market">Please select a target market.</div></div>
@@ -286,10 +290,11 @@ function injectAccessModal(base='') {
           <span>I agree to URBN processing these details to assess and grant access, per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
         <div class="fld-err" id="err-reg-consent" style="margin-top:8px;">Please confirm you accept the Privacy Policy and Terms of Use.</div>
+        </div>
       </div>
       <div class="mf" id="access-actions">
         <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
-        <button class="btn btn-navy" onclick="submitAccess(this)">Submit Request</button>
+        <button class="btn btn-outline" onclick="submitAccess(this)">Request a callback</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
