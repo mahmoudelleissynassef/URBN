@@ -67,22 +67,22 @@
 <section class="section" style="background:var(--bg-white);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
-      <div><div class="section-rule"></div><h2>How URBN works for occupiers</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;max-width:620px;">We verify supply directly with landlords and operators, keep building identity protected, and introduce you only to genuinely available, fit-for-purpose options.</p></div>
+      <div><div class="section-rule"></div><h2>Three ways to start</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;max-width:620px;">We verify supply directly with landlords and operators, keep building identity protected, and introduce you only to genuinely available, fit-for-purpose options.</p></div>
     </div>
     <div class="g3" style="margin-top:8px;">
-      <div class="card" style="padding:26px;">
+      <div class="card" style="padding:26px;" data-reveal>
         <div class="overline label-navy">Demand-led</div>
         <h3 style="font-size:20px;margin:8px 0 8px;">Request a Market Scan</h3>
         <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Tell us your market, size and timeline. We build a verified shortlist that matches — no portal trawling.</p>
         <a href="pages/market-scan.html" class="btn btn-navy btn-sm">Request Market Scan →</a>
       </div>
-      <div class="card" style="padding:26px;">
+      <div class="card" style="padding:26px;" data-reveal>
         <div class="overline label-navy">Decision tool</div>
         <h3 style="font-size:20px;margin:8px 0 8px;">Stay vs Go analysis</h3>
         <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Compare staying put, fitting out a traditional lease, taking a fitted space, or coworking — with upfront CAPEX and total cost over term.</p>
         <a href="pages/stay-vs-go.html" class="btn btn-outline btn-sm">Open Stay vs Go →</a>
       </div>
-      <div class="card" style="padding:26px;">
+      <div class="card" style="padding:26px;" data-reveal>
         <div class="overline label-navy">Supply-side</div>
         <h3 style="font-size:20px;margin:8px 0 8px;">List your building</h3>
         <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Landlords and operators can submit space for review. Listings stay anonymized to occupiers until you choose to reveal.</p>
@@ -145,9 +145,9 @@
   <div class="w-sm">
     <div style="margin-bottom:44px;"><div class="section-rule"></div><h2>How URBN Works</h2></div>
     <div class="process">
-      <div class="pstep"><div class="pn">01</div><div class="pb"><h4>Browse Verified Offices</h4><p>Access a curated inventory of Grade A and A+ office buildings across 16 markets. Every listing is verified against the source. No recycled broker data. No stale availability.</p></div></div>
-      <div class="pstep"><div class="pn">02</div><div class="pb"><h4>Shortlist Buildings</h4><p>Filter by city, district, floor plate, parking, and fit-out condition. Save buildings to a shortlist and compare options. Or request a managed Market Scan for a curated shortlist within 48 hours.</p></div></div>
-      <div class="pstep"><div class="pn">03</div><div class="pb"><h4>Request a Protected Introduction</h4><p>URBN formally introduces you to the building. The introduction is timestamped, logged, and commission-protected for 24 months. You do not contact the landlord directly.</p></div></div>
+      <div class="pstep" data-reveal><div class="pn">01</div><div class="pb"><h4>Browse Verified Offices</h4><p>Access a curated inventory of Grade A and A+ office buildings across 16 markets. Every listing is verified against the source. No recycled broker data. No stale availability.</p></div></div>
+      <div class="pstep" data-reveal><div class="pn">02</div><div class="pb"><h4>Shortlist Buildings</h4><p>Filter by city, district, floor plate, parking, and fit-out condition. Save buildings to a shortlist and compare options. Or request a managed Market Scan for a curated shortlist within 48 hours.</p></div></div>
+      <div class="pstep" data-reveal><div class="pn">03</div><div class="pb"><h4>Request a Protected Introduction</h4><p>URBN formally introduces you to the building. The introduction is timestamped, logged, and commission-protected for 24 months. You do not contact the landlord directly.</p></div></div>
     </div>
   </div>
 </section>
@@ -296,8 +296,16 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   // Keep headline stats in sync with the data — no fake counts.
   const sm=document.getElementById('stat-markets');
   if(sm) sm.textContent=URBN_DATA.markets.length;
+  // Verified-inventory stat. While the network is young, advertising a raw
+  // count of "1" reads as weak — show a qualitative trust signal until inventory
+  // is deep enough for the number to carry weight, then switch to the live count.
   const sb=document.getElementById('stat-buildings');
-  if(sb) sb.textContent=URBN_LISTINGS.buildings.length;
+  const sbl=sb?sb.nextElementSibling:null;
+  if(sb){
+    const n=URBN_LISTINGS.buildings.length;
+    if(n>=5){ sb.textContent=n; if(sbl) sbl.textContent='Verified Buildings'; }
+    else { sb.textContent='100%'; if(sbl) sbl.textContent='Verified at Source'; }
+  }
 });
 </script>
 </body>

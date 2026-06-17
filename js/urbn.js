@@ -118,6 +118,7 @@ function injectNav(base='') {
   const el = document.getElementById('nav-placeholder');
   if (!el) return;
   el.innerHTML = `
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <nav class="nav">
     <div class="nav-i">
       <a href="/" class="logo">
@@ -177,6 +178,17 @@ function injectNav(base='') {
   injectAccessModal(base);
   updateAuthNav();
   URBNAuth.init().then(updateAuthNav);
+  // WCAG: expose a <main> landmark + skip-link target by tagging the page's
+  // primary content wrapper (the element following the nav placeholder) once.
+  try {
+    let main = document.querySelector('.pt-nav');
+    if (!main && el.nextElementSibling) main = el.nextElementSibling;
+    if (main && main.id !== 'main-content') {
+      main.id = 'main-content';
+      main.setAttribute('role', 'main');
+      if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+    }
+  } catch (e) {}
 }
 
 // ── Mobile Nav Toggle ────────────────────────────────────
@@ -198,7 +210,7 @@ function injectFooter(base='') {
       <div class="footer-grid">
         <div>
           <div class="footer-brand-name">URBN</div>
-          <div class="footer-brand-sub">Corporate Office Intelligence</div>
+          <div class="footer-brand-sub">a Heirstone Consulting company</div>
           <p class="footer-brand-desc">Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings. Protected introductions.</p>
         </div>
         <div class="fc">
@@ -406,7 +418,7 @@ function allowedCurrencies(marketId) {
 
 // ── Save ─────────────────────────────────────────────────
 function heartSVG(on) {
-  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${on?'var(--navy)':'none'}" stroke="${on?'var(--navy)':'currentColor'}" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 }
 async function toggleSave(id,btn) {
   await URBNAuth.init();
@@ -419,7 +431,10 @@ async function toggleSave(id,btn) {
   // Optimistic UI
   if (adding) { USER.saved.push(id); btn.classList.add('on'); }
   else { USER.saved.splice(USER.saved.indexOf(id), 1); btn.classList.remove('on'); }
-  btn.innerHTML = heartSVG(USER.saved.includes(id));
+  const now = USER.saved.includes(id);
+  btn.innerHTML = heartSVG(now);
+  btn.setAttribute('aria-pressed', String(now));
+  btn.setAttribute('aria-label', now ? 'Remove from shortlist' : 'Save to shortlist');
   try {
     if (adding) {
       await URBNAuth.client.from('saved_properties').insert({ user_id: URBNAuth.user.id, unit_id: id });
@@ -500,7 +515,7 @@ function renderCard(b, base='', opts={}) {
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
-      ${opts.noSave?'':`<button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>`}
+      ${opts.noSave?'':`<button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>`}
     </div>
     <div class="lc-body">
       <div class="lc-name">${b.name}</div>
@@ -549,7 +564,7 @@ function renderListingCard(L, base='') {
       <div class="lc-img-grad"></div>
       ${gradeTag(L.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
-      <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${L.id}',this);">${heartSVG(saved)}</button>
+      <button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${L.id}',this);">${heartSVG(saved)}</button>
     </div>
     <div class="lc-body">
       <div class="lc-name">${L.name}</div>
@@ -634,4 +649,24 @@ function renderAnonCard(b, base='') {
 
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('[data-tabs]').forEach(initTabs);
+  initScrollReveal();
 });
+
+// Scroll-reveal: fade/slide elements tagged [data-reveal] into view once.
+// Fail-safe: if IntersectionObserver is unavailable, elements are left untouched
+// (fully visible) — we never hide content unless we can guarantee revealing it.
+function initScrollReveal() {
+  const els = document.querySelectorAll('[data-reveal]');
+  if (!els.length) return;
+  if (!('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('reveal-in'); obs.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+  els.forEach((el, i) => {
+    el.classList.add('reveal-init');
+    el.style.transitionDelay = Math.min(i % 4, 3) * 60 + 'ms';
+    io.observe(el);
+  });
+}
