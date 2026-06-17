@@ -1134,8 +1134,8 @@ function handleBatch(req, res) {
 // tables directly (RLS read policies were dropped in the prod-2 migration).
 function anonLabel(b) {
   const mkt = marketName(b.market) || b.market || '';
-  const g = b.grade ? ('Grade ' + String(b.grade).replace(/^grade\s*/i, '').toUpperCase()) : 'Verified';
-  return `Verified ${g} Building${mkt ? ' — ' + mkt : ''}`;
+  const g = b.grade ? ('Grade ' + String(b.grade).replace(/^grade\s*/i, '').toUpperCase()) : '';
+  return `Verified ${g ? g + ' ' : ''}Building${mkt ? ' — ' + mkt : ''}`;
 }
 function shapeListingServer(b, units, mediaByB, granted) {
   const sizes = units.map((u) => Number(u.size_sqm)).filter((n) => !isNaN(n) && n > 0);
