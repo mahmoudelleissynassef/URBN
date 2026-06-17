@@ -50,6 +50,11 @@
     <div id="ll-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
 
       <div class="form-sec-title">Building &amp; location</div>
+      <div class="fg">
+        <label class="fl">Use an existing building or add a new one</label>
+        <select class="fi fi-sel" id="ll-existing" onchange="llExistingChanged()"><option value="">+ Add a new building</option></select>
+        <p style="font-size:11.5px;color:var(--text-2);margin-top:4px;" id="ll-existing-hint">Pick a building already in the URBN inventory to reuse its location and details, or add a new one.</p>
+      </div>
       <div class="fr2">
         <div class="fg"><label class="fl">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name"><div class="fld-err" id="err-ll-building">Enter the building name.</div></div>
         <div class="fg"><label class="fl">Market</label>
@@ -207,7 +212,64 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = await URBNAuth.requireAuth('/pages/signin.html');   // listing requires sign-in
   if (!user) return;
   await loadSubmitter(user);
+  await loadBuildingsPicker();
 });
+
+let LL_BUILDINGS = {};   // id -> building (inventory picker)
+let LL_EXISTING_ID = ''; // selected existing building id, or '' for new
+
+async function loadBuildingsPicker() {
+  const sel = document.getElementById('ll-existing');
+  if (!sel) return;
+  try {
+    await URBNAuth.init();
+    const headers = {};
+    if (URBNAuth.session && URBNAuth.session.access_token) headers.Authorization = 'Bearer ' + URBNAuth.session.access_token;
+    const j = await fetch('/api/buildings-picker', { headers }).then(r => r.json());
+    const buildings = (j && j.buildings) || [];
+    LL_BUILDINGS = {};
+    buildings.forEach(b => { LL_BUILDINGS[b.id] = b; });
+    sel.innerHTML = '<option value="">+ Add a new building</option>' +
+      buildings.map(b => `<option value="${llEsc(b.id)}">${llEsc(b.name)}${b.submarket ? ' — ' + llEsc(b.submarket) : ''}</option>`).join('');
+  } catch (e) { /* keep "add new" only */ }
+}
+
+// Building-level fields that are owned by the chosen inventory building.
+const LL_BUILDING_FIELDS = ['ll-building', 'll-market', 'll-district', 'll-maps'];
+function llSetBuildingFieldsDisabled(disabled) {
+  LL_BUILDING_FIELDS.forEach(id => { const el = document.getElementById(id); if (el) { el.disabled = disabled; el.style.opacity = disabled ? '.6' : ''; } });
+  document.querySelectorAll('.ll-amenity').forEach(c => { c.disabled = disabled; });
+  ['ll-pk-spaces', 'll-pk-arrangement', 'll-pk-included', 'll-pk-price', 'll-pk-visitor', 'll-pk-membership', 'll-pk-membership-price', 'll-pk-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = disabled; });
+}
+function llExistingChanged() {
+  const id = document.getElementById('ll-existing').value;
+  LL_EXISTING_ID = id;
+  const hint = document.getElementById('ll-existing-hint');
+  if (!id) {
+    llSetBuildingFieldsDisabled(false);
+    if (hint) hint.textContent = 'Pick a building already in the URBN inventory to reuse its location and details, or add a new one.';
+    return;
+  }
+  const b = LL_BUILDINGS[id]; if (!b) return;
+  const setv = (elid, val) => { const el = document.getElementById(elid); if (el) el.value = val == null ? '' : val; };
+  setv('ll-building', b.name);
+  setv('ll-market', b.market); llMarketChanged();
+  setv('ll-district', b.submarket);
+  setv('ll-maps', b.google_maps_url);
+  // Amenities
+  const am = Array.isArray(b.amenities) ? b.amenities : [];
+  document.querySelectorAll('.ll-amenity').forEach(c => { c.checked = am.includes(c.value); });
+  // Parking
+  setv('ll-pk-spaces', b.parking_spaces_available);
+  setv('ll-pk-arrangement', b.parking_arrangement);
+  setv('ll-pk-included', b.parking_included_in_rent);
+  setv('ll-pk-price', b.parking_price_per_spot_month);
+  setv('ll-pk-visitor', b.visitor_parking_hourly_rate);
+  setv('ll-pk-membership-price', b.parking_monthly_membership_price);
+  setv('ll-pk-notes', b.parking_notes);
+  llSetBuildingFieldsDisabled(true);
+  if (hint) hint.textContent = 'Using an existing building from inventory — location and building details are pre-filled. Just add the available unit/space below.';
+}
 
 function renderAmenities() {
   const box = document.getElementById('ll-amenities');
@@ -302,10 +364,13 @@ async function submitListing(btn) {
 
   let ok = true;
   const set = (id, errId, bad) => { fldErr(id, errId, bad); if (bad) ok = false; };
-  set('ll-building', 'err-ll-building', !building);
-  set('ll-market', 'err-ll-market', !market);
-  set('ll-district', 'err-ll-district', !district);
-  set('ll-maps', 'err-ll-maps', maps !== '' && !isUrl(maps));
+  // Building-level fields are owned by the inventory building when one is chosen.
+  if (!LL_EXISTING_ID) {
+    set('ll-building', 'err-ll-building', !building);
+    set('ll-market', 'err-ll-market', !market);
+    set('ll-district', 'err-ll-district', !district);
+    set('ll-maps', 'err-ll-maps', maps !== '' && !isUrl(maps));
+  }
   set('ll-fitout', 'err-ll-fitout', !fitOut);
   set('ll-offering', 'err-ll-offering', !offering);
   if (LL_DESK_TYPES.includes(offering)) set('ll-seats', 'err-ll-seats', !isNum(seats));
@@ -360,6 +425,7 @@ async function submitListing(btn) {
     website: document.getElementById('ll-website').value,
     consent: true,
     name, email, company, title, submitterType,
+    existingBuildingId: LL_EXISTING_ID || null,
     building, market, district, mapsUrl: maps, floor,
     fitOut, offeringType: offering, area, seats,
     rent, currency, pricingBasis: basis,
