@@ -38,8 +38,8 @@
         <p>By submitting this request, URBN will formally introduce you to the building. This introduction is <strong style="color:var(--navy);">timestamped, logged, and commission-protected for 24 months</strong> — regardless of whether URBN participates further in negotiations.</p>
       </div>
       <div id="sv-unit-display" style="margin-bottom:18px;"></div>
-      <div class="fg"><label class="fl">Intended Commencement Date</label><input type="date" class="fi" id="sv-date"></div>
-      <div class="fg"><label class="fl">Notes / Requirements</label><textarea class="fi" placeholder="Additional requirements, access preferences..."></textarea></div>
+      <div class="fg"><label class="fl">Proposed Date / Time</label><input type="date" class="fi" id="sv-date"></div>
+      <div class="fg"><label class="fl">Notes / Requirements</label><textarea class="fi" id="sv-notes" placeholder="Additional requirements, access preferences..."></textarea></div>
       <label class="nc-check">
         <input type="checkbox" id="nc-box">
         <span>I confirm I have read and accept the Non-Circumvention Agreement. I will not contact the landlord or their agents directly without URBN's written involvement.</span>
@@ -65,18 +65,18 @@
         <span style="font-size:12px;color:var(--text-2);">You will only see your rank position. Other tenants cannot see your terms.</span>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Rent Offer (per sqm/month)</label><input type="number" class="fi" placeholder="e.g. 1,200"></div>
-        <div class="fg"><label class="fl">Lease Term (months)</label><input type="number" class="fi" placeholder="e.g. 36"></div>
+        <div class="fg"><label class="fl">Rent Offer (per sqm/month)</label><input type="number" class="fi" id="of-rent" placeholder="e.g. 1,200"></div>
+        <div class="fg"><label class="fl">Lease Term (months)</label><input type="number" class="fi" id="of-term" placeholder="e.g. 36"></div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Preferred Start Date</label><input type="date" class="fi"></div>
-        <div class="fg"><label class="fl">Rent-Free Period (months)</label><input type="number" class="fi" placeholder="e.g. 2"></div>
+        <div class="fg"><label class="fl">Preferred Start Date</label><input type="date" class="fi" id="of-start"></div>
+        <div class="fg"><label class="fl">Rent-Free Period (months)</label><input type="number" class="fi" id="of-free" placeholder="e.g. 2"></div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Fit-Out Contribution (local currency)</label><input type="number" class="fi" placeholder="e.g. 50,000"></div>
-        <div class="fg"><label class="fl">Annual Escalation (%)</label><input type="number" class="fi" placeholder="e.g. 5"></div>
+        <div class="fg"><label class="fl">Fit-Out Contribution (local currency)</label><input type="number" class="fi" id="of-fitout" placeholder="e.g. 50,000"></div>
+        <div class="fg"><label class="fl">Annual Escalation (%)</label><input type="number" class="fi" id="of-escalation" placeholder="e.g. 5"></div>
       </div>
-      <div class="fg"><label class="fl">Special Conditions</label><textarea class="fi" rows="2" placeholder="Break options, security deposit, handover condition..."></textarea></div>
+      <div class="fg"><label class="fl">Special Conditions</label><textarea class="fi" id="of-conditions" rows="2" placeholder="Break options, security deposit, handover condition..."></textarea></div>
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeModal('offer-modal')">Cancel</button>
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bpage').innerHTML = `
   <!-- Image hero -->
   <div style="height:420px;position:relative;overflow:hidden;">
-    <img src="${img.replace('600','1200')}" alt="${B.name}" style="width:100%;height:100%;object-fit:cover;opacity:.5;">
+    <img src="${img.replace('600','1200')}" onerror="this.onerror=null;this.src='${getImg(B.market)}'" alt="${B.name}" style="width:100%;height:100%;object-fit:cover;opacity:.5;">
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,8,.2) 0%,rgba(8,8,8,.85) 100%);"></div>
     <div class="w" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;padding-bottom:36px;">
       <a href="search.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);margin-bottom:20px;transition:color .2s;" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-2)'">← Back to Offices</a>
@@ -124,8 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-ghost btn-sm ${saved?'on':''}" id="save-btn-top" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-main').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
-          <button class="btn btn-outline btn-sm" onclick="openModal('offer-modal')">Submit Offer</button>
-          <button class="btn btn-navy btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>
+          ${B.anonymized ? `<button class="btn btn-navy btn-sm" onclick="requestReveal(this)">Request full details</button>` : `<button class="btn btn-outline btn-sm" onclick="openModal('offer-modal')">Submit Offer</button><button class="btn btn-navy btn-sm" onclick="openModal('sv-modal')">Request Site Visit</button>`}
         </div>
       </div>
     </div>
@@ -138,8 +137,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div>
         <!-- Key stats -->
         <div class="stat-strip mb32">
-          ${[['Total GLA',fmt(B.gla)+' sqm'],['Typical Floor Plate',fmt(B.floorplate)+' sqm'],['Building Height',B.floors+' floors'],['Parking Ratio',B.parking+':1']].map(([l,v])=>`<div class="stat-c"><div class="stat-n" style="font-size:32px;">${v}</div><div class="stat-l">${l}</div></div>`).join('')}
+          ${[['Total GLA',fmt(B.gla)+' sqm'],['Typical Floor Plate',fmt(B.floorplate)+' sqm'],['Building Height',(B.buildingHeight?B.buildingHeight+' m':B.floors+' floors')],['Parking',parkingDatum(B)]].map(([l,v])=>`<div class="stat-c"><div class="stat-n" style="font-size:32px;">${v}</div><div class="stat-l">${l}</div></div>`).join('')}
         </div>
+
+        ${B.anonymized?`<div class="form-note" style="margin-bottom:24px;"><p><strong>Building identity protected.</strong> Name, exact address, location pin, operator and original photos are hidden until URBN approves your access. <button class="btn btn-navy btn-sm" style="margin-top:10px;" onclick="requestReveal(this)">Request full details</button></p></div>`:`<div id="gallery-wrap" class="mb32"></div>`}
 
         <!-- Available units -->
         <div class="mb32">
@@ -171,8 +172,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         <!-- Amenities -->
         <div class="mb32">
           <h3 style="font-size:22px;margin-bottom:16px;">Building Amenities</h3>
-          <div class="chips">${B.amenities.map(a=>`<span class="chip on" style="cursor:default;">${a}</span>`).join('')}</div>
+          ${B.amenities.length ? `<div class="chips">${B.amenities.map(a=>`<span class="chip on" style="cursor:default;">${a}</span>`).join('')}</div>` : `<p style="font-size:13px;color:var(--text-2);">Amenities not specified.</p>`}
         </div>
+
+        <!-- Parking -->
+        ${(B.parking && (B.parking.spaces!=null || B.parking.arrangement)) ? `<div class="mb32">
+          <h3 style="font-size:22px;margin-bottom:16px;">Parking</h3>
+          <div class="stat-strip">
+            ${[['Spaces', B.parking.spaces!=null?fmt(B.parking.spaces):'—'],['Arrangement', B.parking.arrangement||'—'],['Included in rent', B.parking.includedInRent||'—'],['Monthly membership', B.parking.monthlyMembership?'Yes':'No']].map(([l,v])=>`<div class="stat-c"><div class="stat-n" style="font-size:20px;text-transform:capitalize;">${v}</div><div class="stat-l">${l}</div></div>`).join('')}
+          </div>
+          ${(B.parking.notes)?`<p style="font-size:12.5px;color:var(--text-2);margin-top:12px;">${B.parking.notes}</p>`:''}
+        </div>` : ''}
 
         <!-- Sustainability -->
         ${B.sustainability.length?`
@@ -202,10 +212,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
 
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-          <button class="btn btn-navy w-full" onclick="openModal('sv-modal')">Request Site Visit</button>
+          ${B.anonymized ? `<button class="btn btn-navy w-full" onclick="requestReveal(this)">Request full details</button>` : ''}
+          <button class="btn ${B.anonymized?'btn-outline':'btn-navy'} w-full" onclick="openModal('sv-modal')">Request Site Visit</button>
           <button class="btn btn-outline w-full" onclick="openModal('offer-modal')">Submit Offer</button>
+          <button class="btn btn-ghost w-full" onclick="requestIntroduction(this)">Request Introduction</button>
           <button class="btn btn-ghost w-full" id="save-btn-main" onclick="toggleSave('${B.id}',this);document.getElementById('save-btn-top').className=this.className">${heartSVG(saved)} ${saved?'Shortlisted':'Save to Shortlist'}</button>
         </div>
+        ${(!B.anonymized && (B.address || B.mapsUrl)) ? `<div class="card" style="padding:16px;margin-bottom:14px;">
+          <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--navy);margin-bottom:8px;text-transform:uppercase;">Location</div>
+          ${B.address ? `<p style="font-size:12.5px;color:var(--text);line-height:1.6;">${B.address}</p>` : ''}
+          ${B.mapsUrl ? `<a href="${B.mapsUrl}" target="_blank" rel="noopener" class="text-navy" style="font-size:12px;text-decoration:underline;">Open map pin →</a>` : ''}
+        </div>` : ''}
 
         <div style="background:var(--bg-white);border:1px solid var(--border-2);padding:16px;">
           <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--navy);margin-bottom:8px;text-transform:uppercase;">Introduction Protection</div>
@@ -228,12 +245,75 @@ function setUnit(uid) {
   }
 }
 
-function submitSV() {
+function uval(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+async function submitSV() {
   if (!document.getElementById('nc-box').checked) { toast('Please accept the Non-Circumvention Agreement to proceed.', 'info'); return; }
-  closeModal('sv-modal');
-  toast('Introduction request submitted — logged and protected ✓');
+  const r = await requestListingAction('site-visit', B.id, {
+    unitId: currentUnit ? currentUnit.id : null,
+    proposedDate: uval('sv-date'), message: uval('sv-notes'),
+  });
+  if (r.redirect) return;
+  if (r.ok) { closeModal('sv-modal'); toast('Site visit request submitted — our team will follow up ✓'); }
+  else toast('Could not submit your request — please try again', 'error');
 }
-function submitOffer() { closeModal('offer-modal'); toast('Offer submitted — awaiting landlord response'); }
+
+async function submitOffer() {
+  const terms = [
+    uval('of-term') ? 'Term: ' + uval('of-term') + ' months' : '',
+    uval('of-start') ? 'Start: ' + uval('of-start') : '',
+    uval('of-free') ? 'Rent-free: ' + uval('of-free') + ' months' : '',
+    uval('of-fitout') ? 'Fit-out contribution: ' + uval('of-fitout') : '',
+    uval('of-escalation') ? 'Escalation: ' + uval('of-escalation') + '%' : '',
+    uval('of-conditions') ? 'Conditions: ' + uval('of-conditions') : '',
+  ].filter(Boolean).join(' · ');
+  const r = await requestListingAction('offer', B.id, {
+    unitId: currentUnit ? currentUnit.id : null,
+    offerAmount: uval('of-rent'), offerTerms: terms,
+  });
+  if (r.redirect) return;
+  if (r.ok) { closeModal('offer-modal'); toast('Offer submitted — our team will follow up ✓'); }
+  else toast('Could not submit your offer — please try again', 'error');
+}
+
+async function requestReveal(btn) {
+  setBtnBusy(btn, true, 'Submitting…');
+  const r = await requestListingAction('reveal-listing', B.id, { message: 'Request to reveal full building details' });
+  setBtnBusy(btn, false);
+  if (r.redirect) return;
+  if (r.ok) toast('Request received — URBN will review and unlock details if approved ✓');
+  else toast('Could not submit your request — please try again', 'error');
+}
+
+async function requestIntroduction(btn) {
+  setBtnBusy(btn, true, 'Submitting…');
+  const r = await requestListingAction('introduction', B.id, { unitId: currentUnit ? currentUnit.id : null });
+  setBtnBusy(btn, false);
+  if (r.redirect) return;
+  if (r.ok) toast('Introduction request submitted — logged and protected ✓');
+  else toast('Could not submit your request — please try again', 'error');
+}
+
+// When details are revealed, load the full (signed) media gallery.
+async function loadGallery() {
+  if (!B || B.anonymized) return;
+  const wrap = document.getElementById('gallery-wrap');
+  if (!wrap) return;
+  try {
+    const headers = {};
+    if (URBNAuth.session && URBNAuth.session.access_token) headers.Authorization = 'Bearer ' + URBNAuth.session.access_token;
+    const j = await fetch('/api/listing-media?b=' + encodeURIComponent(B.id), { headers }).then(r => r.json());
+    const media = (j && j.media) || [];
+    if (!media.length) return;
+    wrap.innerHTML = `<h3 style="font-size:22px;margin-bottom:16px;">Photos &amp; floorplans</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
+      ${media.map(m => m.kind === 'floorplan'
+        ? `<a href="${m.url}" target="_blank" rel="noopener" class="card" style="padding:18px;text-align:center;font-size:13px;">View floorplan →</a>`
+        : `<img src="${m.url}" alt="Listing photo" loading="lazy" style="width:100%;height:140px;object-fit:cover;border-radius:4px;">`).join('')}
+      </div>`;
+  } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadGallery, 400); });
 </script>
 </body>
 </html>

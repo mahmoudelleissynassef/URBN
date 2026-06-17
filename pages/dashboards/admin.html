@@ -20,9 +20,12 @@
         <button class="chip" id="tab-batches" onclick="showTab('batches')">Pending batches</button>
         <button class="chip" id="tab-approved" onclick="showTab('approved')">Approved</button>
         <button class="chip" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
+        <button class="chip" id="tab-reveal" onclick="showTab('reveal')">Reveal requests</button>
+        <button class="chip" id="tab-buildings" onclick="showTab('buildings')">Buildings</button>
         <button class="chip" id="tab-membership" onclick="showTab('membership')">Membership</button>
         <button class="chip" id="tab-users" onclick="showTab('users')">Users</button>
         <button class="chip" id="tab-companies" onclick="showTab('companies')">Companies</button>
+        <button class="chip" id="tab-capex" onclick="showTab('capex')">Construction costs</button>
         <button class="chip" id="tab-analytics" onclick="showTab('analytics')">Analytics</button>
       </div>
       <div id="panel-overview"></div>
@@ -30,10 +33,23 @@
       <div id="panel-batches" class="hidden"></div>
       <div id="panel-approved" class="hidden"></div>
       <div id="panel-rejected" class="hidden"></div>
+      <div id="panel-reveal" class="hidden"></div>
+      <div id="panel-buildings" class="hidden"></div>
       <div id="panel-membership" class="hidden"></div>
       <div id="panel-users" class="hidden"></div>
       <div id="panel-companies" class="hidden"></div>
+      <div id="panel-capex" class="hidden"></div>
       <div id="panel-analytics" class="hidden"></div>
+    </div>
+    <div class="mbg" id="reject-modal">
+      <div class="modal">
+        <div class="mh"><div><div class="label mb12">Review</div><h3>Reject — reason required</h3></div><div class="mx" onclick="closeModal('reject-modal')">✕</div></div>
+        <div class="mb">
+          <div class="fg"><label class="fl">Rejection reason</label><select class="fi fi-sel" id="rj-reason"></select></div>
+          <div class="fg"><label class="fl">Note to uploader (optional)</label><textarea class="fi" id="rj-note" placeholder="Explain what's needed..."></textarea></div>
+        </div>
+        <div class="mf"><button class="btn btn-ghost" onclick="closeModal('reject-modal')">Cancel</button><button class="btn btn-navy" id="rj-confirm" onclick="confirmReject()">Confirm rejection</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -41,8 +57,10 @@
 <script src="../../data/data.js"></script>
 <script src="../../js/urbn.js"></script>
 <script>
-const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'membership', 'users', 'companies', 'analytics'];
-const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, membership: loadMembership, users: loadUsers, companies: loadCompanies, analytics: loadAnalytics };
+const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'reveal', 'buildings', 'membership', 'users', 'companies', 'capex', 'analytics'];
+const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, reveal: loadReveal, buildings: loadBuildings, membership: loadMembership, users: loadUsers, companies: loadCompanies, capex: loadCapex, analytics: loadAnalytics };
+let REJECTION_REASONS = ['Duplicate listing', 'Insufficient building information', 'Missing or unclear photos', 'Floorplan required', 'Rent or service charge missing', 'Unable to verify ownership/operator authority', 'Building does not meet URBN quality criteria', 'Location or map pin unclear', 'Suspicious or inconsistent information', 'Outside current market coverage', 'Other'];
+fetch('/api/config').then(r => r.json()).then(c => { if (c && Array.isArray(c.rejectionReasons) && c.rejectionReasons.length) REJECTION_REASONS = c.rejectionReasons; }).catch(() => {});
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
@@ -141,8 +159,7 @@ async function loadPending() {
       ${mediaPaths.length ? `<div style="margin-top:8px;font-size:11px;color:var(--text-2);word-break:break-all;"><strong>Media paths (${esc(p.mediaBucket || 'listing-media')}):</strong><br>${mediaPaths.map(esc).join('<br>')}</div>` : ''}
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-navy btn-sm" onclick="approveListing('${L.id}',this)">Approve</button>
-        <button class="btn btn-outline btn-sm" onclick="rejectListing('${L.id}','reject',this)">Reject</button>
-        <button class="btn btn-ghost btn-sm" onclick="rejectListing('${L.id}','info',this)">Request more info</button>
+        <button class="btn btn-outline btn-sm" onclick="openReject('listing','${L.id}')">Reject</button>
       </div>
     </div>`;
   }).join('');
@@ -156,14 +173,31 @@ async function approveListing(id, btn) {
   if (j.ok) { showToast('Listing approved and published'); loadPending(); }
   else showToast('Approve failed: ' + (j.error || 'error') + (j.detail ? ' — ' + j.detail : ''), 'error');
 }
-async function rejectListing(id, mode, btn) {
-  const reason = prompt(mode === 'info' ? 'What information is needed? (emailed to submitter)' : 'Reason for rejection (emailed to submitter):');
-  if (reason === null) return;
-  setBtnBusy(btn, true, 'Saving…');
-  const j = await adminFetch('/api/admin/reject-listing', 'POST', { requestId: id, reason });
+
+// ── Rejection modal (reason dropdown + optional note) ────────────────────────
+let REJECT_CTX = null;
+function openReject(kind, id) {
+  REJECT_CTX = { kind, id };
+  const sel = document.getElementById('rj-reason');
+  sel.innerHTML = REJECTION_REASONS.map(r => `<option>${esc(r)}</option>`).join('');
+  document.getElementById('rj-note').value = '';
+  openModal('reject-modal');
+}
+async function confirmReject() {
+  if (!REJECT_CTX) return;
+  const reasonCode = document.getElementById('rj-reason').value;
+  const note = document.getElementById('rj-note').value.trim();
+  const btn = document.getElementById('rj-confirm'); setBtnBusy(btn, true, 'Saving…');
+  const { kind, id } = REJECT_CTX;
+  let j;
+  if (kind === 'listing') j = await adminFetch('/api/admin/reject-listing', 'POST', { requestId: id, reasonCode, reason: note });
+  else if (kind === 'batch-row') j = await adminFetch('/api/admin/reject-batch-row', 'POST', { rowId: id, reasonCode, reason: note });
   setBtnBusy(btn, false);
-  if (j.ok) { showToast(mode === 'info' ? 'Sent to submitter' : 'Listing rejected'); loadPending(); }
-  else showToast('Failed: ' + (j.error || 'error'), 'error');
+  if (j && j.ok) {
+    showToast('Rejected — uploader notified');
+    closeModal('reject-modal');
+    if (kind === 'listing') loadPending(); else loadBatches();
+  } else showToast('Failed: ' + ((j && j.error) || 'error'), 'error');
 }
 
 // ── Batches ──────────────────────────────────────────────────────────────────
@@ -187,7 +221,7 @@ async function loadBatches() {
   }).join('');
 }
 async function approveRow(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-batch-row', 'POST', { rowId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Row approved'); loadBatches(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }
-async function rejectRow(id, btn) { const reason = prompt('Reason (optional):') || ''; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-batch-row', 'POST', { rowId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Row rejected'); loadBatches(); } else showToast('Failed', 'error'); }
+function rejectRow(id) { openReject('batch-row', id); }
 async function approveValidBatch(id, btn) { if (!confirm('Approve all valid (pending) rows in this batch? They go live.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-valid-batch', 'POST', { batchId: id }); setBtnBusy(btn, false); if (j.ok) { showToast(j.approved + ' rows approved'); loadBatches(); } else showToast('Failed', 'error'); }
 
 // ── Approved ─────────────────────────────────────────────────────────────────
@@ -307,7 +341,183 @@ async function loadAnalytics() {
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Market scans by market</strong>' + kvTable(d.scanByMarket, ['Market', 'Scans']) + '</div>')
     + sec('Engagement', statTiles([['Total saves', e.totalSaves]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong>' + mostSaved + '</div>')
     + sec('Membership', statTiles([['Total companies', m.totalCompanies], ['Total users', m.totalUsers], ['Pending membership', m.pendingMembership]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Active companies by tier</strong>' + kvTable(m.companiesByTier, ['Tier', 'Companies']) + '</div>')
-    + sec('Data quality', statTiles([['Buildings missing photo', q.buildingsMissingPhoto], ['Buildings missing map', q.buildingsMissingMaps], ['Units missing rent', q.unitsMissingRent], ['Buildings with no units', q.buildingsNoUnits]]));
+    + sec('Requests', statTiles([['Reveal requests', Object.values((a.requests||{}).revealByBuilding||{}).reduce((x,y)=>x+y,0)], ['Site visits', Object.values((a.requests||{}).siteVisitsByMarket||{}).reduce((x,y)=>x+y,0)], ['Offers', Object.values((a.requests||{}).offersByMarket||{}).reduce((x,y)=>x+y,0)], ['Introductions', (a.requests||{}).introductions], ['Listings approved', (a.requests||{}).listingsApproved], ['Listings rejected', (a.requests||{}).listingsRejected]])
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Pending by type</strong>' + kvTable((a.requests||{}).pendingByType, ['Type', 'Pending']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Reveal requests by building</strong>' + kvTable((a.requests||{}).revealByBuilding, ['Building', 'Requests']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Site visits by market</strong>' + kvTable((a.requests||{}).siteVisitsByMarket, ['Market', 'Visits']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Offers by market</strong>' + kvTable((a.requests||{}).offersByMarket, ['Market', 'Offers']) + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Reveal grants by status</strong>' + kvTable((a.requests||{}).grantsByStatus, ['Status', 'Grants']) + '</div>')
+    + sec('Data quality', statTiles([['Missing photo', q.buildingsMissingPhoto], ['Missing map', q.buildingsMissingMaps], ['Missing amenities', q.buildingsMissingAmenities], ['Missing parking', q.buildingsMissingParking], ['Units missing rent', q.unitsMissingRent], ['No units', q.buildingsNoUnits]])
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Construction costs last updated by market</strong>' + kvTable(a.constructionCostsByMarket, ['Market', 'Updated']) + '</div>');
+}
+
+// ── Reveal requests ──────────────────────────────────────────────────────────
+async function loadReveal() {
+  const panel = document.getElementById('panel-reveal');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/reveal-requests', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  if (!j.grants || !j.grants.length) { panel.innerHTML = emptyBox('No reveal requests yet.'); return; }
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>User</th><th>Building</th><th>Market</th><th>Status</th><th>Actions</th></tr></thead><tbody>${j.grants.map(g => {
+    const actions = g.status === 'requested'
+      ? `<button class="btn btn-navy btn-sm" onclick="approveReveal('${g.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectReveal('${g.id}',this)">Reject</button>`
+      : (g.status === 'approved' ? `<button class="btn btn-ghost btn-sm" onclick="revokeGrant('${g.id}',this)">Revoke</button>` : '');
+    return `<tr><td>${fmtDate(g.created_at)}</td><td>${esc(g.userEmail || g.user_id || '')}</td><td>${esc(g.buildingName || '')}</td><td>${esc(g.market || '')}</td><td><span class="badge ${g.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(g.status)}</span></td><td>${actions}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+async function approveReveal(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-reveal', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal approved — user notified'); loadReveal(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }
+async function rejectReveal(id, btn) { const reason = prompt('Reason (emailed to requester):'); if (reason === null) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-reveal', 'POST', { grantId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal rejected'); loadReveal(); } else showToast('Failed', 'error'); }
+async function revokeGrant(id, btn) { if (!confirm('Revoke this access grant? The user will no longer see full details.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/revoke-grant', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Access revoked'); loadReveal(); } else showToast('Failed', 'error'); }
+
+// ── Buildings management ─────────────────────────────────────────────────────
+let BLD_STATUS = 'approved';
+async function loadBuildings() {
+  const panel = document.getElementById('panel-buildings');
+  panel.innerHTML = `<div class="chips" style="margin-bottom:16px;">
+    ${['approved', 'pending', 'rejected', 'draft', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}
+  </div><div id="bld-list">${loadingBox()}</div>`;
+  const q = BLD_STATUS ? '/api/admin/buildings?status=' + encodeURIComponent(BLD_STATUS) : '/api/admin/buildings';
+  const j = await adminFetch(q, 'GET');
+  const list = document.getElementById('bld-list');
+  if (!j.ok) { list.innerHTML = errBox(j); return; }
+  if (!j.buildings || !j.buildings.length) { list.innerHTML = emptyBox('No buildings for this status.'); return; }
+  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name || '')}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function fieldInput(label, id, val, type) { return `<div class="fg"><label class="fl">${esc(label)}</label><input type="${type || 'text'}" class="fi" id="${id}" value="${esc(val == null ? '' : val)}"></div>`; }
+async function openBuilding(id) {
+  const panel = document.getElementById('panel-buildings');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/building?id=' + encodeURIComponent(id), 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  const b = j.building;
+  const media = j.media || [];
+  panel.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="loadBuildings()" style="margin-bottom:14px;">← Back to buildings</button>
+    <h3 style="font-size:20px;margin-bottom:6px;">${esc(b.name || '(no name)')}</h3>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:18px;">${esc(b.id)} · <span class="badge badge-gated">${esc(b.status)}</span></div>
+    <div class="card" style="padding:22px;margin-bottom:18px;">
+      <div class="form-sec-title" style="margin-top:0;">Building details</div>
+      <div class="fgs">${fieldInput('Name', 'bf-name', b.name)}${fieldInput('Grade', 'bf-grade', b.grade)}</div>
+      <div class="fgs">${fieldInput('Market', 'bf-market', b.market)}${fieldInput('Submarket', 'bf-submarket', b.submarket)}</div>
+      <div class="fgs">${fieldInput('Address', 'bf-address', b.address)}${fieldInput('Google Maps URL', 'bf-maps', b.google_maps_url)}</div>
+      <div class="fgs">${fieldInput('Year built', 'bf-year', b.year_built, 'number')}${fieldInput('Floors', 'bf-floors', b.floors, 'number')}</div>
+      <div class="fgs">${fieldInput('Building height (m)', 'bf-height', b.building_height_m, 'number')}${fieldInput('Total GLA (sqm)', 'bf-gla', b.total_gla_sqm, 'number')}</div>
+      <div class="fgs">${fieldInput('Typical floor plate (sqm)', 'bf-plate', b.typical_floorplate_sqm, 'number')}${fieldInput('Certifications (; separated)', 'bf-certs', (b.certifications || []).join('; '))}</div>
+      <div class="fg"><label class="fl">Amenities (; separated)</label><input type="text" class="fi" id="bf-amenities" value="${esc((b.amenities || []).join('; '))}"></div>
+      <div class="form-sec-title">Parking</div>
+      <div class="fgs">${fieldInput('Spaces available', 'bf-pk-spaces', b.parking_spaces_available, 'number')}${fieldInput('Arrangement (free/paid/mixed/none)', 'bf-pk-arrangement', b.parking_arrangement)}</div>
+      <div class="fgs">${fieldInput('Included in rent (yes/no/partially)', 'bf-pk-included', b.parking_included_in_rent)}${fieldInput('Price / spot / month', 'bf-pk-price', b.parking_price_per_spot_month, 'number')}</div>
+      <div class="fgs">${fieldInput('Visitor hourly rate', 'bf-pk-visitor', b.visitor_parking_hourly_rate, 'number')}${fieldInput('Monthly membership price', 'bf-pk-mprice', b.parking_monthly_membership_price, 'number')}</div>
+      <div class="fg"><label class="fl">Parking notes</label><input type="text" class="fi" id="bf-pk-notes" value="${esc(b.parking_notes || '')}"></div>
+      <button class="btn btn-navy btn-sm" onclick="saveBuilding('${esc(b.id)}',this)">Save building details</button>
+    </div>
+    <div class="card" style="padding:22px;margin-bottom:18px;">
+      <div class="form-sec-title" style="margin-top:0;">Status &amp; visibility</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${b.status !== 'approved' ? `<button class="btn btn-navy btn-sm" onclick="setBuildingStatus('${esc(b.id)}','approved',this)">Publish (approve)</button>` : `<button class="btn btn-outline btn-sm" onclick="setBuildingStatus('${esc(b.id)}','draft',this)">Unpublish</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="setBuildingStatus('${esc(b.id)}','rejected',this)">Mark rejected</button>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;margin-bottom:18px;">
+      <div class="form-sec-title" style="margin-top:0;">Media (set the public-safe main image)</div>
+      ${media.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">${media.map(m => `<div class="card" style="padding:10px;">
+        ${m.signedUrl && m.kind !== 'floorplan' ? `<img src="${m.signedUrl}" style="width:100%;height:120px;object-fit:cover;border-radius:3px;">` : `<div style="height:120px;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:12px;color:var(--text-2);">${esc(m.kind || 'file')}</div>`}
+        <div style="font-size:11px;color:var(--text-2);margin:8px 0;">${esc(m.kind || '')}${m.is_main ? ' · main' : ''}${m.approved_for_public ? ' · public' : ''}</div>
+        <label style="display:flex;gap:6px;align-items:center;font-size:11.5px;margin-bottom:4px;"><input type="checkbox" ${m.approved_for_public ? 'checked' : ''} onchange="setMedia('${esc(m.id)}','${esc(b.id)}','approved_for_public',this.checked)">Public-safe</label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:11.5px;"><input type="checkbox" ${m.is_main ? 'checked' : ''} onchange="setMedia('${esc(m.id)}','${esc(b.id)}','is_main',this.checked)">Main image</label>
+      </div>`).join('')}</div>` : emptyBox('No uploaded media for this building.')}
+    </div>
+    <div class="card" style="padding:22px;">
+      <div class="form-sec-title" style="margin-top:0;">Units (${(j.units || []).length})</div>
+      ${(j.units || []).length ? (j.units || []).map(u => `<div style="border-top:1px solid var(--border);padding:12px 0;">
+        <div class="fgs">${fieldInput('Floor', 'uf-floor-' + u.id, u.unit_floor)}${fieldInput('Size (sqm)', 'uf-size-' + u.id, u.size_sqm, 'number')}</div>
+        <div class="fgs">${fieldInput('Asking rent', 'uf-rent-' + u.id, u.asking_rent, 'number')}${fieldInput('Service charge', 'uf-svc-' + u.id, u.service_charge, 'number')}</div>
+        <div class="fgs">${fieldInput('Allocated parking spaces', 'uf-pk-' + u.id, u.allocated_parking_spaces, 'number')}${fieldInput('Unit parking price', 'uf-pkp-' + u.id, u.unit_parking_price, 'number')}</div>
+        <button class="btn btn-ghost btn-sm" onclick="saveUnit('${esc(u.id)}',this)">Save unit</button>
+      </div>`).join('') : emptyBox('No units.')}
+    </div>`;
+}
+function gv(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function numOr(v) { return v === '' ? null : Number(v); }
+function arrOr(v) { const a = String(v || '').split(/[;,]/).map(x => x.trim()).filter(Boolean); return a.length ? a : null; }
+async function saveBuilding(id, btn) {
+  const fields = {
+    name: gv('bf-name'), grade: gv('bf-grade'), market: gv('bf-market'), submarket: gv('bf-submarket'),
+    address: gv('bf-address'), google_maps_url: gv('bf-maps'), year_built: numOr(gv('bf-year')), floors: numOr(gv('bf-floors')),
+    building_height_m: numOr(gv('bf-height')), total_gla_sqm: numOr(gv('bf-gla')), typical_floorplate_sqm: numOr(gv('bf-plate')),
+    certifications: arrOr(gv('bf-certs')), amenities: arrOr(gv('bf-amenities')),
+    parking_spaces_available: numOr(gv('bf-pk-spaces')), parking_arrangement: gv('bf-pk-arrangement') || null,
+    parking_included_in_rent: gv('bf-pk-included') || null, parking_price_per_spot_month: numOr(gv('bf-pk-price')),
+    visitor_parking_hourly_rate: numOr(gv('bf-pk-visitor')), parking_monthly_membership_price: numOr(gv('bf-pk-mprice')),
+    parking_notes: gv('bf-pk-notes') || null,
+  };
+  setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/update-building', 'POST', { id, fields });
+  setBtnBusy(btn, false);
+  showToast(j.ok ? 'Building saved' : 'Failed: ' + (j.error || 'error'), j.ok ? 'success' : 'error');
+}
+async function saveUnit(id, btn) {
+  const fields = { unit_floor: gv('uf-floor-' + id), size_sqm: numOr(gv('uf-size-' + id)), asking_rent: numOr(gv('uf-rent-' + id)), service_charge: numOr(gv('uf-svc-' + id)), allocated_parking_spaces: numOr(gv('uf-pk-' + id)), unit_parking_price: numOr(gv('uf-pkp-' + id)) };
+  setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/update-unit', 'POST', { id, fields });
+  setBtnBusy(btn, false);
+  showToast(j.ok ? 'Unit saved' : 'Failed: ' + (j.error || 'error'), j.ok ? 'success' : 'error');
+}
+async function setBuildingStatus(id, status, btn) {
+  if (!confirm('Set building status to "' + status + '"?')) return;
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/unpublish-building', 'POST', { buildingId: id, status });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Status updated'); openBuilding(id); } else showToast('Failed', 'error');
+}
+async function setMedia(mediaId, buildingId, flag, value) {
+  const body = { mediaId, buildingId }; body[flag] = value;
+  const j = await adminFetch('/api/admin/set-media-flags', 'POST', body);
+  showToast(j.ok ? 'Media updated' : 'Failed', j.ok ? 'success' : 'error');
+}
+
+// ── Construction costs (CAPEX inputs) ────────────────────────────────────────
+async function loadCapex() {
+  const panel = document.getElementById('panel-capex');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/construction-costs', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  const marketOpts = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const f = (label, id, ph) => `<div class="fg"><label class="fl">${esc(label)}</label><input type="number" class="fi" id="${id}" placeholder="${ph || ''}"></div>`;
+  const rows = (j.costs || []);
+  panel.innerHTML = `
+    <div class="card" style="padding:22px;margin-bottom:18px;">
+      <div class="form-sec-title" style="margin-top:0;">Add / update market construction costs</div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" id="cx-market"><option value="">Select...</option>${marketOpts}</select></div>
+        <div class="fg"><label class="fl">Currency</label><input type="text" class="fi" id="cx-currency" placeholder="e.g. EGP"></div>
+      </div>
+      <div class="fgs"><div class="fg"><label class="fl">Effective date</label><input type="date" class="fi" id="cx-date"></div><div class="fg"></div></div>
+      <div class="fgs">${f('Shell &amp; core → CAT A / sqm', 'cx-shell')}${f('CAT A → CAT B / sqm', 'cx-cata')}</div>
+      <div class="fgs">${f('Fit-out basic / sqm', 'cx-fb')}${f('Fit-out standard / sqm', 'cx-fs')}</div>
+      <div class="fgs">${f('Fit-out premium / sqm', 'cx-fp')}${f('Furniture / workstation', 'cx-furn')}</div>
+      <div class="fgs">${f('IT/AV / workstation', 'cx-itav')}${f('Professional fees %', 'cx-fees')}</div>
+      <div class="fgs">${f('Contingency %', 'cx-cont')}${f('Reinstatement / sqm', 'cx-reins')}</div>
+      <div class="fgs">${f('Moving cost allowance', 'cx-move')}<div class="fg"><label class="fl">Notes</label><input type="text" class="fi" id="cx-notes"></div></div>
+      <button class="btn btn-navy btn-sm" onclick="saveCapex(this)">Save costs</button>
+    </div>
+    <div class="form-sec-title">History (latest per market shown first)</div>
+    ${rows.length ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Market</th><th>Cur</th><th>Effective</th><th>Std fit-out/sqm</th><th>Furn/ws</th><th>Fees%</th><th>Updated</th></tr></thead><tbody>${rows.map(c => `<tr><td>${esc(c.market)}</td><td>${esc(c.currency)}</td><td>${esc(c.effective_date || '—')}</td><td>${c.fitout_standard_per_sqm ?? '—'}</td><td>${c.furniture_per_workstation ?? '—'}</td><td>${c.professional_fees_pct ?? '—'}</td><td>${fmtDate(c.updated_at)}</td></tr>`).join('')}</tbody></table></div>` : emptyBox('No construction costs entered yet.')}`;
+}
+async function saveCapex(btn) {
+  const body = {
+    market: gv('cx-market'), currency: gv('cx-currency'), effective_date: gv('cx-date') || null,
+    shell_core_to_cat_a_per_sqm: gv('cx-shell'), cat_a_to_cat_b_per_sqm: gv('cx-cata'),
+    fitout_basic_per_sqm: gv('cx-fb'), fitout_standard_per_sqm: gv('cx-fs'), fitout_premium_per_sqm: gv('cx-fp'),
+    furniture_per_workstation: gv('cx-furn'), it_av_per_workstation: gv('cx-itav'),
+    professional_fees_pct: gv('cx-fees'), contingency_pct: gv('cx-cont'), reinstatement_per_sqm: gv('cx-reins'),
+    moving_cost_allowance: gv('cx-move'), notes: gv('cx-notes'),
+  };
+  if (!body.market || !body.currency) { showToast('Market and currency are required', 'error'); return; }
+  setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/save-construction-costs', 'POST', body);
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Construction costs saved'); loadCapex(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 </script>
 </body>

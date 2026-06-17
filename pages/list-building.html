@@ -117,6 +117,34 @@
       </div>
       <div class="fg"><label class="fl">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
 
+      <div class="form-sec-title">Amenities</div>
+      <p style="font-size:12.5px;color:var(--text-2);margin:-6px 0 12px;">Tick everything the building offers.</p>
+      <div id="ll-amenities" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;margin-bottom:8px;"></div>
+
+      <div class="form-sec-title">Parking</div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Parking spaces available</label><input type="number" class="fi" id="ll-pk-spaces" placeholder="e.g. 120"><div class="fld-err" id="err-ll-pk-spaces">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Parking arrangement</label>
+          <select class="fi fi-sel" id="ll-pk-arrangement"><option value="">Select...</option><option value="free">Free</option><option value="paid">Paid</option><option value="mixed">Mixed</option><option value="none">None</option></select>
+        </div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Parking included in rent?</label>
+          <select class="fi fi-sel" id="ll-pk-included"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option><option value="partially">Partially</option></select>
+        </div>
+        <div class="fg"><label class="fl">Price per spot / month (if paid)</label><input type="number" class="fi" id="ll-pk-price" placeholder="e.g. 1,500"><div class="fld-err" id="err-ll-pk-price">Must be numeric.</div></div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Visitor parking hourly rate (optional)</label><input type="number" class="fi" id="ll-pk-visitor" placeholder="e.g. 30"><div class="fld-err" id="err-ll-pk-visitor">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Monthly parking membership available?</label>
+          <select class="fi fi-sel" id="ll-pk-membership"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
+      </div>
+
       <div class="form-sec-title">Photos &amp; floorplans</div>
       <div class="form-note">
         <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="signin.html" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="signup.html" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
@@ -167,16 +195,26 @@
 <script>
 let LL_PROFILE = null;
 const USER_TYPE_LABELS = { occupier: 'Occupier', broker: 'Broker', developer: 'Developer', landlord_owner: 'Landlord / Owner', coworking_operator: 'Coworking Operator', serviced_office_operator: 'Serviced Office Operator', advisor: 'Advisor', other: 'Other' };
+// Mirrors AMENITY_OPTIONS in server.js (kept in sync; server also exposes it via /api/config).
+const LL_AMENITIES = ['24/7 access', 'Reception / concierge', 'Security', 'CCTV', 'Elevators', 'Backup power / generator', 'High-speed internet / fiber', 'Meeting rooms', 'Conference facilities', 'Pantry / kitchenette', 'Cafeteria / F&B', 'Gym / wellness', 'Outdoor terrace', 'Business lounge', 'Prayer room', 'Parking', 'EV charging', 'Bicycle parking', 'Showers / lockers', 'Disabled access', 'LEED / green certification', 'Smart building systems', 'Other'];
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
   const sel = document.getElementById('ll-market');
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+  renderAmenities();
   const user = await URBNAuth.requireAuth('/pages/signin.html');   // listing requires sign-in
   if (!user) return;
   await loadSubmitter(user);
 });
+
+function renderAmenities() {
+  const box = document.getElementById('ll-amenities');
+  if (!box) return;
+  box.innerHTML = LL_AMENITIES.map((a, i) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-amenity" value="${llEsc(a)}" id="ll-am-${i}">${llEsc(a)}</label>`).join('');
+}
+function selectedAmenities() { return [...document.querySelectorAll('.ll-amenity:checked')].map(c => c.value); }
 
 function llEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
@@ -248,6 +286,10 @@ async function submitListing(btn) {
   const rent = v('ll-rent'), currency = v('ll-currency'), basis = v('ll-basis');
   const svc = v('ll-svc'), svcBasis = v('ll-svcbasis'), avail = v('ll-avail'), term = v('ll-term');
   const notes = v('ll-notes');
+  const amenities = selectedAmenities();
+  const pkSpaces = v('ll-pk-spaces'), pkArrangement = v('ll-pk-arrangement'), pkIncluded = v('ll-pk-included');
+  const pkPrice = v('ll-pk-price'), pkVisitor = v('ll-pk-visitor'), pkMembership = v('ll-pk-membership');
+  const pkMembershipPrice = v('ll-pk-membership-price'), pkNotes = v('ll-pk-notes');
   const consent = document.getElementById('ll-consent').checked;
 
   const photoFiles = [...document.getElementById('ll-photos').files];
@@ -272,6 +314,10 @@ async function submitListing(btn) {
   set('ll-currency', 'err-ll-currency', !currency || !allowedCurrencies(market).includes(currency));
   set('ll-basis', 'err-ll-basis', !basis);
   set('ll-svc', 'err-ll-svc', svc !== '' && !isNum(svc));
+  set('ll-pk-spaces', 'err-ll-pk-spaces', pkSpaces !== '' && !isNum(pkSpaces));
+  set('ll-pk-price', 'err-ll-pk-price', pkPrice !== '' && !isNum(pkPrice));
+  set('ll-pk-visitor', 'err-ll-pk-visitor', pkVisitor !== '' && !isNum(pkVisitor));
+  set('ll-pk-membership-price', 'err-ll-pk-membership-price', pkMembershipPrice !== '' && !isNum(pkMembershipPrice));
   set('ll-photos', 'err-ll-photos', photosBad);
   set('ll-floorplan', 'err-ll-floorplan', floorplanBad);
   document.getElementById('err-ll-consent').classList.toggle('show', !consent);
@@ -319,6 +365,10 @@ async function submitListing(btn) {
     rent, currency, pricingBasis: basis,
     serviceCharge: svc, serviceChargeBasis: svcBasis,
     availabilityDate: avail, minTerm: term,
+    amenities,
+    parkingSpaces: pkSpaces, parkingArrangement: pkArrangement, parkingIncludedInRent: pkIncluded,
+    parkingPricePerSpot: pkPrice, visitorParkingHourly: pkVisitor, parkingMonthlyMembership: pkMembership,
+    parkingMonthlyMembershipPrice: pkMembershipPrice, parkingNotes: pkNotes,
     mediaBucket: 'listing-media', photoPaths, floorplanPath, photoCount: photoPaths.length,
     submittedBy: URBNAuth.user.id,
     message: notes,
@@ -385,7 +435,9 @@ function bulkValidate(r) {
   if (!r.pricing_basis) errs.push('pricing_basis');
   if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
   if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
-  ['year_built', 'floors', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge'].forEach(k => { if (r[k] && !num(r[k])) errs.push(k); });
+  ['year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge', 'parking_spaces_available', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_price'].forEach(k => { if (r[k] && !num(r[k])) errs.push(k); });
+  if (r.parking_arrangement && !['free', 'paid', 'mixed', 'none'].includes(String(r.parking_arrangement).toLowerCase())) errs.push('parking_arrangement');
+  if (r.parking_included_in_rent && !['yes', 'no', 'partially'].includes(String(r.parking_included_in_rent).toLowerCase())) errs.push('parking_included_in_rent');
   ['google_maps_url', 'main_photo_url'].forEach(k => { if (r[k] && !isUrl(r[k])) errs.push(k); });
   for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
   for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }

@@ -39,19 +39,19 @@ const URBN_LISTINGS = {
         this.buildings = (typeof URBN_DATA !== 'undefined' && URBN_DATA.buildings) ? URBN_DATA.buildings : [];
         this.loaded = true; return this.buildings;
       }
-      // Real listings: approved buildings + their approved units from Supabase.
+      // Real listings come from the server, ANONYMIZED by default. Sensitive
+      // identity (name, address, maps pin, operator, raw photos) is only included
+      // for buildings the signed-in user has an approved reveal grant for — the
+      // server enforces this with the service role (the anon key cannot read the
+      // buildings/units tables directly). We pass the access token when signed in.
       try {
-        if (typeof URBNAuth !== 'undefined') await URBNAuth.init();
-        if (typeof URBNAuth !== 'undefined' && URBNAuth.client) {
-          const [{ data: bs }, { data: us }] = await Promise.all([
-            URBNAuth.client.from('buildings').select('*').eq('status', 'approved'),
-            URBNAuth.client.from('units').select('*').eq('status', 'approved'),
-          ]);
-          const units = Array.isArray(us) ? us : [];
-          this.buildings = (Array.isArray(bs) ? bs : []).map(b => shapeBuilding(b, units.filter(u => u.building_id === b.id)));
-        } else {
-          this.buildings = []; // Supabase not configured yet → empty (no fake inventory)
+        let headers = {};
+        if (typeof URBNAuth !== 'undefined') {
+          await URBNAuth.init();
+          if (URBNAuth.session && URBNAuth.session.access_token) headers.Authorization = 'Bearer ' + URBNAuth.session.access_token;
         }
+        const j = await fetch('/api/listings', { headers }).then(r => r.json());
+        this.buildings = (j && Array.isArray(j.buildings)) ? j.buildings : [];
       } catch (e) { this.buildings = []; }
       this.loaded = true;
       return this.buildings;

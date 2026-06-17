@@ -140,6 +140,14 @@ function injectNav(base='') {
         <a href="${base}pages/buildings.html">Buildings</a>
         <a href="${base}pages/districts.html">Districts</a>
         <a href="${base}pages/industrial.html">Industrial</a>
+        <div class="nav-dd">
+          <a href="${base}pages/stay-vs-go.html">Tools</a>
+          <div class="nav-dd-panel">
+            <a href="${base}pages/stay-vs-go.html">Stay vs Go</a>
+            <a href="${base}pages/market-scan.html">Market Scan</a>
+            <a href="${base}pages/dashboards/tenant.html?tab=shortlist" data-auth="in" style="display:none;">Saved Properties</a>
+          </div>
+        </div>
         <a href="${base}pages/list-building.html">List Your Building</a>
         <a href="${base}pages/subscription.html">Pricing</a>
         <div class="nav-sep"></div>
@@ -171,6 +179,7 @@ function injectNav(base='') {
     <a href="${base}pages/buildings.html">Buildings</a>
     <a href="${base}pages/districts.html">Districts</a>
     <a href="${base}pages/industrial.html">Industrial</a>
+    <a href="${base}pages/stay-vs-go.html">Stay vs Go</a>
     <a href="${base}pages/list-building.html">List Your Building</a>
     <a href="${base}pages/subscription.html">Pricing</a>
     <a href="${base}pages/market-scan.html">Contact</a>
@@ -218,6 +227,7 @@ function injectFooter(base='') {
             <li><a href="${base}pages/buildings.html">Buildings</a></li>
             <li><a href="${base}pages/districts.html">Districts</a></li>
             <li><a href="${base}pages/industrial.html">Industrial</a></li>
+            <li><a href="${base}pages/stay-vs-go.html">Stay vs Go</a></li>
             <li><a href="${base}pages/market-scan.html">Market Scan</a></li>
           </ul>
         </div>
@@ -476,14 +486,31 @@ function gradeB(g){
   return `<span class="badge badge-grade">${g==='A+'?'Grade A+':'Grade A'}</span>`;
 }
 
+// ── Parking display (handles new {spaces,arrangement} object or legacy ratio) ──
+function parkingDatum(b) {
+  const pk = b && b.parking;
+  if (pk && typeof pk === 'object') {
+    if (pk.spaces != null) return fmt(pk.spaces) + ' spaces';
+    if (pk.arrangement) return pk.arrangement.charAt(0).toUpperCase() + pk.arrangement.slice(1);
+    return '—';
+  }
+  return (pk != null && pk !== '') ? pk + ':1' : '—';
+}
+// Neutral market placeholder used when a listing has no admin-approved public
+// image (keeps anonymized cards from exposing the real building).
+function cardImg(b) { return imgFor(b); }
+
 // ── Listing card ─────────────────────────────────────────
+// Listings are anonymized by default — `b.name` is the verified label unless the
+// viewer has an approved reveal grant (server-enforced; see /api/listings).
 function renderCard(b, base='') {
   const saved=USER.saved.includes(b.id);
   const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
+  const fallback = getImg(b.market);
   return `
   <div class="lc" onclick="window.location.href='${base}pages/building.html?id=${b.id}'">
     <div class="lc-img">
-      <img src="${imgFor(b)}" alt="${b.name} — ${b.submarket}, ${mkt?.country||''}" loading="lazy">
+      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name}" loading="lazy">
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
@@ -505,19 +532,39 @@ function renderCard(b, base='') {
           <div class="lc-d-key">Floors</div>
         </div>
         <div class="lc-datum">
-          <div class="lc-d-val">${b.parking}:1</div>
+          <div class="lc-d-val">${parkingDatum(b)}</div>
           <div class="lc-d-key">Parking</div>
         </div>
       </div>
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-sub">per ${b.rentUnit}</div>
+          <div class="lc-rent-sub">${b.anonymized ? 'indicative / ' : 'per '}${b.rentUnit}</div>
         </div>
-        <span class="btn btn-ghost btn-sm">View →</span>
+        <span class="btn btn-ghost btn-sm">${b.anonymized ? 'Details on request →' : 'View →'}</span>
       </div>
     </div>
   </div>`;
+}
+
+// ── In-app listing requests (reveal / site-visit / offer / introduction) ──────
+// Requires sign-in. Posts to the authenticated /api/listing-request endpoint.
+async function requestListingAction(type, buildingId, extra = {}) {
+  await URBNAuth.init();
+  if (!URBNAuth.user || !URBNAuth.session) {
+    showToast('Sign in to continue', 'info');
+    setTimeout(() => { location.href = '/pages/signin.html?next=' + encodeURIComponent(location.pathname + location.search); }, 1000);
+    return { ok: false, redirect: true };
+  }
+  try {
+    const res = await fetch('/api/listing-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + URBNAuth.session.access_token },
+      body: JSON.stringify({ type, buildingId, sourcePage: location.pathname, ...extra }),
+    });
+    let j = {}; try { j = await res.json(); } catch (e) {}
+    return { ok: res.ok && j.ok === true, json: j };
+  } catch (e) { return { ok: false, json: { error: 'network' } }; }
 }
 
 function renderAnonCard(b, base='') {
