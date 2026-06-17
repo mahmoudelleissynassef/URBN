@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stay vs Go — Occupancy Cost Analysis — URBN</title>
+  <meta name="description" content="Compare staying put, fitting out a traditional lease, taking a fitted office, or coworking — with upfront CAPEX, monthly cost and total cost over term."/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="stylesheet" href="../css/urbn.css"/>
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="pt-nav" style="padding:56px 0 80px;">
+  <div class="w">
+    <div class="mb32" style="max-width:680px;">
+      <span class="overline label-navy">Decision Tool</span>
+      <h1 style="font-size:42px;">Stay vs Go</h1>
+      <p style="font-size:14.5px;color:var(--text-2);margin-top:12px;line-height:1.8;">Compare four ways to occupy space in a new market — staying in your current office, fitting out a traditional lease, taking an already-fitted office, or using coworking / serviced space. We show upfront CAPEX, monthly occupancy cost and total cost over the lease term. CAPEX benchmarks come from URBN's market construction-cost inputs; where a market has none yet, you can enter your own assumptions — we never show invented numbers.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:360px 1fr;gap:36px;align-items:start;">
+      <!-- Inputs -->
+      <div class="card" style="padding:26px;">
+        <div class="form-sec-title" style="margin-top:0;">Your requirement</div>
+        <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" id="sg-market" onchange="loadCosts()"><option value="">Select market...</option></select></div>
+        <div id="sg-cost-status" style="font-size:12px;margin:-4px 0 12px;color:var(--text-2);"></div>
+        <div class="fgs">
+          <div class="fg"><label class="fl">Office area (sqm)</label><input type="number" class="fi" id="sg-area" value="800" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Employees / desks</label><input type="number" class="fi" id="sg-desks" value="80" oninput="recalc()"></div>
+        </div>
+        <div class="fgs">
+          <div class="fg"><label class="fl">Lease term (months)</label><input type="number" class="fi" id="sg-term" value="36" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Fit-out level</label><select class="fi fi-sel" id="sg-fitlevel" onchange="recalc()"><option value="basic">Basic</option><option value="standard" selected>Standard</option><option value="premium">Premium</option></select></div>
+        </div>
+        <div class="fgs">
+          <div class="fg"><label class="fl">Rent (per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="1200" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Service charge (per sqm / month)</label><input type="number" class="fi" id="sg-svc" value="150" oninput="recalc()"></div>
+        </div>
+        <div class="fgs">
+          <div class="fg"><label class="fl">Parking cost (per month, total)</label><input type="number" class="fi" id="sg-parking" value="0" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Coworking (per desk / month)</label><input type="number" class="fi" id="sg-cowork" value="0" oninput="recalc()"></div>
+        </div>
+        <div class="fg"><label class="fl">Current office cost (per month, for "Stay")</label><input type="number" class="fi" id="sg-stay" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Leave 0 if you have no current office in this market.</p></div>
+
+        <div id="sg-manual" class="hidden" style="border-top:1px solid var(--border);margin-top:8px;padding-top:14px;">
+          <div class="form-sec-title" style="margin-top:0;">Manual CAPEX assumptions</div>
+          <p style="font-size:11.5px;color:var(--text-2);margin:-4px 0 12px;">This market has no URBN construction-cost benchmarks yet. Enter your own assumptions to run the comparison.</p>
+          <div class="fgs">
+            <div class="fg"><label class="fl">Fit-out cost (per sqm)</label><input type="number" class="fi" id="sg-m-fitout" placeholder="e.g. 4500" oninput="recalc()"></div>
+            <div class="fg"><label class="fl">Furniture (per desk)</label><input type="number" class="fi" id="sg-m-furniture" placeholder="e.g. 1200" oninput="recalc()"></div>
+          </div>
+          <div class="fgs">
+            <div class="fg"><label class="fl">IT / AV (per desk)</label><input type="number" class="fi" id="sg-m-itav" placeholder="e.g. 900" oninput="recalc()"></div>
+            <div class="fg"><label class="fl">Prof. fees + contingency (%)</label><input type="number" class="fi" id="sg-m-fees" placeholder="e.g. 18" oninput="recalc()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div>
+        <div id="sg-results"></div>
+        <div class="card" style="padding:22px;margin-top:18px;">
+          <div class="form-sec-title" style="margin-top:0;">Assumptions &amp; notes</div>
+          <ul id="sg-notes" style="font-size:12.5px;color:var(--text-2);line-height:1.9;padding-left:18px;margin:0;"></ul>
+        </div>
+        <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;">
+          <a href="market-scan.html" class="btn btn-navy">Request a Market Scan →</a>
+          <a href="market-scan.html" class="btn btn-outline">Speak to URBN</a>
+        </div>
+        <p style="font-size:11px;color:var(--text-2);margin-top:14px;line-height:1.7;">Indicative only. Figures are estimates for early-stage comparison and are not a quote, valuation, or financial advice. Confirm all costs with URBN and your advisors before committing.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<script src="../data/data.js"></script>
+<script src="../js/urbn.js"></script>
+<script>
+let COSTS = null;           // construction costs row for the selected market (or null)
+let CURRENCY = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+  injectNav('../'); injectFooter('../');
+  const sel = document.getElementById('sg-market');
+  URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
+  // Preselect from ?m= if present
+  const m = p('m'); if (m) { sel.value = m; }
+  loadCosts();
+});
+
+function curOf(marketId) {
+  const m = URBN_DATA.markets.find(x => x.id === marketId);
+  return (m && m.currency) || 'USD';
+}
+function money(n) { return CURRENCY + ' ' + Math.round(Number(n) || 0).toLocaleString(); }
+
+async function loadCosts() {
+  const market = document.getElementById('sg-market').value;
+  CURRENCY = market ? curOf(market) : 'USD';
+  const status = document.getElementById('sg-cost-status');
+  COSTS = null;
+  if (!market) { status.textContent = 'Select a market to begin.'; document.getElementById('sg-manual').classList.add('hidden'); recalc(); return; }
+  try {
+    const j = await fetch('/api/construction-costs?market=' + encodeURIComponent(market)).then(r => r.json());
+    COSTS = (j && j.costs) || null;
+  } catch (e) { COSTS = null; }
+  if (COSTS) {
+    if (COSTS.currency) CURRENCY = COSTS.currency;
+    status.innerHTML = `<span style="color:#1E6B3F;">✓ URBN CAPEX benchmarks loaded${COSTS.effective_date ? ' (as of ' + COSTS.effective_date + ')' : ''}.</span>`;
+    document.getElementById('sg-manual').classList.add('hidden');
+  } else {
+    status.innerHTML = `<span style="color:#B42318;">CAPEX assumptions not available for this market yet.</span> Enter your own below to compare.`;
+    document.getElementById('sg-manual').classList.remove('hidden');
+  }
+  recalc();
+}
+
+function n(id) { const el = document.getElementById(id); return el ? Number(el.value) || 0 : 0; }
+
+// Resolve per-sqm fit-out cost + per-desk furniture/IT + fees%, from admin costs or manual inputs.
+function capexInputs() {
+  const level = document.getElementById('sg-fitlevel').value;
+  if (COSTS) {
+    const perSqm = level === 'premium' ? COSTS.fitout_premium_per_sqm : level === 'basic' ? COSTS.fitout_basic_per_sqm : COSTS.fitout_standard_per_sqm;
+    const feesPct = (Number(COSTS.professional_fees_pct) || 0) + (Number(COSTS.contingency_pct) || 0);
+    return {
+      perSqm: Number(perSqm) || 0,
+      furniture: Number(COSTS.furniture_per_workstation) || 0,
+      itav: Number(COSTS.it_av_per_workstation) || 0,
+      feesPct, reinstatement: Number(COSTS.reinstatement_per_sqm) || 0,
+      moving: Number(COSTS.moving_cost_allowance) || 0, source: 'URBN benchmarks',
+    };
+  }
+  return {
+    perSqm: n('sg-m-fitout'), furniture: n('sg-m-furniture'), itav: n('sg-m-itav'),
+    feesPct: n('sg-m-fees'), reinstatement: 0, moving: 0, source: 'your manual assumptions',
+  };
+}
+
+function recalc() {
+  const area = n('sg-area'), desks = n('sg-desks'), term = n('sg-term');
+  const rent = n('sg-rent'), svc = n('sg-svc'), parking = n('sg-parking');
+  const cowork = n('sg-cowork'), stayMonthly = n('sg-stay');
+  const ci = capexInputs();
+  const haveCapex = ci.perSqm > 0 || ci.furniture > 0 || ci.itav > 0;
+
+  const monthlyLease = (rent + svc) * area + parking;       // traditional shell + service + parking
+  const fittedRent = rent * 1.2;                             // fitted assumption: +20% on rent
+  const monthlyFitted = (fittedRent + svc) * area + parking;
+  const monthlyCowork = cowork * desks;
+
+  // Traditional + CAPEX upfront
+  const construction = ci.perSqm * area;
+  const ffe = (ci.furniture + ci.itav) * desks;
+  const fees = (construction + ffe) * (ci.feesPct / 100);
+  const upfrontTraditional = construction + ffe + fees + ci.moving;
+  const reinstatement = ci.reinstatement * area;
+
+  const scenarios = [
+    { key: 'stay', name: 'Stay (current office)', upfront: 0, monthly: stayMonthly, end: 0,
+      avail: stayMonthly > 0, note: stayMonthly > 0 ? '' : 'Enter your current monthly office cost to include this option.' },
+    { key: 'traditional', name: 'Traditional lease + fit-out', upfront: upfrontTraditional, monthly: monthlyLease, end: reinstatement,
+      avail: haveCapex, note: haveCapex ? '' : 'Add CAPEX assumptions to estimate fit-out.' },
+    { key: 'fitted', name: 'Already-fitted office', upfront: ci.moving, monthly: monthlyFitted, end: 0,
+      avail: rent > 0, note: 'Fitted rent assumed at +20% vs shell rent.' },
+    { key: 'cowork', name: 'Coworking / serviced', upfront: 0, monthly: monthlyCowork, end: 0,
+      avail: cowork > 0, note: cowork > 0 ? '' : 'Enter a coworking per-desk rate to include this option.' },
+  ];
+  scenarios.forEach(s => { s.total = s.avail ? (s.upfront + s.monthly * term + s.end) : null; });
+
+  const ranked = scenarios.filter(s => s.avail && s.total != null).sort((a, b) => a.total - b.total);
+  const best = ranked.length ? ranked[0].key : null;
+
+  document.getElementById('sg-results').innerHTML = `
+    <div class="card" style="padding:0;overflow:auto;">
+      <table class="data-table">
+        <thead><tr><th>Option</th><th>Upfront CAPEX</th><th>Monthly cost</th><th>Total over ${term||0} mo</th></tr></thead>
+        <tbody>
+        ${scenarios.map(s => `<tr style="${s.key===best?'background:rgba(36,58,94,.05);':''}">
+          <td><strong>${s.name}</strong>${s.key===best?' <span class="badge badge-available" style="font-size:9px;">Lowest total</span>':''}${s.note?`<div style="font-size:11px;color:var(--text-2);margin-top:3px;">${s.note}</div>`:''}</td>
+          <td>${s.avail?money(s.upfront):'—'}</td>
+          <td>${s.avail?money(s.monthly):'—'}</td>
+          <td>${s.avail?`<strong>${money(s.total)}</strong>`:'<span style="color:var(--text-2);">n/a</span>'}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  const notes = [
+    `CAPEX source: <strong>${ci.source}</strong>.`,
+    `Traditional fit-out = ${money(ci.perSqm)}/sqm × ${area} sqm + (${money(ci.furniture)} furniture + ${money(ci.itav)} IT/AV) × ${desks} desks + ${ci.feesPct}% fees &amp; contingency${ci.moving?` + ${money(ci.moving)} moving`:''}.`,
+    ci.reinstatement ? `Reinstatement at lease end = ${money(ci.reinstatement)}/sqm × ${area} sqm, added to the traditional total.` : 'Reinstatement not modelled (no benchmark).',
+    `Fitted-office rent assumed at +20% vs shell rent — adjust the rent input to reflect a real quote.`,
+    `Monthly occupancy = (rent + service charge) × area + parking. Coworking = per-desk rate × desks.`,
+    `All figures exclude VAT/taxes, agency fees, and financing. Indicative early-stage comparison only.`,
+  ];
+  document.getElementById('sg-notes').innerHTML = notes.map(x => `<li>${x}</li>`).join('');
+}
+</script>
+</body>
+</html>

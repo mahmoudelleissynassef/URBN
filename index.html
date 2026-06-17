@@ -61,10 +61,33 @@
 <section class="section" style="background:var(--bg-white);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
-      <div><div class="section-rule"></div><h2>Available Offices</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Verified Grade A and A+ buildings across 16 markets.</p></div>
-      <a href="pages/search.html" class="btn btn-ghost">Browse All →</a>
+      <div><div class="section-rule"></div><h2>How URBN works for occupiers</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;max-width:620px;">We verify supply directly with landlords and operators, keep building identity protected, and introduce you only to genuinely available, fit-for-purpose options.</p></div>
     </div>
-    <div class="g3" id="featured-grid"></div>
+    <div class="g3" style="margin-top:8px;">
+      <div class="card" style="padding:26px;">
+        <div class="overline label-navy">Demand-led</div>
+        <h3 style="font-size:20px;margin:8px 0 8px;">Request a Market Scan</h3>
+        <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Tell us your market, size and timeline. We build a verified shortlist that matches — no portal trawling.</p>
+        <a href="pages/market-scan.html" class="btn btn-navy btn-sm">Request Market Scan →</a>
+      </div>
+      <div class="card" style="padding:26px;">
+        <div class="overline label-navy">Decision tool</div>
+        <h3 style="font-size:20px;margin:8px 0 8px;">Stay vs Go analysis</h3>
+        <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Compare staying put, fitting out a traditional lease, taking a fitted space, or coworking — with upfront CAPEX and total cost over term.</p>
+        <a href="pages/stay-vs-go.html" class="btn btn-outline btn-sm">Open Stay vs Go →</a>
+      </div>
+      <div class="card" style="padding:26px;">
+        <div class="overline label-navy">Supply-side</div>
+        <h3 style="font-size:20px;margin:8px 0 8px;">List your building</h3>
+        <p style="font-size:13.5px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Landlords and operators can submit space for review. Listings stay anonymized to occupiers until you choose to reveal.</p>
+        <a href="pages/list-building.html" class="btn btn-outline btn-sm">List Your Building →</a>
+      </div>
+    </div>
+    <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-navy" data-auth="out" onclick="openModal('access-modal')">Request Access</button>
+      <a href="pages/subscription.html" class="btn btn-ghost">View Pricing</a>
+      <a href="pages/search.html" class="btn btn-ghost">Browse coverage →</a>
+    </div>
   </div>
 </section>
 
@@ -157,10 +180,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   }).join('');
   ticker.innerHTML=items+items;
 
-  // Featured (approved listings only; clean empty state when none)
-  const fg=document.getElementById('featured-grid');
-  const feat=URBN_LISTINGS.buildings.slice(0,6);
-  fg.innerHTML = feat.length ? feat.map(b=>renderCard(b,'')).join('') : listingsEmptyState('', '');
+  // Landing page intentionally shows NO specific listings (anonymized platform).
+  // Market coverage + CTAs only. Counts below reflect verified inventory honestly.
 
   // City cards
   const mg=document.getElementById('markets-grid');

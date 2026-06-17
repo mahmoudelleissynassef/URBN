@@ -30,7 +30,31 @@ const REQUEST_TYPES = {
   'membership': 'Membership Request',
   'membership-change': 'Membership Change',
 };
+// In-app, listing-centric requests (require a signed-in user + a building).
+// Handled by the authenticated POST /api/listing-request, not the public form.
+const IN_APP_REQUEST_TYPES = ['reveal-listing', 'site-visit', 'offer', 'introduction'];
+const IN_APP_LABELS = {
+  'reveal-listing': 'Building details request', 'site-visit': 'Site visit request',
+  'offer': 'Offer', 'introduction': 'Introduction request',
+};
 const MEMBERSHIP_TIERS = ['free', 'starter', 'membership', 'enterprise'];
+
+// Controlled vocab shared with the admin console + List Your Building form.
+const REJECTION_REASONS = [
+  'Duplicate listing', 'Insufficient building information', 'Missing or unclear photos',
+  'Floorplan required', 'Rent or service charge missing', 'Unable to verify ownership/operator authority',
+  'Building does not meet URBN quality criteria', 'Location or map pin unclear',
+  'Suspicious or inconsistent information', 'Outside current market coverage', 'Other',
+];
+const AMENITY_OPTIONS = [
+  '24/7 access', 'Reception / concierge', 'Security', 'CCTV', 'Elevators', 'Backup power / generator',
+  'High-speed internet / fiber', 'Meeting rooms', 'Conference facilities', 'Pantry / kitchenette',
+  'Cafeteria / F&B', 'Gym / wellness', 'Outdoor terrace', 'Business lounge', 'Prayer room', 'Parking',
+  'EV charging', 'Bicycle parking', 'Showers / lockers', 'Disabled access', 'LEED / green certification',
+  'Smart building systems', 'Other',
+];
+const PARKING_ARRANGEMENTS = ['free', 'paid', 'mixed', 'none'];
+const PARKING_INCLUDED = ['yes', 'no', 'partially'];
 
 // Market -> local currency (mirror of data/data.js). Allowed quoting currencies
 // per market = [local, USD] (+ EUR for XOF / Francophone West African markets).
@@ -194,6 +218,12 @@ function buildListingEmail(data, payload, requestId, createdAt) {
       emailRow('Asking Rent', data.rent) + emailRow('Currency', data.currency) + emailRow('Pricing Basis', data.pricingBasis) +
       emailRow('Service Charge', data.serviceCharge) + emailRow('Service Charge Basis', data.serviceChargeBasis) +
       emailRow('Availability Date', data.availabilityDate) + emailRow('Minimum Term', data.minTerm)) +
+    emailSection('Amenities & Parking',
+      emailRow('Amenities', Array.isArray(data.amenities) ? data.amenities.join(', ') : data.amenities) +
+      emailRow('Parking Spaces', data.parkingSpaces) + emailRow('Parking Arrangement', data.parkingArrangement) +
+      emailRow('Included in Rent', data.parkingIncludedInRent) + emailRow('Price / Spot / Month', data.parkingPricePerSpot) +
+      emailRow('Visitor Hourly Rate', data.visitorParkingHourly) + emailRow('Monthly Membership', data.parkingMonthlyMembership) +
+      emailRow('Membership Price', data.parkingMonthlyMembershipPrice) + emailRow('Parking Notes', data.parkingNotes)) +
     emailSection('Media',
       emailRow('Photos Uploaded', String(photoPaths.length)) + emailRow('Floorplan Uploaded', floorplanYN) + emailRow('Storage Bucket', bucket)) +
     emailSection('Storage Paths',
@@ -459,7 +489,12 @@ function validateBatchRow(r) {
   if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
   if (AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
   // Numeric if present
-  ['year_built', 'floors', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge'].forEach((k) => { if (r[k] && !num(r[k])) errs.push(k); });
+  ['year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge',
+    'parking_spaces_available', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_price',
+  ].forEach((k) => { if (r[k] && !num(r[k])) errs.push(k); });
+  // Parking enums if present
+  if (r.parking_arrangement && !PARKING_ARRANGEMENTS.includes(String(r.parking_arrangement).toLowerCase())) errs.push('parking_arrangement');
+  if (r.parking_included_in_rent && !PARKING_INCLUDED.includes(String(r.parking_included_in_rent).toLowerCase())) errs.push('parking_included_in_rent');
   // URLs if present
   ['google_maps_url', 'main_photo_url'].forEach((k) => { if (r[k] && !isUrl(r[k])) errs.push(k); });
   for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
@@ -522,6 +557,24 @@ const numOrNull = (x) => (x === '' || x == null || isNaN(Number(x))) ? null : Nu
 const arrOrNull = (s) => { const a = String(s || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean); return a.length ? a : null; };
 const dateOrNull = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '').trim()) ? String(s).trim() : null;
 
+// Auth user emails (GoTrue admin API, service role).
+async function listAuthUsers() {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/admin/users?per_page=1000`, { method: 'GET', headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (r.status < 200 || r.status >= 300) return [];
+    const j = JSON.parse(r.body); return j.users || (Array.isArray(j) ? j : []);
+  } catch (e) { return []; }
+}
+function groupCount(arr, keyFn) {
+  const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; }); return m;
+}
+function groupAgg(arr, keyFn, valFn) {
+  const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); const v = valFn(x); if (k == null || k === '' || v == null || isNaN(v)) return; (m[k] = m[k] || []).push(v); }); return m;
+}
+const sum = (a) => a.reduce((s, n) => s + n, 0);
+const avg = (a) => a.length ? Math.round(sum(a) / a.length) : 0;
+
 async function sendApprovalEmail(to, name, buildingName, approved, note) {
   if (!to) return;
   const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
@@ -541,12 +594,45 @@ async function sendApprovalEmail(to, name, buildingName, approved, note) {
   } catch (e) { console.error('[admin] approval email failed:', e.message); }
 }
 
+async function sendMembershipDecisionEmail(to, name, tier, approved) {
+  if (!to) return;
+  const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+  const title = approved ? 'Your membership has been activated' : 'Your membership request update';
+  const badge = approved ? 'Active' : 'Update';
+  const hi = name || 'there';
+  const msg = approved
+    ? `Your <strong>${escapeHtml(tier || '')}</strong> membership is now active on URBN Offices.`
+    : `Thank you. Your request for the <strong>${escapeHtml(tier || '')}</strong> tier was not approved at this time. Your current access is unchanged.`;
+  const inner = `<tr><td style="padding:20px 24px 8px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(hi)},</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">${msg}</p></td></tr>`;
+  try { await sendResendEmail({ subject: `URBN Offices — ${title}`, html: emailShell(title, badge, inner), text: `Hi ${hi},\n\n${approved ? 'Your ' + (tier || '') + ' membership is now active.' : 'Your ' + (tier || '') + ' tier request was not approved.'}\n\n— URBN Offices`, from, to }); }
+  catch (e) { console.error('[admin] membership email:', e.message); }
+}
+
+async function sendRevealDecisionEmail(to, buildingName, market, approved) {
+  if (!to) return;
+  const from = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+  const mkt = marketName(market) || market || '';
+  const title = approved ? 'Building details unlocked' : 'Building details request update';
+  const badge = approved ? 'Access granted' : 'Update';
+  const msg = approved
+    ? `Your request to view full details${buildingName ? ' for <strong>' + escapeHtml(buildingName) + '</strong>' : ''} has been approved. Sign in to URBN Offices to view the building name, location and full media.`
+    : `Thank you. Your request to view full building details${mkt ? ' in ' + escapeHtml(mkt) : ''} was not approved at this time.`;
+  const inner = `<tr><td style="padding:20px 24px 8px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi there,</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">${msg}</p></td></tr>`;
+  try { await sendResendEmail({ subject: `URBN Offices — ${title}`, html: emailShell(title, badge, inner), text: approved ? 'Your building details request was approved. Sign in to view full details.' : 'Your building details request was not approved.', from, to }); }
+  catch (e) { console.error('[admin] reveal email:', e.message); }
+}
+
 // Approve a manual list-building request -> buildings + units + listing_media.
 async function approveRequestRow(row, adminId) {
   const p = row.payload || {}, now = new Date().toISOString(), bId = 'b_' + row.id;
   await sbUpsert('buildings', [{
     id: bId, name: p.building || row.name || 'Untitled', market: row.market || p.market || null, submarket: p.district || null,
     address: p.address || null, google_maps_url: p.mapsUrl || null, grade: p.grade || null, image_url: p.mainPhotoUrl || null,
+    building_height_m: numOrNull(p.buildingHeight), amenities: Array.isArray(p.amenities) ? p.amenities : arrOrNull(p.amenities),
+    parking_spaces_available: numOrNull(p.parkingSpaces), parking_arrangement: p.parkingArrangement || null,
+    parking_included_in_rent: p.parkingIncludedInRent || null, parking_price_per_spot_month: numOrNull(p.parkingPricePerSpot),
+    visitor_parking_hourly_rate: numOrNull(p.visitorParkingHourly), parking_monthly_membership_available: p.parkingMonthlyMembership === true || p.parkingMonthlyMembership === 'yes' || null,
+    parking_monthly_membership_price: numOrNull(p.parkingMonthlyMembershipPrice), parking_notes: p.parkingNotes || null,
     status: 'approved', submitted_by: p.submittedBy || null, request_id: row.id, approved_by: adminId, approved_at: now,
   }]);
   await sbUpsert('units', [{
@@ -556,7 +642,7 @@ async function approveRequestRow(row, adminId) {
     availability_date: dateOrNull(p.availabilityDate), min_term: p.minTerm || null, notes: row.message || p.message || null, status: 'approved', request_id: row.id,
   }]);
   const media = [];
-  (Array.isArray(p.photoPaths) ? p.photoPaths : []).forEach((path) => media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path, kind: 'photo', uploaded_by: p.submittedBy || null }));
+  (Array.isArray(p.photoPaths) ? p.photoPaths : []).forEach((path, i) => media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path, kind: 'photo', uploaded_by: p.submittedBy || null, is_main: i === 0 }));
   if (p.floorplanPath) media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path: p.floorplanPath, kind: 'floorplan', uploaded_by: p.submittedBy || null });
   if (media.length) { try { await insertSupabaseTable('listing_media', media); } catch (e) { console.error('[admin] media:', e.message); } }
   await sbPatch('client_requests', `id=eq.${row.id}`, { status: 'approved', reviewed_by: adminId, reviewed_at: now });
@@ -570,6 +656,12 @@ async function approveBatchRowRec(row, adminId) {
     google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
     total_gla_sqm: numOrNull(r.total_gla_sqm), typical_floorplate_sqm: numOrNull(r.typical_floorplate_sqm), parking_ratio: numOrNull(r.parking_ratio),
     certifications: arrOrNull(r.certifications), amenities: arrOrNull(r.amenities), image_url: r.main_photo_url || null,
+    building_height_m: numOrNull(r.building_height_m),
+    parking_spaces_available: numOrNull(r.parking_spaces_available), parking_arrangement: r.parking_arrangement || null,
+    parking_included_in_rent: r.parking_included_in_rent || null, parking_price_per_spot_month: numOrNull(r.parking_price_per_spot_month),
+    visitor_parking_hourly_rate: numOrNull(r.visitor_parking_hourly_rate),
+    parking_monthly_membership_available: /^(yes|true)$/i.test(String(r.parking_monthly_membership_available || '')) || null,
+    parking_monthly_membership_price: numOrNull(r.parking_monthly_membership_price), parking_notes: r.parking_notes || null,
     status: 'approved', approved_by: adminId, approved_at: now,
   }]);
   await sbUpsert('units', [{
@@ -610,6 +702,116 @@ function handleAdmin(req, res, urlPath) {
       if (req.method === 'GET' && urlPath === '/api/admin/listing-batches') {
         return sendJson(res, 200, { ok: true, batches: await sbGet(`listing_batches?order=created_at.desc`), rows: await sbGet(`listing_batch_rows?order=row_index.asc`) });
       }
+      if (req.method === 'GET' && urlPath === '/api/admin/overview') {
+        const len = async (q) => (await sbGet(q + (q.includes('?') ? '&' : '?') + 'select=id')).length;
+        const [pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership, latest] = await Promise.all([
+          len('client_requests?request_type=eq.list-building&status=in.(pending,new)'),
+          len('listing_batch_rows?status=eq.pending_review'),
+          len('buildings?status=eq.approved'),
+          len('client_requests?request_type=eq.list-building&status=eq.rejected'),
+          len('profiles'), len('companies'),
+          len('client_requests?request_type=in.(membership,membership-change)&status=eq.pending'),
+          sbGet('client_requests?order=created_at.desc&limit=8'),
+        ]);
+        return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, latest });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/users') {
+        const [profiles, companies, saved, reqs, authUsers] = await Promise.all([
+          sbGet('profiles?select=*&order=created_at.desc'), sbGet('companies?select=id,name'),
+          sbGet('saved_properties?select=user_id'), sbGet('client_requests?select=email'), listAuthUsers(),
+        ]);
+        const emailById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; });
+        const compById = {}; companies.forEach((c) => { compById[c.id] = c.name; });
+        const savedByUser = groupCount(saved, (s) => s.user_id);
+        const reqByEmail = groupCount(reqs, (r) => (r.email || '').toLowerCase());
+        const users = profiles.map((p) => { const email = emailById[p.id] || ''; return { id: p.id, email, full_name: p.full_name, company: compById[p.company_id] || '', user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at, requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 }; });
+        return sendJson(res, 200, { ok: true, users });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/companies') {
+        const [companies, members, subs, reqs, batches] = await Promise.all([
+          sbGet('companies?select=*&order=created_at.desc'), sbGet('company_members?select=company_id'),
+          sbGet('company_subscriptions?select=company_id,tier,status&order=created_at.desc'),
+          sbGet('client_requests?select=company,request_type'), sbGet('listing_batches?select=company_id'),
+        ]);
+        const memberCount = groupCount(members, (m) => m.company_id), batchCount = groupCount(batches, (b) => b.company_id);
+        const latestSub = {}; subs.forEach((s) => { if (!latestSub[s.company_id]) latestSub[s.company_id] = s; });
+        const reqByName = groupCount(reqs, (r) => (r.company || '').toLowerCase());
+        const listingByName = groupCount(reqs.filter((r) => r.request_type === 'list-building'), (r) => (r.company || '').toLowerCase());
+        const out = companies.map((c) => ({ id: c.id, name: c.name, created_at: c.created_at, members: memberCount[c.id] || 0, tier: (latestSub[c.id] || {}).tier || '—', status: (latestSub[c.id] || {}).status || '—', requests: reqByName[(c.name || '').toLowerCase()] || 0, listings: listingByName[(c.name || '').toLowerCase()] || 0, batches: batchCount[c.id] || 0 }));
+        return sendJson(res, 200, { ok: true, companies: out });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/membership-requests') {
+        return sendJson(res, 200, { ok: true, requests: await sbGet('client_requests?request_type=in.(membership,membership-change)&order=created_at.desc') });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/analytics') {
+        const [buildings, units, reqs, subs, saved, profiles, companies, revealGrants, capexRows] = await Promise.all([
+          sbGet('buildings?status=eq.approved&select=*'), sbGet('units?status=eq.approved&select=*'),
+          sbGet('client_requests?select=*&order=created_at.desc&limit=2000'), sbGet('company_subscriptions?select=company_id,tier,status&order=created_at.desc'),
+          sbGet('saved_properties?select=user_id,building_id'), sbGet('profiles?select=id'), sbGet('companies?select=id'),
+          sbGet('listing_access_grants?select=building_id,company_id,status').catch(() => []),
+          sbGet('market_construction_costs?order=market.asc,effective_date.desc.nullslast,created_at.desc&select=market,effective_date,updated_at').catch(() => []),
+        ]);
+        const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
+        const capexByMarket = {}; capexRows.forEach((c) => { if (!capexByMarket[c.market]) capexByMarket[c.market] = c.updated_at || c.effective_date; });
+        const access = reqs.filter((r) => r.request_type === 'access'), scan = reqs.filter((r) => r.request_type === 'market-scan');
+        const listReqs = reqs.filter((r) => r.request_type === 'list-building');
+        const memReqs = reqs.filter((r) => r.request_type === 'membership' || r.request_type === 'membership-change');
+        const rentByMarket = groupAgg(units, (u) => bById[u.building_id] ? bById[u.building_id].market : null, (u) => Number(u.asking_rent));
+        const avgRentByMarket = {}, rentRangeByMarket = {};
+        Object.keys(rentByMarket).forEach((k) => { avgRentByMarket[k] = avg(rentByMarket[k]); rentRangeByMarket[k] = [Math.min(...rentByMarket[k]), Math.max(...rentByMarket[k])]; });
+        const latestSub = {}; subs.forEach((s) => { if (!latestSub[s.company_id]) latestSub[s.company_id] = s; });
+        const companiesByTier = groupCount(Object.values(latestSub).filter((s) => s.status === 'active'), (s) => s.tier);
+        const savedByBuilding = groupCount(saved, (s) => s.building_id);
+        const mostSaved = Object.entries(savedByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', saves: n }));
+        return sendJson(res, 200, { ok: true, analytics: {
+          supply: { approvedBuildings: buildings.length, approvedUnits: units.length, totalSqm: sum(units.map((u) => Number(u.size_sqm) || 0)), totalDesks: sum(units.map((u) => Number(u.desks) || 0)), listingsByMarket: groupCount(buildings, (b) => b.market), listingsBySubmarket: groupCount(buildings, (b) => b.submarket), listingsByOffering: groupCount(units, (u) => u.offering_type), avgRentByMarket, rentRangeByMarket, pendingBySource: groupCount(listReqs.filter((r) => r.status === 'pending' || r.status === 'new'), (r) => r.source_page) },
+          demand: { accessByMarket: groupCount(access, (r) => r.market), scanByMarket: groupCount(scan, (r) => r.market), requestsByCompany: groupCount(reqs, (r) => r.company), latest: reqs.slice(0, 8).map((r) => ({ type: r.request_type, market: r.market, company: r.company, email: r.email, created_at: r.created_at })) },
+          engagement: { mostSaved, totalSaves: saved.length, savedByMarket: groupCount(saved, (s) => (bById[s.building_id] || {}).market) },
+          membership: { companiesByTier, pendingMembership: memReqs.filter((r) => r.status === 'pending').length, totalCompanies: companies.length, totalUsers: profiles.length },
+          dataQuality: { buildingsMissingPhoto: buildings.filter((b) => !b.image_url).length, buildingsMissingMaps: buildings.filter((b) => !b.google_maps_url).length, unitsMissingRent: units.filter((u) => !u.asking_rent).length, unitsMissingServiceCharge: units.filter((u) => u.service_charge == null).length, buildingsNoUnits: buildings.filter((b) => !units.some((u) => u.building_id === b.id)).length, buildingsMissingAmenities: buildings.filter((b) => !Array.isArray(b.amenities) || !b.amenities.length).length, buildingsMissingParking: buildings.filter((b) => b.parking_spaces_available == null && !b.parking_arrangement).length },
+          requests: {
+            pendingByType: groupCount(reqs.filter((r) => r.status === 'pending' || r.status === 'new'), (r) => r.request_type),
+            revealByBuilding: groupCount(reqs.filter((r) => r.request_type === 'reveal-listing'), (r) => (bById[(r.payload || {}).buildingId] || {}).name || (r.payload || {}).buildingId),
+            revealByCompany: groupCount(reqs.filter((r) => r.request_type === 'reveal-listing'), (r) => r.company),
+            siteVisitsByMarket: groupCount(reqs.filter((r) => r.request_type === 'site-visit'), (r) => r.market),
+            offersByMarket: groupCount(reqs.filter((r) => r.request_type === 'offer'), (r) => r.market),
+            introductions: reqs.filter((r) => r.request_type === 'introduction').length,
+            grantsByStatus: groupCount(revealGrants, (g) => g.status),
+            listingsApproved: listReqs.filter((r) => r.status === 'approved').length,
+            listingsRejected: listReqs.filter((r) => r.status === 'rejected').length,
+          },
+          constructionCostsByMarket: capexByMarket,
+        } });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/reveal-requests') {
+        const grants = await sbGet('listing_access_grants?order=created_at.desc&select=*');
+        const buildings = await sbGet('buildings?select=id,name,market,submarket');
+        const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
+        const authUsers = await listAuthUsers(); const emailById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; });
+        return sendJson(res, 200, { ok: true, grants: grants.map((g) => ({ ...g, buildingName: (bById[g.building_id] || {}).name || g.building_id, market: (bById[g.building_id] || {}).market || '', userEmail: emailById[g.user_id] || '' })) });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/buildings') {
+        const status = (req.url.split('status=')[1] || '').split('&')[0];
+        const q = status ? `buildings?status=eq.${encodeURIComponent(status)}&order=created_at.desc&select=*` : 'buildings?order=created_at.desc&select=*';
+        const buildings = await sbGet(q);
+        const units = await sbGet('units?select=building_id');
+        const cntByB = groupCount(units, (u) => u.building_id);
+        return sendJson(res, 200, { ok: true, buildings: buildings.map((b) => ({ ...b, unitCount: cntByB[b.id] || 0 })) });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/building') {
+        const id = (req.url.split('id=')[1] || '').split('&')[0];
+        if (!id) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const building = (await sbGet(`buildings?id=eq.${encodeURIComponent(id)}&select=*`))[0];
+        if (!building) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        const units = await sbGet(`units?building_id=eq.${encodeURIComponent(id)}&order=created_at.asc&select=*`);
+        const mediaRows = await sbGet(`listing_media?building_id=eq.${encodeURIComponent(id)}&select=*`);
+        const media = [];
+        for (const m of mediaRows) { const url = await signStorageUrl(m.bucket, m.path, 3600); media.push({ ...m, signedUrl: url }); }
+        return sendJson(res, 200, { ok: true, building, units, media });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/construction-costs') {
+        return sendJson(res, 200, { ok: true, costs: await sbGet('market_construction_costs?order=market.asc,effective_date.desc.nullslast,created_at.desc&select=*') });
+      }
       const body = await readJsonBody(req);
       if (!body) return sendJson(res, 400, { ok: false, error: 'invalid_json' });
       if (urlPath === '/api/admin/approve-listing') {
@@ -622,8 +824,11 @@ function handleAdmin(req, res, urlPath) {
       if (urlPath === '/api/admin/reject-listing') {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
-        await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, false, body.reason);
+        const reasonCode = REJECTION_REASONS.includes(body.reasonCode) ? body.reasonCode : (body.reasonCode ? 'Other' : null);
+        const note = String(body.reason || body.note || '').slice(0, 500);
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_reason: reasonCode, review_note: note });
+        const reasonText = [reasonCode, note].filter(Boolean).join(reasonCode && note ? ' — ' : '');
+        await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, false, reasonText);
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-batch-row') {
@@ -633,13 +838,109 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-batch-row') {
-        await sbPatch('listing_batch_rows', `id=eq.${body.rowId}`, { status: 'rejected', errors: [String(body.reason || 'rejected by admin')] });
+        const reasonCode = REJECTION_REASONS.includes(body.reasonCode) ? body.reasonCode : (body.reasonCode ? 'Other' : null);
+        const note = String(body.reason || body.note || '').slice(0, 500);
+        const errText = [reasonCode, note].filter(Boolean).join(' — ') || 'rejected by admin';
+        await sbPatch('listing_batch_rows', `id=eq.${body.rowId}`, { status: 'rejected', review_reason: reasonCode, review_note: note, reviewed_by: user.id, reviewed_at: new Date().toISOString(), errors: [errText] });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-valid-batch') {
         const rows = await sbGet(`listing_batch_rows?batch_id=eq.${body.batchId}&status=eq.pending_review&select=*`);
         let n = 0; for (const row of rows) { await approveBatchRowRec(row, user.id); n++; }
         return sendJson(res, 200, { ok: true, approved: n });
+      }
+      if (urlPath === '/api/admin/approve-membership') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        const p = row.payload || {}, tier = p.requestedTier || body.tier;
+        if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', requested_by: user.id }]);
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        await sendMembershipDecisionEmail(row.email, row.name, tier, true);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reject-membership') {
+        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
+        await sendMembershipDecisionEmail(row.email, row.name, (row.payload || {}).requestedTier, false);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/set-tier') {
+        if (!body.companyId || !MEMBERSHIP_TIERS.includes(body.tier)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', requested_by: user.id }]);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/unpublish-building') {
+        if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('buildings', `id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
+        await sbPatch('units', `building_id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reopen-listing') {
+        if (!body.requestId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'pending', review_note: null });
+        return sendJson(res, 200, { ok: true });
+      }
+      // ── Reveal / listing access grants ───────────────────────────────────
+      if (urlPath === '/api/admin/approve-reveal') {
+        if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const g = (await sbGet(`listing_access_grants?id=eq.${body.grantId}&select=*`))[0];
+        if (!g) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'approved', granted_by: user.id, granted_at: new Date().toISOString(), expires_at: body.expiresAt || null, notes: String(body.notes || '').slice(0, 500) || null });
+        if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, true); } catch (e) {}
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/reject-reveal') {
+        if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const g = (await sbGet(`listing_access_grants?id=eq.${body.grantId}&select=*`))[0];
+        if (!g) return sendJson(res, 404, { ok: false, error: 'not_found' });
+        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'rejected', granted_by: user.id, notes: String(body.reason || '').slice(0, 500) || null });
+        if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
+        try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, false); } catch (e) {}
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/revoke-grant') {
+        if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'revoked', notes: String(body.reason || '').slice(0, 500) || null });
+        return sendJson(res, 200, { ok: true });
+      }
+      // ── Building / unit / media editing ──────────────────────────────────
+      if (urlPath === '/api/admin/update-building') {
+        if (!body.id) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const allowed = ['name', 'market', 'submarket', 'address', 'google_maps_url', 'grade', 'year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'certifications', 'amenities', 'parking_spaces_available', 'parking_arrangement', 'parking_included_in_rent', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_available', 'parking_monthly_membership_price', 'parking_notes', 'image_url', 'status'];
+        const fields = body.fields || {}; const patch = {};
+        for (const k of allowed) if (k in fields) patch[k] = fields[k];
+        if (!Object.keys(patch).length) return sendJson(res, 400, { ok: false, error: 'no_fields' });
+        await sbPatch('buildings', `id=eq.${encodeURIComponent(body.id)}`, patch);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/update-unit') {
+        if (!body.id) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const allowed = ['unit_floor', 'size_sqm', 'offering_type', 'fit_out', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'service_charge', 'service_charge_basis', 'availability_date', 'min_term', 'notes', 'allocated_parking_spaces', 'parking_included', 'unit_parking_price', 'status'];
+        const fields = body.fields || {}; const patch = {};
+        for (const k of allowed) if (k in fields) patch[k] = fields[k];
+        if (!Object.keys(patch).length) return sendJson(res, 400, { ok: false, error: 'no_fields' });
+        await sbPatch('units', `id=eq.${encodeURIComponent(body.id)}`, patch);
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/set-media-flags') {
+        if (!body.mediaId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const patch = {};
+        ['is_public_safe', 'is_main', 'approved_for_public'].forEach((k) => { if (k in body) patch[k] = !!body[k]; });
+        if (!Object.keys(patch).length) return sendJson(res, 400, { ok: false, error: 'no_fields' });
+        if (patch.is_main === true && body.buildingId) await sbPatch('listing_media', `building_id=eq.${encodeURIComponent(body.buildingId)}&id=neq.${body.mediaId}`, { is_main: false });
+        await sbPatch('listing_media', `id=eq.${body.mediaId}`, patch);
+        return sendJson(res, 200, { ok: true });
+      }
+      // ── Construction / CAPEX inputs ──────────────────────────────────────
+      if (urlPath === '/api/admin/save-construction-costs') {
+        if (!body.market || !body.currency) return sendJson(res, 400, { ok: false, error: 'market_currency_required' });
+        const numFields = ['shell_core_to_cat_a_per_sqm', 'cat_a_to_cat_b_per_sqm', 'fitout_basic_per_sqm', 'fitout_standard_per_sqm', 'fitout_premium_per_sqm', 'furniture_per_workstation', 'it_av_per_workstation', 'professional_fees_pct', 'contingency_pct', 'reinstatement_per_sqm', 'moving_cost_allowance'];
+        const rec = { market: String(body.market), currency: String(body.currency), effective_date: dateOrNull(body.effective_date), notes: String(body.notes || '').slice(0, 1000) || null, updated_by: user.id, updated_at: new Date().toISOString() };
+        numFields.forEach((k) => { rec[k] = numOrNull(body[k]); });
+        const inserted = await insertSupabaseTable('market_construction_costs', rec);
+        return sendJson(res, 200, { ok: true, id: Array.isArray(inserted) && inserted[0] ? inserted[0].id : null });
       }
       return sendJson(res, 404, { ok: false, error: 'unknown_admin_endpoint' });
     } catch (e) {
@@ -725,6 +1026,229 @@ function handleBatch(req, res) {
   });
 }
 
+// ── Public listings (anonymized by default; reveal via access grants) ────────
+// Sensitive identity (name, address, maps pin, operator/contact, raw photos,
+// floorplans) is NEVER sent unless the caller has an approved listing_access_grant.
+// Enforced server-side with the service role — the anon key cannot read these
+// tables directly (RLS read policies were dropped in the prod-2 migration).
+function anonLabel(b) {
+  const mkt = marketName(b.market) || b.market || '';
+  const g = b.grade ? ('Grade ' + String(b.grade).replace(/^grade\s*/i, '').toUpperCase()) : 'Verified';
+  return `Verified ${g} Building${mkt ? ' — ' + mkt : ''}`;
+}
+function shapeListingServer(b, units, mediaByB, granted) {
+  const sizes = units.map((u) => Number(u.size_sqm)).filter((n) => !isNaN(n) && n > 0);
+  const rents = units.map((u) => Number(u.asking_rent)).filter((n) => !isNaN(n) && n > 0);
+  const cur = (units.find((u) => u.currency) || {}).currency || '';
+  const basis = (units.find((u) => u.pricing_basis) || {}).pricing_basis || '';
+  const media = mediaByB[b.id] || [];
+  const hasPublicImage = media.some((m) => m.approved_for_public);
+  const label = anonLabel(b);
+  return {
+    id: b.id, revealed: !!granted, anonymized: !granted,
+    name: granted ? b.name : label, label,
+    market: b.market, submarket: b.submarket || '', grade: b.grade || 'A',
+    gla: Number(b.total_gla_sqm) || 0, floorplate: Number(b.typical_floorplate_sqm) || 0,
+    floors: Number(b.floors) || 0, yearBuilt: Number(b.year_built) || null,
+    buildingHeight: b.building_height_m != null ? Number(b.building_height_m) : null,
+    availMin: sizes.length ? Math.min(...sizes) : 0, availMax: sizes.length ? Math.max(...sizes) : 0,
+    rentMin: rents.length ? Math.min(...rents) : 0, rentMax: rents.length ? Math.max(...rents) : 0,
+    rentCurrency: cur, rentUnit: (basis || '').replace(/^per\s+/, ''),
+    sustainability: Array.isArray(b.certifications) ? b.certifications : [],
+    amenities: Array.isArray(b.amenities) ? b.amenities : [],
+    parking: {
+      spaces: b.parking_spaces_available != null ? Number(b.parking_spaces_available) : null,
+      arrangement: b.parking_arrangement || '', includedInRent: b.parking_included_in_rent || '',
+      pricePerSpotMonth: b.parking_price_per_spot_month != null ? Number(b.parking_price_per_spot_month) : null,
+      visitorHourly: b.visitor_parking_hourly_rate != null ? Number(b.visitor_parking_hourly_rate) : null,
+      monthlyMembership: !!b.parking_monthly_membership_available,
+      monthlyMembershipPrice: b.parking_monthly_membership_price != null ? Number(b.parking_monthly_membership_price) : null,
+      notes: granted ? (b.parking_notes || '') : '',
+    },
+    hasPublicImage, image: hasPublicImage ? ('/api/listing-image?b=' + encodeURIComponent(b.id)) : null,
+    address: granted ? (b.address || '') : '', mapsUrl: granted ? (b.google_maps_url || '') : '',
+    units: units.map((u) => ({ id: u.id, floor: u.unit_floor, size: Number(u.size_sqm) || 0, desks: Number(u.desks) || 0, meetingRooms: Number(u.meeting_rooms) || 0, rent: Number(u.asking_rent) || 0, type: u.offering_type, fitOut: u.fit_out || '' })),
+  };
+}
+async function approvedGrantsFor(userId) {
+  const set = new Set();
+  if (!userId) return set;
+  try {
+    const grants = await sbGet(`listing_access_grants?user_id=eq.${userId}&status=eq.approved&select=building_id,expires_at`);
+    const now = Date.now();
+    grants.forEach((g) => { if (!g.expires_at || new Date(g.expires_at).getTime() > now) set.add(g.building_id); });
+  } catch (e) {}
+  return set;
+}
+// Create a short-lived signed URL for a private storage object (service role).
+async function signStorageUrl(bucket, objectPath, expiresIn = 3600) {
+  const base = process.env.SUPABASE_URL;
+  if (!base || !bucket || !objectPath) return null;
+  if (bucket === 'external') return objectPath; // batch rows store the public URL as the path
+  try {
+    const body = JSON.stringify({ expiresIn });
+    const enc = String(objectPath).split('/').map(encodeURIComponent).join('/');
+    const r = await httpsRequest(`${base.replace(/\/$/, '')}/storage/v1/object/sign/${bucket}/${enc}`, { method: 'POST', headers: { ...sbHeaders(), 'Content-Length': Buffer.byteLength(body) } }, body);
+    if (r.status < 200 || r.status >= 300) return null;
+    const j = JSON.parse(r.body || '{}');
+    const signed = j.signedURL || j.signedUrl;
+    return signed ? (base.replace(/\/$/, '') + '/storage/v1' + signed) : null;
+  } catch (e) { return null; }
+}
+
+function handlePublicListings(req, res) {
+  (async () => {
+    try {
+      const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+      let grantedIds = new Set();
+      if (token) { const user = await getAuthUser(token); if (user && user.id) grantedIds = await approvedGrantsFor(user.id); }
+      const [buildings, units, media] = await Promise.all([
+        sbGet('buildings?status=eq.approved&select=*'),
+        sbGet('units?status=eq.approved&select=*'),
+        // Isolated: if the media flag columns don't exist yet (pre-migration),
+        // don't blank the whole listing set — just treat as no public images.
+        sbGet('listing_media?select=building_id,approved_for_public,is_main').catch(() => []),
+      ]);
+      const unitsByB = {}; units.forEach((u) => { (unitsByB[u.building_id] = unitsByB[u.building_id] || []).push(u); });
+      const mediaByB = {}; media.forEach((m) => { (mediaByB[m.building_id] = mediaByB[m.building_id] || []).push(m); });
+      const out = buildings.map((b) => shapeListingServer(b, unitsByB[b.id] || [], mediaByB, grantedIds.has(b.id)));
+      return sendJson(res, 200, { ok: true, buildings: out });
+    } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [] }); }
+  })();
+}
+
+// 302 → signed URL of the public-safe main image. Only approved_for_public media
+// is ever signed here, so no auth is required and nothing private leaks.
+function handleListingImage(req, res) {
+  (async () => {
+    try {
+      const u = new URL(req.url, 'http://x'); const bId = u.searchParams.get('b');
+      if (!bId) { res.writeHead(400); return res.end(); }
+      const media = await sbGet(`listing_media?building_id=eq.${encodeURIComponent(bId)}&approved_for_public=eq.true&select=bucket,path,is_main,created_at&order=is_main.desc,created_at.asc`);
+      const m = media[0];
+      if (!m) { res.writeHead(404); return res.end(); }
+      const signed = await signStorageUrl(m.bucket, m.path, 3600);
+      if (!signed) { res.writeHead(404); return res.end(); }
+      res.writeHead(302, { Location: signed, 'Cache-Control': 'private, max-age=600' }); return res.end();
+    } catch (e) { res.writeHead(404); return res.end(); }
+  })();
+}
+
+// Full media gallery (signed URLs). Public-safe images for everyone; the complete
+// set only for admins or users with an approved grant for that building.
+function handleListingMedia(req, res) {
+  (async () => {
+    try {
+      const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+      const user = await getAuthUser(token);
+      const u = new URL(req.url, 'http://x'); const bId = u.searchParams.get('b');
+      if (!bId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+      let admin = false, granted = false;
+      if (user && user.id) {
+        admin = await isAdmin(user.id);
+        if (!admin) { const set = await approvedGrantsFor(user.id); granted = set.has(bId); }
+      }
+      const canSeeAll = admin || granted;
+      const filter = canSeeAll ? '' : '&approved_for_public=eq.true';
+      const media = await sbGet(`listing_media?building_id=eq.${encodeURIComponent(bId)}&select=id,bucket,path,kind,is_main,approved_for_public${filter}`);
+      const out = [];
+      for (const m of media) { const url = await signStorageUrl(m.bucket, m.path, 3600); if (url) out.push({ id: m.id, kind: m.kind, isMain: !!m.is_main, publicSafe: !!m.approved_for_public, url }); }
+      return sendJson(res, 200, { ok: true, media: out, revealed: canSeeAll });
+    } catch (e) { return sendJson(res, 200, { ok: true, media: [], revealed: false }); }
+  })();
+}
+
+// Branded emails for in-app listing requests (reveal / site-visit / offer / intro).
+async function sendListingRequestEmails(type, info, payload, requestId, createdAt) {
+  const requestsFrom = process.env.REQUESTS_FROM || process.env.LEAD_FROM;
+  const noReplyFrom = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+  const label = IN_APP_LABELS[type] || 'Request';
+  const mkt = marketName(info.market) || info.market || '';
+  // Admin notification — admins may see the real building identity.
+  const adminRows = emailRow('Type', label) + emailRow('User', info.name) + emailRow('Email', info.email) +
+    emailRow('Company', info.company) + emailRow('Building', info.buildingName) + emailRow('Market', mkt) +
+    (payload.unitId ? emailRow('Unit', payload.unitId) : '') +
+    (payload.proposedDate ? emailRow('Proposed date/time', payload.proposedDate) : '') +
+    (payload.offerAmount != null ? emailRow('Offer amount', String(payload.offerAmount)) : '') +
+    (payload.offerTerms ? emailRow('Offer terms', payload.offerTerms) : '') +
+    (Array.isArray(payload.requestedFields) && payload.requestedFields.length ? emailRow('Fields requested', payload.requestedFields.join(', ')) : '') +
+    (payload.message ? emailRow('Message', payload.message) : '');
+  const adminInner = emailSection(label, adminRows) + emailSection('Reference', emailRow('Reference', requestId) + emailRow('Building ID', payload.buildingId));
+  try {
+    await sendResendEmail({
+      subject: `${label}: ${info.buildingName || ''} — ${info.company || info.email || ''}`,
+      html: emailShell('New ' + label, type === 'offer' ? 'Offer' : 'Request', adminInner),
+      text: `${label}\nUser: ${info.name || '—'} (${info.email || '—'})\nCompany: ${info.company || '—'}\nBuilding: ${info.buildingName || '—'}\nMarket: ${mkt}`,
+      from: requestsFrom, replyTo: info.email || undefined,
+    });
+  } catch (e) { console.error('[listing-request] admin email:', e.message); }
+  // User confirmation — anonymized, does NOT reveal the building identity.
+  if (info.email) {
+    const anon = `verified building${mkt ? ' in ' + mkt : ''}`;
+    const uInner = `<tr><td style="padding:20px 24px 4px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(info.name || 'there')},</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">We&#39;ve received your ${escapeHtml(label.toLowerCase())} for a ${escapeHtml(anon)}. Our team will review it and follow up shortly.</p></td></tr>` +
+      emailSection('Your request', emailRow('Request', label) + emailRow('Market', mkt) + (payload.proposedDate ? emailRow('Proposed date/time', payload.proposedDate) : '') + (payload.offerAmount != null ? emailRow('Offer amount', String(payload.offerAmount)) : '')) +
+      emailSection('Reference', emailRow('Reference', requestId) + emailRow('Submitted', createdAt || new Date().toISOString()));
+    try { await sendResendEmail({ subject: `URBN Offices — ${label} received`, html: emailShell(label + ' received', 'Received', uInner), text: `Hi ${info.name || 'there'},\n\nWe received your ${label.toLowerCase()}. Our team will follow up shortly.\n\nReference: ${requestId || '—'}\n\n— URBN Offices`, from: noReplyFrom, to: info.email }); }
+    catch (e) { console.error('[listing-request] user email:', e.message); }
+  }
+}
+
+function handleListingRequest(req, res) {
+  (async () => {
+    const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+    const user = await getAuthUser(token);
+    if (!user || !user.id) return sendJson(res, 401, { ok: false, error: 'not_authenticated' });
+    const data = await readJsonBody(req);
+    if (!data) return sendJson(res, 400, { ok: false, error: 'invalid_json' });
+    const type = String(data.type || '');
+    if (!IN_APP_REQUEST_TYPES.includes(type)) return sendJson(res, 400, { ok: false, error: 'invalid_type' });
+    const buildingId = String(data.buildingId || '').slice(0, 200);
+    if (!buildingId) return sendJson(res, 400, { ok: false, error: 'building_required' });
+    try {
+      const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(buildingId)}&select=id,market,status,name`))[0];
+      if (!b || b.status !== 'approved') return sendJson(res, 404, { ok: false, error: 'building_not_found' });
+      const prof = (await sbGet(`profiles?id=eq.${user.id}&select=full_name,company_id`))[0] || {};
+      let companyName = '';
+      if (prof.company_id) { const c = (await sbGet(`companies?id=eq.${prof.company_id}&select=name`))[0]; companyName = (c && c.name) || ''; }
+      const s = (v) => (typeof v === 'string' ? v.trim() : (v == null ? '' : String(v))).slice(0, 2000);
+      const payload = {
+        userId: user.id, companyId: prof.company_id || null, buildingId, unitId: s(data.unitId) || null,
+        proposedDate: s(data.proposedDate) || null, offerAmount: data.offerAmount != null && data.offerAmount !== '' ? (Number(data.offerAmount) || null) : null,
+        offerTerms: s(data.offerTerms) || null, requestedFields: Array.isArray(data.requestedFields) ? data.requestedFields.slice(0, 30).map((x) => String(x).slice(0, 60)) : null,
+        message: s(data.message) || null,
+      };
+      const row = { request_type: type, source_page: s(data.sourcePage) || null, name: prof.full_name || null, email: user.email || null, company: companyName || null, market: b.market || null, message: payload.message, payload, status: 'pending' };
+      const inserted = await insertSupabase(row);
+      const requestId = (Array.isArray(inserted) && inserted[0] && inserted[0].id) || null;
+      const createdAt = (Array.isArray(inserted) && inserted[0] && inserted[0].created_at) || null;
+      if (type === 'reveal-listing') {
+        try { await insertSupabaseTable('listing_access_grants', [{ user_id: user.id, company_id: prof.company_id || null, building_id: buildingId, unit_id: payload.unitId, request_id: requestId, status: 'requested' }]); }
+        catch (e) { console.error('[listing-request] grant insert:', e.message); }
+      }
+      try { await sendListingRequestEmails(type, { name: prof.full_name, email: user.email, company: companyName, market: b.market, buildingName: b.name }, payload, requestId, createdAt); }
+      catch (e) { console.error('[listing-request] email:', e.message); }
+      return sendJson(res, 200, { ok: true, requestId });
+    } catch (e) { console.error('[listing-request]', e.message); return sendJson(res, 500, { ok: false, error: 'server_error', detail: String(e.message || '').slice(0, 200) }); }
+  })();
+}
+
+// Latest construction-cost inputs per market (used by the Stay vs Go tool).
+function handleConstructionCosts(req, res) {
+  let market = null;
+  (async () => {
+    try {
+      const u = new URL(req.url, 'http://x'); market = u.searchParams.get('market');
+      if (market) {
+        const rows = await sbGet(`market_construction_costs?market=eq.${encodeURIComponent(market)}&order=effective_date.desc.nullslast,created_at.desc&limit=1&select=*`);
+        return sendJson(res, 200, { ok: true, market, costs: rows[0] || null });
+      }
+      const rows = await sbGet('market_construction_costs?order=market.asc,effective_date.desc.nullslast,created_at.desc&select=*');
+      const latest = {}; rows.forEach((r) => { if (!latest[r.market]) latest[r.market] = r; });
+      return sendJson(res, 200, { ok: true, costs: Object.values(latest) });
+    } catch (e) { return sendJson(res, 200, { ok: true, costs: market ? null : [] }); }
+  })();
+}
+
 // ── Server ───────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split('?')[0];
@@ -737,6 +1261,22 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/batch') {
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handleBatch(req, res);
+  }
+
+  // Public/anonymized listings + controlled media + in-app listing requests.
+  if (urlPath === '/api/listings') {
+    if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handlePublicListings(req, res);
+  }
+  if (urlPath === '/api/listing-image') return handleListingImage(req, res);
+  if (urlPath === '/api/listing-media') return handleListingMedia(req, res);
+  if (urlPath === '/api/listing-request') {
+    if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handleListingRequest(req, res);
+  }
+  if (urlPath === '/api/construction-costs') {
+    if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handleConstructionCosts(req, res);
   }
 
   if (urlPath.startsWith('/api/admin/')) {
@@ -753,7 +1293,37 @@ const server = http.createServer((req, res) => {
       // Dummy/static listings are OFF by default; only the public approved
       // Supabase listings show unless this is explicitly enabled.
       showDemoListings: String(process.env.SHOW_DEMO_LISTINGS || '').toLowerCase() === 'true',
+      // Controlled vocab shared by the listing form + admin console.
+      amenityOptions: AMENITY_OPTIONS,
+      parkingArrangements: PARKING_ARRANGEMENTS,
+      parkingIncluded: PARKING_INCLUDED,
+      rejectionReasons: REJECTION_REASONS,
     });
+  }
+
+  // ── Subdomain-aware routing ────────────────────────────────────────────────
+  // admin.<domain> and user.<domain> map clean routes to the real page files via
+  // redirect (so relative asset paths keep working). Public host is unaffected.
+  // Staging (urbn-staging.up.railway.app) keeps serving every file directly.
+  const host = String(req.headers.host || '').toLowerCase();
+  if (host.startsWith('admin.')) {
+    const m = {
+      '/': '/pages/dashboards/admin.html', '/dashboard': '/pages/dashboards/admin.html',
+      '/pending-listings': '/pages/dashboards/admin.html?tab=pending', '/batch-uploads': '/pages/dashboards/admin.html?tab=batches',
+      '/approved-listings': '/pages/dashboards/admin.html?tab=approved', '/rejected-listings': '/pages/dashboards/admin.html?tab=rejected',
+      '/users': '/pages/dashboards/admin.html?tab=users', '/companies': '/pages/dashboards/admin.html?tab=companies',
+      '/membership-requests': '/pages/dashboards/admin.html?tab=membership', '/analytics': '/pages/dashboards/admin.html?tab=analytics',
+      '/settings': '/pages/dashboards/admin.html?tab=overview',
+    };
+    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
+  } else if (host.startsWith('user.')) {
+    const m = {
+      '/': '/pages/dashboards/tenant.html', '/dashboard': '/pages/dashboards/tenant.html',
+      '/account': '/pages/account.html', '/saved': '/pages/dashboards/tenant.html?tab=shortlist',
+      '/requests': '/pages/dashboards/tenant.html?tab=requests', '/listings': '/pages/list-building.html',
+      '/batch-upload': '/pages/operator/batch-upload.html', '/membership': '/pages/subscription.html',
+    };
+    if (m[urlPath]) { res.writeHead(302, { Location: m[urlPath] }); return res.end(); }
   }
 
   let reqPath = urlPath;
