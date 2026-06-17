@@ -401,8 +401,12 @@ function renderComparison() {
   const headCell = (c) => {
     if (c.current) return '<div style="height:84px;display:flex;align-items:flex-end;"><strong>Your current office</strong></div>';
     const img = c.b.image || fb(c.b.market);
+    const blur = c.b.imageClear === false;
     return `<div style="display:flex;flex-direction:column;gap:6px;">
-      <img src="${img}" onerror="this.onerror=null;this.src='${fb(c.b.market)}'" alt="${sgEsc(c.b.name)}" style="width:100%;max-width:170px;height:84px;object-fit:cover;border-radius:4px;">
+      <div style="position:relative;width:100%;max-width:170px;">
+        <img src="${img}" onerror="this.onerror=null;this.src='${fb(c.b.market)}'" alt="${sgEsc(c.b.name)}" style="width:100%;height:84px;object-fit:cover;border-radius:4px;${blur ? 'filter:blur(16px);transform:scale(1.08);' : ''}">
+        ${blur ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:8px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;">🔒 Upgrade</span></div>' : ''}
+      </div>
       <strong style="font-size:12.5px;">${sgEsc(c.b.name)}${c.b.revealed ? '' : ' <span class="badge badge-gated" style="font-size:8px;">anonymised</span>'}</strong>
     </div>`;
   };
