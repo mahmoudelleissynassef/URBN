@@ -33,6 +33,7 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
 const DISTS = [
   {name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'The dominant Grade A office submarket in Cairo. Home to modern towers with generous floor plates and strong parking ratios. Preferred by multinationals requiring corporate-grade infrastructure.',rent:'EGP 950–1,400 / sqm / month',connect:'Ring Road access · No metro direct',bcount:2},
@@ -49,12 +50,13 @@ const DISTS = [
   {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman\'s modern CBD — master-planned mixed-use district with Grade A towers, retail, and hotels. Preferred address for regional HQs and NGOs.',rent:'JOD 14–22 / sqm / month',connect:'Key junction · Accessible from all districts',bcount:1},
 ];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
+  await URBN_LISTINGS.load();
   const list = document.getElementById('dist-list');
   DISTS.forEach(d => {
-    const bcount = URBN_DATA.buildings.filter(b => b.market === d.market && b.submarket === d.name).length || d.bcount;
+    const bcount = URBN_LISTINGS.buildings.filter(b => b.market === d.market && b.submarket === d.name).length;
     list.innerHTML += `
     <div style="padding:28px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;align-items:start;">
       <div>

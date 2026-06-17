@@ -45,22 +45,25 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
   const sel = document.getElementById('bd-market');
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+  await URBN_LISTINGS.load();
   filterBuildings();
 });
 function filterBuildings() {
-  let res = [...URBN_DATA.buildings];
+  let res = [...URBN_LISTINGS.buildings];
   const m = document.getElementById('bd-market').value;
   const g = document.getElementById('bd-grade').value;
   if (m) res = res.filter(b => b.market === m);
   if (g) res = res.filter(b => b.grade === g);
   const grid = document.getElementById('bd-grid');
-  grid.innerHTML = res.map(b => renderCard(b, '../')).join('');
+  const mktName = m ? (URBN_DATA.markets.find(x => x.id === m) || {}).name : '';
+  grid.innerHTML = res.length ? res.map(b => renderCard(b, '../')).join('') : listingsEmptyState('../', mktName);
 }
 </script>
 </body>

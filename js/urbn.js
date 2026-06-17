@@ -101,7 +101,7 @@ function injectNav(base='') {
         <div class="logo-mark">U</div>
         <div>
           <span class="logo-text">URBN</span>
-          <span class="logo-sub">Office Intelligence</span>
+          <span class="logo-sub" style="text-transform:none;letter-spacing:.02em;">a Heirstone Consulting company</span>
         </div>
       </a>
       <div class="nav-links">
@@ -215,10 +215,9 @@ function injectFooter(base='') {
           <div class="fc-title">Company</div>
           <ul>
             <li><a href="${base}pages/list-building.html">List Your Building</a></li>
+            <li><a href="${base}pages/subscription.html">Pricing</a></li>
+            <li><a href="${base}pages/market-scan.html">Contact</a></li>
             <li><a href="${base}pages/dashboards/tenant.html">Dashboard</a></li>
-            <li><a href="${base}pages/managers.html">Contacts</a></li>
-            <li><a href="${base}pages/subscription.html">Access & Pricing</a></li>
-            <li><a href="${base}pages/tools/stay-vs-go.html">Stay vs Go</a></li>
           </ul>
         </div>
         <div class="fc">
@@ -442,6 +441,7 @@ function getImg(m){return IMG[m]||IMG.cairo;}
 // Per-building image first (so distinct listings never share a landmark),
 // falling back to the market image, then a neutral default.
 function imgFor(b){
+  if (b && b.image) return b.image; // real listing's own image
   if (b && typeof URBN_DATA!=='undefined' && URBN_DATA.buildingImages && URBN_DATA.buildingImages[b.id]) {
     return URBN_DATA.buildingImages[b.id];
   }

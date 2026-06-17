@@ -120,7 +120,7 @@
   <div class="w">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(194,163,107,0.5);">
       <div style="padding:32px 32px 0 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;" id="stat-markets">16</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Active Markets</div></div>
-      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">200+</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Verified Buildings</div></div>
+      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;" id="stat-buildings">—</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Verified Buildings</div></div>
       <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">A/A+</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Grade Standard Only</div></div>
       <div style="padding:32px 0 0 32px;"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">24mo</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Introduction Protection</div></div>
     </div>
@@ -143,9 +143,11 @@
 <div id="footer-placeholder"></div>
 <script src="data/data.js"></script>
 <script src="js/urbn.js"></script>
+<script src="js/listings.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',async ()=>{
   injectNav(''); injectFooter('');
+  await URBN_LISTINGS.load();
 
   // Ticker
   const ticker=document.getElementById('ticker');
@@ -155,15 +157,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   }).join('');
   ticker.innerHTML=items+items;
 
-  // Featured
+  // Featured (approved listings only; clean empty state when none)
   const fg=document.getElementById('featured-grid');
-  URBN_DATA.buildings.slice(0,6).forEach(b=>fg.innerHTML+=renderCard(b,''));
+  const feat=URBN_LISTINGS.buildings.slice(0,6);
+  fg.innerHTML = feat.length ? feat.map(b=>renderCard(b,'')).join('') : listingsEmptyState('', '');
 
   // City cards
   const mg=document.getElementById('markets-grid');
   URBN_DATA.markets.slice(0,8).forEach(m=>{
     const s=URBN_DATA.marketStats[m.id];
-    const bc=URBN_DATA.buildings.filter(b=>b.market===m.id).length;
+    const bc=URBN_LISTINGS.count(m.id);
     const subs=m.submarkets.slice(0,2).join(', ');
     mg.innerHTML+=`<a href="pages/search.html?m=${m.id}" class="city-card">
       <div class="city-card-region">${m.region}</div>
@@ -198,9 +201,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     <div class="district-rent-label">Indicative rent band</div>
   </a>`);
 
-  // Keep the "Active Markets" headline stat in sync with the data.
+  // Keep headline stats in sync with the data — no fake counts.
   const sm=document.getElementById('stat-markets');
   if(sm) sm.textContent=URBN_DATA.markets.length;
+  const sb=document.getElementById('stat-buildings');
+  if(sb) sb.textContent=URBN_LISTINGS.buildings.length;
 });
 </script>
 </body>

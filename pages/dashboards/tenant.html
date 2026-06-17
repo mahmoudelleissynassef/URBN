@@ -73,20 +73,25 @@
 <div id="footer-placeholder"></div>
 <script src="../../data/data.js"></script>
 <script src="../../js/urbn.js"></script>
+<script src="../../js/listings.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
   const user = await URBNAuth.requireAuth('/pages/signin.html');
   if (!user) return;
+  await URBN_LISTINGS.load();
   await loadDashboard(user);
 });
+function unavailableCard(id) {
+  return `<div class="lc" style="opacity:.7;"><div class="lc-body"><div class="lc-name">Saved building</div><div class="lc-district">No longer available</div><p style="font-size:12px;color:var(--text-2);margin-top:10px;line-height:1.6;">This building is no longer approved/live. Reference: ${String(id).replace(/[^a-zA-Z0-9_-]/g,'')}</p></div></div>`;
+}
 
 function fmtDate(s) { try { return new Date(s).toISOString().split('T')[0]; } catch (e) { return s || ''; } }
 function tableEmpty(msg) { return `<div style="padding:40px 22px;text-align:center;color:var(--text-2);font-size:13px;">${msg}</div>`; }
 
 async function loadDashboard(user) {
   const c = URBNAuth.client;
-  let profile = null, company = null, sub = null, saved = [], requests = [], tablesMissing = false;
+  let profile = null, company = null, sub = null, subsList = [], saved = [], requests = [], tablesMissing = false;
 
   try {
     const { data: p } = await c.from('profiles').select('*').eq('id', user.id).maybeSingle();
@@ -94,8 +99,9 @@ async function loadDashboard(user) {
     if (p && p.company_id) {
       const { data: co } = await c.from('companies').select('*').eq('id', p.company_id).maybeSingle();
       company = co || null;
-      const { data: s } = await c.from('company_subscriptions').select('*').eq('company_id', p.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle();
-      sub = s || null;
+      const { data: subs } = await c.from('company_subscriptions').select('*').eq('company_id', p.company_id).order('created_at', { ascending: false }).limit(20);
+      subsList = Array.isArray(subs) ? subs : [];
+      sub = subsList[0] || null;
     }
   } catch (e) { tablesMissing = true; }
 
@@ -112,17 +118,21 @@ async function loadDashboard(user) {
   // Identity
   const name = (profile && profile.full_name) || user.email;
   const companyName = (company && company.name) || (profile && profile.company_id ? '' : '');
-  const tier = (sub && sub.tier) || (profile && profile.requested_tier) || 'free';
-  const status = (sub && sub.status) || 'requested';
+  const activeSub = subsList.find(x => x.status === 'active') || null;
+  const requestedSub = subsList.find(x => x.status === 'requested') || null;
+  const currentTier = (activeSub && activeSub.tier) || (!subsList.length && profile && profile.requested_tier) || 'free';
+  const requestedTier = requestedSub ? requestedSub.tier : null;
+  const status = sub ? sub.status : '—';
+  const requestDate = sub ? fmtDate(sub.created_at) : '—';
   document.getElementById('dash-name').textContent = name;
   document.getElementById('dash-company').textContent = companyName || '—';
-  document.getElementById('dash-tier').textContent = tier;
+  document.getElementById('dash-tier').textContent = currentTier;
   document.getElementById('dash-greeting').textContent = 'Welcome, ' + name.split('@')[0];
-  document.getElementById('dash-sub').textContent = (companyName ? companyName + ' · ' : '') + tier + ' · ' + status;
+  document.getElementById('dash-sub').textContent = (companyName ? companyName + ' · ' : '') + 'Current: ' + currentTier + (requestedTier ? ' · Requested: ' + requestedTier + ' (' + status + ')' : '');
   document.getElementById('kpi-saved').textContent = saved.length;
   document.getElementById('kpi-requests').textContent = requests.length;
-  document.getElementById('kpi-tier').textContent = tier;
-  document.getElementById('kpi-tier-status').textContent = status;
+  document.getElementById('kpi-tier').textContent = currentTier;
+  document.getElementById('kpi-tier-status').textContent = requestedTier ? ('Requested ' + requestedTier + ' · ' + status + ' · ' + requestDate) : (status === '—' ? 'No active request' : status + ' · ' + requestDate);
 
   if (tablesMissing && !profile) {
     document.getElementById('dash-notice').innerHTML =
@@ -131,9 +141,11 @@ async function loadDashboard(user) {
 
   // Saved properties (joined with current building data source)
   const grid = document.getElementById('shortlist-grid');
-  const savedBuildings = saved.map(id => URBN_DATA.buildings.find(b => b.id === id)).filter(Boolean);
-  grid.innerHTML = savedBuildings.map(b => renderCard(b, '../')).join('');
-  document.getElementById('shortlist-empty').innerHTML = savedBuildings.length ? '' :
+  grid.innerHTML = saved.map(id => {
+    const b = URBN_LISTINGS.find(id);
+    return b ? renderCard(b, '../') : unavailableCard(id);
+  }).join('');
+  document.getElementById('shortlist-empty').innerHTML = saved.length ? '' :
     `<div style="padding:30px 0;color:var(--text-2);font-size:14px;">No saved properties yet. Browse <a href="../search.html" class="text-navy" style="text-decoration:underline;">offices</a> and tap the heart to save.</div>`;
 
   // Requests table

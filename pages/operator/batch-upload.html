@@ -82,6 +82,9 @@ function validateRow(r) {
   if (DESK_OFFERINGS.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
   if (AREA_OFFERINGS.includes(r.offering_type) && !num(r.unit_size_sqm)) errs.push('unit_size_sqm');
   if (r.service_charge && !num(r.service_charge)) errs.push('service_charge');
+  const isUrl = x => /^https?:\/\/\S+$/i.test(String(x || '').trim());
+  for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
+  for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }
   return errs;
 }
 

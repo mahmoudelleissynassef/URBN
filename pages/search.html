@@ -128,18 +128,20 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
 let F = { market: [], grade: [], cert: [], cond: [] };
 let view = 'buildings';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
+  await URBN_LISTINGS.load();
 
   // Market chips
   const mc = document.getElementById('market-chips');
   URBN_DATA.markets.forEach(m => {
-    const count = URBN_DATA.buildings.filter(b => b.market === m.id).length;
+    const count = URBN_LISTINGS.count(m.id);
     const btn = document.createElement('button');
     btn.className = 'chip'; if (!count) btn.classList.add('chip-empty');
     btn.innerHTML = `${m.name} <span class="chip-count">${count}</span>`;
@@ -207,7 +209,7 @@ function resetFilters() {
 }
 
 function applyFilters() {
-  let res = [...URBN_DATA.buildings];
+  let res = [...URBN_LISTINGS.buildings];
   if (F.market.length) res = res.filter(b => F.market.includes(b.market));
   if (F.grade.length) res = res.filter(b => F.grade.includes(b.grade));
   if (F.cert.length) res = res.filter(b => F.cert.some(c => b.sustainability.some(s => s.includes(c))));

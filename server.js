@@ -27,7 +27,10 @@ const REQUEST_TYPES = {
   'access': 'Request Access',
   'market-scan': 'Market Scan',
   'list-building': 'List Your Building',
+  'membership': 'Membership Request',
+  'membership-change': 'Membership Change',
 };
+const MEMBERSHIP_TIERS = ['free', 'starter', 'membership', 'enterprise'];
 
 // Market -> local currency (mirror of data/data.js). Allowed quoting currencies
 // per market = [local, USD] (+ EUR for XOF / Francophone West African markets).
@@ -121,13 +124,13 @@ async function insertSupabase(row) {
   return JSON.parse(r.body || '[]');
 }
 
-async function sendResendEmail({ subject, text, html, replyTo, from }) {
+async function sendResendEmail({ subject, text, html, replyTo, from, to }) {
   const key = process.env.RESEND_API_KEY;
   const fromAddr = from || process.env.LEAD_FROM;
-  const to = process.env.LEAD_TO;
-  if (!key || !fromAddr || !to) throw new Error('resend_env_missing');
+  const toAddr = to || process.env.LEAD_TO;
+  if (!key || !fromAddr || !toAddr) throw new Error('resend_env_missing');
   const body = JSON.stringify({
-    from: fromAddr, to: [to], subject, text, html,
+    from: fromAddr, to: [toAddr], subject, text, html,
     ...(replyTo ? { reply_to: replyTo } : {}),
   });
   const r = await httpsRequest('https://api.resend.com/emails', {
@@ -226,6 +229,57 @@ function buildGenericEmail(label, fields, payload) {
   return { html, text };
 }
 
+function buildMembershipAdminEmail(data, payload) {
+  const inner = emailSection('Membership Request',
+    emailRow('Name', data.name) + emailRow('Email', data.email) + emailRow('Company', data.company) +
+    emailRow('Current Tier', data.currentTier) + emailRow('Requested Tier', data.requestedTier)) + rawPayloadRow(payload);
+  return {
+    subject: `Membership request: ${data.requestedTier || '?'} — ${data.company || data.email || ''}`,
+    html: emailShell('New Membership Request', 'Membership Requested', inner),
+    text: `NEW MEMBERSHIP REQUEST\n\nName: ${data.name || '—'}\nEmail: ${data.email || '—'}\nCompany: ${data.company || '—'}\nCurrent Tier: ${data.currentTier || '—'}\nRequested Tier: ${data.requestedTier || '—'}`,
+  };
+}
+
+// Short "what you submitted" rows shown in the user confirmation email.
+function userDetailRows(type, data) {
+  const mkt = marketName(data.market) || data.market || '';
+  if (type === 'list-building') {
+    return emailRow('Building', data.building) + emailRow('Market', mkt) + emailRow('Offering', data.offeringType) +
+      emailRow('Asking Rent', [data.rent, data.currency, data.pricingBasis].filter(Boolean).join(' ')) +
+      emailRow('Photos Uploaded', Array.isArray(data.photoPaths) ? String(data.photoPaths.length) : '0');
+  }
+  if (type === 'market-scan') {
+    return emailRow('Market', mkt) + emailRow('Required Area (sqm)', data.area) + emailRow('Sector', data.sector) + emailRow('Timeline', data.timeline);
+  }
+  if (type === 'membership' || type === 'membership-change') {
+    return emailRow('Current Tier', data.currentTier) + emailRow('Requested Tier', data.requestedTier);
+  }
+  return emailRow('Company', data.company) + emailRow('Market', mkt) + emailRow('Required Area (sqm)', data.area);
+}
+
+// User-facing confirmation email (always from NO_REPLY_FROM).
+function buildUserConfirmation(type, data, name, requestId, createdAt) {
+  const map = {
+    'access':        { thing: 'a request', title: 'Request received', badge: 'Received' },
+    'market-scan':   { thing: 'a market scan request', title: 'Market scan request received', badge: 'Received' },
+    'list-building': { thing: 'a building', title: 'Listing submitted for review', badge: 'Pending Review' },
+    'membership':    { thing: 'a membership change', title: 'Membership request received', badge: 'Membership Requested' },
+    'membership-change': { thing: 'a membership change', title: 'Membership request received', badge: 'Membership Requested' },
+    'batch':         { thing: 'a batch upload', title: 'Batch upload received', badge: 'Pending Review' },
+  };
+  const m = map[type] || map['access'];
+  const hi = name || (data && data.name) || 'there';
+  const intro = `<tr><td style="padding:20px 24px 4px;">
+    <p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(hi)},</p>
+    <p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">You&#39;ve recently submitted ${escapeHtml(m.thing)} through URBN Offices. Below are the details of your request. Our team will review it and follow up shortly.</p>
+  </td></tr>`;
+  const inner = intro + emailSection('Your Request', userDetailRows(type, data)) +
+    emailSection('Reference', emailRow('Reference', requestId) + emailRow('Submitted', createdAt || new Date().toISOString()));
+  const html = emailShell(m.title, m.badge, inner);
+  const text = `Hi ${hi},\n\nYou've recently submitted ${m.thing} through URBN Offices. Our team will review it and follow up shortly.\n\nReference: ${requestId || '—'}\nSubmitted: ${createdAt || new Date().toISOString()}\n\n— URBN Offices`;
+  return { subject: `URBN Offices — ${m.title}`, html, text };
+}
+
 function handleLeadRequest(req, res) {
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '';
   if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
@@ -287,6 +341,9 @@ function handleLeadRequest(req, res) {
       if (photoCount < 3) errs.push('photoPaths');
       if (data.consent !== true) errs.push('consent');
     }
+    if (type === 'membership' || type === 'membership-change') {
+      if (!MEMBERSHIP_TIERS.includes(s(data.requestedTier))) errs.push('requestedTier');
+    }
     if (errs.length) return sendJson(res, 400, { ok: false, error: 'validation', fields: errs });
 
     // Everything else (minus control/honeypot keys) is preserved in the jsonb payload.
@@ -312,8 +369,8 @@ function handleLeadRequest(req, res) {
       user_agent: String(req.headers['user-agent'] || '').slice(0, 500) || null,
       ip_hash: ipHash,
     };
-    // Supply-side listings are held for verification before publishing.
-    if (type === 'list-building') row.status = 'pending';
+    // Supply-side listings and membership changes are held for manual review.
+    if (type === 'list-building' || type === 'membership' || type === 'membership-change') row.status = 'pending';
 
     // 1) Store in Supabase. This is the source of truth — failure is a hard error.
     let requestId = null, createdAt = null;
@@ -330,21 +387,32 @@ function handleLeadRequest(req, res) {
     let emailDelivered = true;
     try {
       const label = REQUEST_TYPES[type];
-      let mail, fromAddr;
+      const listingsFrom = process.env.LISTINGS_FROM || process.env.LEAD_FROM;
+      const requestsFrom = process.env.REQUESTS_FROM || process.env.LEAD_FROM;
+      const noReplyFrom = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
+
+      // (a) Internal admin notification to LEAD_TO, from the routed sender.
+      let adminMail, adminFrom;
       if (type === 'list-building') {
-        // Polished internal review email, sent from the dedicated listings sender.
-        mail = buildListingEmail(data, payload, requestId, createdAt);
-        fromAddr = process.env.LISTINGS_FROM || process.env.LEAD_FROM;
+        adminMail = buildListingEmail(data, payload, requestId, createdAt);
+        adminFrom = listingsFrom;
+      } else if (type === 'membership' || type === 'membership-change') {
+        adminMail = buildMembershipAdminEmail({ name, email, company, currentTier: data.currentTier, requestedTier: data.requestedTier }, payload);
+        adminFrom = requestsFrom;
       } else {
         const fields = { Name: name, Email: email, Company: company, Phone: phone, Market: marketName(market) || market, Area: area, Building: building, Message: message };
         const g = buildGenericEmail(label, fields, payload);
-        mail = { subject: `New ${label} request — ${company || name || email}`, html: g.html, text: g.text };
-        fromAddr = process.env.LEAD_FROM;
+        adminMail = { subject: `New ${label} request — ${company || name || email}`, html: g.html, text: g.text };
+        adminFrom = requestsFrom;
       }
-      await sendResendEmail({
-        subject: mail.subject, text: mail.text, html: mail.html,
-        replyTo: email || undefined, from: fromAddr,
-      });
+      await sendResendEmail({ subject: adminMail.subject, text: adminMail.text, html: adminMail.html, replyTo: email || undefined, from: adminFrom });
+
+      // (b) User confirmation to the submitter, from no-reply.
+      if (email) {
+        const u = buildUserConfirmation(type, data, name, requestId, createdAt);
+        try { await sendResendEmail({ subject: u.subject, text: u.text, html: u.html, from: noReplyFrom, to: email }); }
+        catch (e2) { console.error('[api/request] user confirmation email failed:', e2.message); }
+      }
     } catch (e) {
       emailDelivered = false;
       console.error('[api/request] resend email failed (request was stored):', e.message);
@@ -387,6 +455,10 @@ function validateBatchRow(r) {
   if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
   if (AREA.includes(r.offering_type) && !num(r.unit_size_sqm)) errs.push('unit_size_sqm');
   if (r.service_charge && !num(r.service_charge)) errs.push('service_charge');
+  // Photo / floorplan URLs are optional but must be valid URLs if present.
+  const isUrl = (x) => /^https?:\/\/\S+$/i.test(String(x || '').trim());
+  for (let i = 1; i <= 5; i++) { const u = r['photo_url_' + i]; if (u && !isUrl(u)) errs.push('photo_url_' + i); }
+  for (let i = 1; i <= 2; i++) { const u = r['floorplan_url_' + i]; if (u && !isUrl(u)) errs.push('floorplan_url_' + i); }
   return errs;
 }
 
@@ -450,6 +522,29 @@ function handleBatch(req, res) {
           status: e.errs.length ? 'rejected' : 'pending_review', errors: e.errs,
         })));
       }
+      // Notify admin (listings sender) + confirm to the uploader (no-reply).
+      try {
+        const sum = emailSection('Batch', emailRow('Filename', data.filename) + emailRow('Uploaded By', user.email) +
+          emailRow('Rows Processed', String(rows.length)) + emailRow('Accepted', String(accepted.length)) +
+          emailRow('Rejected', String(rejected.length)) + emailRow('Status', 'pending_review'));
+        const errSec = rejected.length ? emailSection('Validation Errors (first 20)',
+          rejected.slice(0, 20).map((e) => emailRow('Row ' + (e.i + 1), e.errs.join(', '))).join('')) : '';
+        await sendResendEmail({
+          subject: `Batch upload: ${data.filename || 'listings'} — ${accepted.length}/${rows.length} accepted — Pending Review`,
+          html: emailShell('New Batch Upload', 'Pending Review', sum + errSec),
+          text: `BATCH UPLOAD — PENDING REVIEW\nFile: ${data.filename}\nUploaded by: ${user.email}\nProcessed: ${rows.length} · Accepted: ${accepted.length} · Rejected: ${rejected.length}`,
+          from: process.env.LISTINGS_FROM || process.env.LEAD_FROM, replyTo: user.email,
+        });
+        const userInner = `<tr><td style="padding:20px 24px 4px;"><p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(user.email)},</p><p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">You&#39;ve recently submitted a batch upload through URBN Offices. Our team will review it and follow up shortly.</p></td></tr>` +
+          emailSection('Your Batch', emailRow('Filename', data.filename) + emailRow('Rows Accepted', String(accepted.length)) + emailRow('Rows Rejected', String(rejected.length)) + emailRow('Status', 'pending_review'));
+        await sendResendEmail({
+          subject: 'URBN Offices — Batch upload received',
+          html: emailShell('Batch upload received', 'Pending Review', userInner),
+          text: `Hi,\n\nYour batch upload (${data.filename}) was received: ${accepted.length} of ${rows.length} rows accepted, pending review.\n\n— URBN Offices`,
+          from: process.env.NO_REPLY_FROM || process.env.LEAD_FROM, to: user.email,
+        });
+      } catch (e) { console.error('[api/batch] email failed:', e.message); }
+
       return sendJson(res, 200, { ok: true, batchId, processed: rows.length, accepted: accepted.length, rejected: rejected.length });
     } catch (e) {
       console.error('[api/batch] store failed:', e.message);
@@ -479,6 +574,9 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, {
       supabaseUrl: process.env.SUPABASE_URL || '',
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+      // Dummy/static listings are OFF by default; only the public approved
+      // Supabase listings show unless this is explicitly enabled.
+      showDemoListings: String(process.env.SHOW_DEMO_LISTINGS || '').toLowerCase() === 'true',
     });
   }
 

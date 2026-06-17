@@ -33,14 +33,16 @@
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
+<script src="../js/listings.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
+  await URBN_LISTINGS.load();
   const mg = document.getElementById('markets-grid');
   URBN_DATA.markets.forEach(m => {
     const s = URBN_DATA.marketStats[m.id];
-    const bc = URBN_DATA.buildings.filter(b => b.market === m.id).length;
+    const bc = URBN_LISTINGS.count(m.id);
     const subs = m.submarkets.slice(0, 2).join(', ');
     mg.innerHTML += `<a href="search.html?m=${m.id}" class="city-card">
       <div class="city-card-region">${m.region}</div>
