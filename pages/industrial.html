@@ -1,19 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Industrial & Logistics â€” URBN</title>
-  <meta name="description" content="Industrial and logistics space across Africa & MENA â€” warehouses, distribution centres, cold storage and build-to-suit, verified by URBN."/>
+  <title>Industrial & Logistics — URBN</title>
+  <meta name="description" content="Industrial and logistics space across Africa & MENA — warehouses, distribution centres, cold storage and build-to-suit, verified by URBN."/>
   <link rel="canonical" href="https://urbnoffices.com/industrial"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="URBN"/>
-  <meta property="og:title" content="Industrial & Logistics â€” URBN"/>
+  <meta property="og:title" content="Industrial & Logistics — URBN"/>
   <meta property="og:description" content="Warehouses, distribution centres, cold storage and build-to-suit across Africa & MENA."/>
   <meta property="og:url" content="https://urbnoffices.com/industrial"/>
   <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="Industrial & Logistics â€” URBN"/>
+  <meta name="twitter:title" content="Industrial & Logistics — URBN"/>
   <meta name="twitter:description" content="Warehouses, distribution centres and build-to-suit across Africa & MENA."/>
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
@@ -71,7 +71,7 @@
         <span class="overline label-navy">Industrial & Logistics</span>
         <h1 style="font-size:28px;">Available Units</h1>
       </div>
-      <a href="market-scan.html" class="btn btn-navy btn-sm">Request Industrial Scan â†’</a>
+      <a href="market-scan.html" class="btn btn-navy btn-sm">Request Industrial Scan →</a>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:14px;" id="ind-list"></div>
@@ -99,11 +99,11 @@
         <div class="fg"><label class="fl">Power Requirement (kVA)</label><input type="number" class="fi" placeholder="e.g. 2,000"></div>
         <div class="fg"><label class="fl">Delivery Timeline</label>
           <select class="fi fi-sel">
-            <option>Immediate (existing)</option><option>3â€“6 months</option><option>6â€“12 months</option><option>12â€“24 months (BTS/BTO)</option>
+            <option>Immediate (existing)</option><option>3–6 months</option><option>6–12 months</option><option>12–24 months (BTS/BTO)</option>
           </select>
         </div>
       </div>
-      <button class="btn btn-navy" onclick="showToast('BTS/BTO requirement submitted â€” URBN will respond within 48 hours')">Submit Requirement</button>
+      <button class="btn btn-navy" onclick="showToast('BTS/BTO requirement submitted — URBN will respond within 48 hours')">Submit Requirement</button>
     </div>
   </div>
 </div>
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="flex-b mb16">
         <div>
           <div style="font-family:var(--fd);font-size:20px;color:var(--text);">${u.anonName}</div>
-          <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-2);text-transform:uppercase;margin-top:3px;letter-spacing:.1em;">${u.submarket} Â· ${mkt?.country||''} Â· ${u.type.toUpperCase().replace('-',' ')}</div>
+          <div style="font-family:var(--fm);font-size:9.5px;color:var(--text-2);text-transform:uppercase;margin-top:3px;letter-spacing:.1em;">${u.submarket} · ${mkt?.country||''} · ${u.type.toUpperCase().replace('-',' ')}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           ${u.compliance.map(c=>`<span class="badge badge-verified">${c}</span>`).join('')}

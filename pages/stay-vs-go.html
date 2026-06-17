@@ -51,8 +51,8 @@
           <p style="font-size:11px;color:var(--text-2);margin-top:6px;">Untick everything for a bare <strong>core &amp; shell</strong>; tick all for a <strong>plug-and-play</strong> fitted, furnished office. We only cost what isn't already provided.</p>
         </div>
         <div class="fgs">
-          <div class="fg"><label class="fl">Assumed market rent (per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="1200" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Used for the generic options below. Saved offices use their own rent.</p></div>
-          <div class="fg"><label class="fl">Service charge (per sqm / month)</label><input type="number" class="fi" id="sg-svc" value="150" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Assumed market rent <span id="sg-rent-cur" style="color:var(--text-2);font-weight:400;"></span>(per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="30" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Indicative prime rate for the generic options below. Saved offices use their own rent. Where URBN benchmarks apply, figures are in USD.</p></div>
+          <div class="fg"><label class="fl">Service charge (per sqm / month)</label><input type="number" class="fi" id="sg-svc" value="8" oninput="recalc()"></div>
         </div>
         <div class="fgs">
           <div class="fg"><label class="fl">Parking cost (per month, total)</label><input type="number" class="fi" id="sg-parking" value="0" oninput="recalc()"></div>
@@ -184,6 +184,8 @@ function loadCosts() {
     status.innerHTML = `<span style="color:#B42318;">CAPEX assumptions not available for this market yet.</span> Enter your own below to compare.`;
     document.getElementById('sg-manual').classList.remove('hidden');
   }
+  const rc = document.getElementById('sg-rent-cur');
+  if (rc) rc.textContent = CURRENCY ? '(' + CURRENCY + ') ' : '';
   recalc();
 }
 

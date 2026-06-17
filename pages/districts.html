@@ -1,20 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Office Districts â€” URBN</title>
-  <meta name="description" content="Prime office districts across Africa & MENA â€” indicative rents, connectivity and verified building counts for New Cairo, DIFC, KAFD, Sandton, Westlands and more."/>
+  <title>Office Districts — URBN</title>
+  <meta name="description" content="Prime office districts across Africa & MENA — indicative rents, connectivity and verified building counts for New Cairo, DIFC, KAFD, Sandton, Westlands and more."/>
   <link rel="canonical" href="https://urbnoffices.com/districts"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="URBN"/>
-  <meta property="og:title" content="Office Districts â€” URBN"/>
-  <meta property="og:description" content="Prime office districts across Africa & MENA â€” indicative rents, connectivity and verified building counts."/>
+  <meta property="og:title" content="Office Districts — URBN"/>
+  <meta property="og:description" content="Prime office districts across Africa & MENA — indicative rents, connectivity and verified building counts."/>
   <meta property="og:url" content="https://urbnoffices.com/districts"/>
   <meta property="og:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="Office Districts â€” URBN"/>
-  <meta name="twitter:description" content="Prime office districts across Africa & MENA â€” indicative rents and verified building counts."/>
+  <meta name="twitter:title" content="Office Districts — URBN"/>
+  <meta name="twitter:description" content="Prime office districts across Africa & MENA — indicative rents and verified building counts."/>
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=85"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
 </head>
@@ -36,18 +36,18 @@
 <script src="../js/listings.js"></script>
 <script>
 const DISTS = [
-  {name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'The dominant Grade A office submarket in Cairo. Home to modern towers with generous floor plates and strong parking ratios. Preferred by multinationals requiring corporate-grade infrastructure.',rent:'EGP 950â€“1,400 / sqm / month',connect:'Ring Road access Â· No metro direct',bcount:2},
-  {name:'CBD (Downtown)',city:'Cairo',country:'Egypt',market:'cairo',desc:'Cairo\'s central business district. Historic prestige address with iconic towers including Nile-front buildings. Preferred by financial institutions and regional HQs.',rent:'EGP 1,100â€“1,600 / sqm / month',connect:'Metro Lines 1 & 2 Â· Central Cairo',bcount:1},
-  {name:'6th of October',city:'Cairo',country:'Egypt',market:'cairo',desc:'Emerging office location with lower rents and campus-style developments. Suitable for back-office, tech, and light industrial operations.',rent:'EGP 600â€“900 / sqm / month',connect:'6 October Highway Â· 35 min from CBD',bcount:1},
-  {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',desc:'Dubai International Financial Centre â€” the Gulf\'s premier financial district. Regulated jurisdiction, premium address, WELL and LEED certified towers. Commands the highest rents in Dubai.',rent:'AED 2,200â€“3,500 / sqm / year',connect:'Metro Red Line (Financial Centre) Â· Central location',bcount:1},
-  {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',desc:'Dense commercial district adjacent to Downtown Dubai. Good value relative to DIFC with strong transport links and abundant F&B. Popular with mid-market corporate occupiers.',rent:'AED 1,600â€“2,400 / sqm / year',connect:'Metro Red Line (Business Bay) Â· Canal views',bcount:1},
-  {name:'Downtown Dubai',city:'Dubai',country:'UAE',market:'dubai',desc:'Iconic address anchored by Burj Khalifa. Prestigious for client-facing operations. Premium rents reflect the address value.',rent:'AED 2,800â€“4,200 / sqm / year',connect:'Metro Red Line (Burj Khalifa/Dubai Mall)',bcount:1},
-  {name:'KAFD',city:'Riyadh',country:'Saudi Arabia',market:'riyadh',desc:'King Abdullah Financial District â€” the Kingdom\'s flagship CBD. New infrastructure, metro access, and modern Grade A+ towers. Preferred for Vision 2030-aligned corporate relocations.',rent:'SAR 1,800â€“2,800 / sqm / year',connect:'Riyadh Metro (KAFD Station) Â· North Riyadh',bcount:1},
-  {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',desc:'Lagos\'s prime corporate address. Waterfront peninsula with premium office towers, financial institutions, and embassies. Requires backup power and security planning.',rent:'NGN 45,000â€“75,000 / sqm / year',connect:'Road only Â· Lekki-Epe Expressway proximity',bcount:1},
-  {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',desc:'Nairobi\'s most developed commercial suburb. Concentration of Grade A offices, hotels, and corporate services. Strong infrastructure compared to CBD.',rent:'KES 1,200â€“1,800 / sqm / month',connect:'Major road junctions Â· 15 min to JKIA',bcount:1},
-  {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',desc:'Southern Africa\'s premier CBD. Gautrain access, luxury hotels, and Grade A+ towers. Africa\'s most sophisticated corporate office market.',rent:'ZAR 220â€“380 / sqm / month',connect:'Gautrain Sandton Station Â· N1/N3 highways',bcount:1},
-  {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',desc:'Morocco\'s purpose-built financial hub. Tax-advantaged zone, modern LEED-certified towers, bilingual workforce. Gateway to Francophone Africa.',rent:'MAD 1,800â€“2,800 / sqm / year',connect:'Casablanca Tramway Â· Mohammed V Airport 30 min',bcount:1},
-  {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman\'s modern CBD â€” master-planned mixed-use district with Grade A towers, retail, and hotels. Preferred address for regional HQs and NGOs.',rent:'JOD 14â€“22 / sqm / month',connect:'Key junction Â· Accessible from all districts',bcount:1},
+  {name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'The dominant Grade A office submarket in Cairo. Home to modern towers with generous floor plates and strong parking ratios. Preferred by multinationals requiring corporate-grade infrastructure.',rent:'EGP 950–1,400 / sqm / month',connect:'Ring Road access · No metro direct',bcount:2},
+  {name:'CBD (Downtown)',city:'Cairo',country:'Egypt',market:'cairo',desc:'Cairo\'s central business district. Historic prestige address with iconic towers including Nile-front buildings. Preferred by financial institutions and regional HQs.',rent:'EGP 1,100–1,600 / sqm / month',connect:'Metro Lines 1 & 2 · Central Cairo',bcount:1},
+  {name:'6th of October',city:'Cairo',country:'Egypt',market:'cairo',desc:'Emerging office location with lower rents and campus-style developments. Suitable for back-office, tech, and light industrial operations.',rent:'EGP 600–900 / sqm / month',connect:'6 October Highway · 35 min from CBD',bcount:1},
+  {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',desc:'Dubai International Financial Centre — the Gulf\'s premier financial district. Regulated jurisdiction, premium address, WELL and LEED certified towers. Commands the highest rents in Dubai.',rent:'AED 2,200–3,500 / sqm / year',connect:'Metro Red Line (Financial Centre) · Central location',bcount:1},
+  {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',desc:'Dense commercial district adjacent to Downtown Dubai. Good value relative to DIFC with strong transport links and abundant F&B. Popular with mid-market corporate occupiers.',rent:'AED 1,600–2,400 / sqm / year',connect:'Metro Red Line (Business Bay) · Canal views',bcount:1},
+  {name:'Downtown Dubai',city:'Dubai',country:'UAE',market:'dubai',desc:'Iconic address anchored by Burj Khalifa. Prestigious for client-facing operations. Premium rents reflect the address value.',rent:'AED 2,800–4,200 / sqm / year',connect:'Metro Red Line (Burj Khalifa/Dubai Mall)',bcount:1},
+  {name:'KAFD',city:'Riyadh',country:'Saudi Arabia',market:'riyadh',desc:'King Abdullah Financial District — the Kingdom\'s flagship CBD. New infrastructure, metro access, and modern Grade A+ towers. Preferred for Vision 2030-aligned corporate relocations.',rent:'SAR 1,800–2,800 / sqm / year',connect:'Riyadh Metro (KAFD Station) · North Riyadh',bcount:1},
+  {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',desc:'Lagos\'s prime corporate address. Waterfront peninsula with premium office towers, financial institutions, and embassies. Requires backup power and security planning.',rent:'NGN 45,000–75,000 / sqm / year',connect:'Road only · Lekki-Epe Expressway proximity',bcount:1},
+  {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',desc:'Nairobi\'s most developed commercial suburb. Concentration of Grade A offices, hotels, and corporate services. Strong infrastructure compared to CBD.',rent:'KES 1,200–1,800 / sqm / month',connect:'Major road junctions · 15 min to JKIA',bcount:1},
+  {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',desc:'Southern Africa\'s premier CBD. Gautrain access, luxury hotels, and Grade A+ towers. Africa\'s most sophisticated corporate office market.',rent:'ZAR 220–380 / sqm / month',connect:'Gautrain Sandton Station · N1/N3 highways',bcount:1},
+  {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',desc:'Morocco\'s purpose-built financial hub. Tax-advantaged zone, modern LEED-certified towers, bilingual workforce. Gateway to Francophone Africa.',rent:'MAD 1,800–2,800 / sqm / year',connect:'Casablanca Tramway · Mohammed V Airport 30 min',bcount:1},
+  {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman\'s modern CBD — master-planned mixed-use district with Grade A towers, retail, and hotels. Preferred address for regional HQs and NGOs.',rent:'JOD 14–22 / sqm / month',connect:'Key junction · Accessible from all districts',bcount:1},
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.innerHTML += `
     <div style="padding:28px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;align-items:start;">
       <div>
-        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">${d.city} Â· ${d.country}</div>
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;margin-bottom:8px;">${d.city} · ${d.country}</div>
         <h3 style="font-size:26px;margin-bottom:14px;">${d.name}</h3>
         <p style="font-size:13.5px;color:var(--text-2);line-height:1.78;">${d.desc}</p>
       </div>
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <a href="search.html?m=${d.market}" class="btn btn-navy btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices â†’</a>
+        <a href="search.html?m=${d.market}" class="btn btn-navy btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
         <a href="market-scan.html" class="btn btn-ghost btn-sm w-full" style="text-align:center;justify-content:center;">Request Market Scan</a>
       </div>
     </div>`;

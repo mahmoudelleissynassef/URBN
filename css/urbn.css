@@ -22,7 +22,7 @@
 
   --text:      #111418;
   --text-2:    #6B7280;
-  --text-3:    #9CA3AF;
+  --text-3:    #6F7782;   /* darkened from #9CA3AF for WCAG AA contrast (~4.5:1 on white) */
   --text-inv:  #FFFFFF;
 
   --border:    #E6E8EB;
@@ -702,4 +702,63 @@ textarea.fi { resize: vertical; min-height: 100px; }
   .hero-actions { flex-direction: column; width: 100%; }
   .hero-actions .btn { width: 100%; justify-content: center; }
   .section-title { font-size: 28px; }
+}
+
+/* ── Accessibility (WCAG 2.1/2.2 AA) ──────────────────────────────────────── */
+
+/* Skip-to-content link: visually hidden until focused. */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 2000;
+  background: var(--navy); color: #fff; padding: 10px 16px;
+  font-family: var(--fm); font-size: 13px; letter-spacing: .02em;
+  border-radius: 0 0 4px 0; text-decoration: none;
+}
+.skip-link:focus { left: 0; }
+
+/* Visible keyboard-focus ring for all interactive controls (mouse users unaffected). */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.chip:focus-visible,
+.fi:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* The main-content landmark should not show a ring when focused via the skip link. */
+#main-content:focus, #main-content:focus-visible { outline: none; }
+
+/* Minimum interactive target sizing (WCAG 2.2 AA 2.5.8). */
+.chip { min-height: 30px; display: inline-flex; align-items: center; }
+.btn-sm { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* ── Dynamic design polish ─────────────────────────────────────────────────── */
+
+/* Card hover-elevation (adds a subtle lift on top of the existing border/shadow). */
+.lc { transition: border-color .22s, box-shadow .22s, transform .22s; }
+.lc:hover { transform: translateY(-3px); }
+.city-card { transition: border-color .22s, box-shadow .22s, transform .22s; }
+.city-card:hover { transform: translateY(-3px); box-shadow: var(--sh-md); }
+
+/* Scroll-reveal: elements tagged [data-reveal] fade/slide in once on view.
+   The hidden state is applied by JS only when IntersectionObserver is available,
+   so no-JS and unsupported browsers always render content fully visible. */
+.reveal-init { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; will-change: opacity, transform; }
+.reveal-init.reveal-in { opacity: 1; transform: none; }
+
+/* Skeleton shimmer utility for loading states. */
+.skeleton { position: relative; overflow: hidden; background: var(--bg-off); border-radius: var(--r); }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent); animation: skeleton-shimmer 1.4s infinite; }
+@keyframes skeleton-shimmer { 100% { transform: translateX(100%); } }
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .lc:hover, .city-card:hover { transform: none; }
+  .reveal-init { opacity: 1; transform: none; }
 }
