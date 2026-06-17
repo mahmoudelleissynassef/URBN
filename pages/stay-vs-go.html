@@ -164,6 +164,39 @@ function money(n) { return fmtMoney(CURRENCY, n); }
 // "2025-12-01" -> "December 2025"
 function fmtAsOf(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }); } catch (e) { return d; } }
 // Short, escaped source line from the cost row's notes (first sentence).
+// Horizontal CAPEX waterfall: each cost component is a floating bar positioned at
+// its running cumulative, so you can see how the upfront total builds up. Pure
+// CSS (no chart library) and responsive. `segs` = [{label, value, color}, ...].
+function waterfallHTML(segs, total) {
+  segs = segs.filter(s => s.value > 0);
+  if (!segs.length || total <= 0) return '';
+  let cum = 0;
+  const bars = segs.map(s => {
+    const left = (cum / total) * 100;
+    const width = Math.max((s.value / total) * 100, 0.6);
+    cum += s.value;
+    return `
+      <div class="wf-row">
+        <div class="wf-label" title="${s.label}">${s.label}</div>
+        <div class="wf-track">
+          <div class="wf-bar" style="margin-left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;background:${s.color};"></div>
+        </div>
+        <div class="wf-val">${money(s.value)}</div>
+      </div>`;
+  }).join('');
+  const totalRow = `
+      <div class="wf-row wf-total">
+        <div class="wf-label">Total upfront</div>
+        <div class="wf-track"><div class="wf-bar" style="margin-left:0;width:100%;background:var(--navy);"></div></div>
+        <div class="wf-val">${money(total)}</div>
+      </div>`;
+  return `
+    <div class="wf" role="img" aria-label="CAPEX waterfall showing how the upfront total of ${money(total)} builds up from each cost component">
+      <div class="wf-cap">How the upfront cost builds up</div>
+      ${bars}${totalRow}
+    </div>`;
+}
+
 function costSource() {
   const n = (COSTS && COSTS.notes) ? String(COSTS.notes) : '';
   if (!n) return '';
@@ -285,6 +318,14 @@ function recalc() {
       if (cond.catA) provided.push('CAT A'); if (cond.fitted) provided.push('CAT B fit-out');
       if (cond.furn) provided.push('furniture'); if (cond.it) provided.push('IT/AV');
       const plug = upfrontTraditional <= (ci.moving + 1);
+      const segs = [
+        { label: 'Core &amp; shell → CAT A', value: cond.catA ? 0 : cap.catAWorks, color: '#243A5E' },
+        { label: 'Fit-out CAT A → CAT B', value: cond.fitted ? 0 : cap.fitoutWorks, color: '#2F4B73' },
+        { label: 'Furniture', value: cond.furn ? 0 : cap.furn, color: '#3E6098' },
+        { label: 'IT / AV / cabling', value: cond.it ? 0 : cap.it, color: '#5B7FB8' },
+        { label: 'Professional fees &amp; contingency', value: fees, color: '#8AA6CF' },
+        { label: 'Moving allowance', value: ci.moving, color: '#C2A36B' },
+      ];
       capexEl.innerHTML = `
         <div class="card" style="padding:24px;border:1px solid var(--navy,#243A5E);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
@@ -298,6 +339,7 @@ function recalc() {
             ${rows.length ? rows.map(([l, v]) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-2);">${l}</span><span style="color:var(--text);white-space:nowrap;">${money(v)}</span></div>`).join('') : '<div style="padding:7px 0;font-size:13px;color:var(--text-2);">No fit-out works required for this condition.</div>'}
             <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0 0;font-size:14px;font-weight:600;"><span>Total upfront CAPEX</span><span>${money(upfrontTraditional)}</span></div>
           </div>
+          ${waterfallHTML(segs, upfrontTraditional)}
           ${provided.length ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:10px;">Already provided (no cost): ${provided.join(', ')}.</p>` : ''}
           ${reinstatement ? `<p style="font-size:11.5px;color:var(--text-2);margin-top:6px;">Plus an estimated ${money(reinstatement)} reinstatement at lease end (${money(ci.reinstatement)}/m²).</p>` : ''}
         </div>`;

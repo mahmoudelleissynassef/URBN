@@ -326,19 +326,6 @@ const URBN_DATA = {
     { id: 'm008', name: 'James Mwangi', company: 'Knight Frank Kenya', role: 'Senior Manager', markets: ['nairobi'], portfolioType: 'Office', verified: true, areas: ['Westlands', 'Upper Hill'] },
   ],
 
-  // Industrial listings
-  industrial: [
-    { id: 'i001', name: 'Cairo Logistics Hub', anonName: 'Grade A Warehouse · 6th of October', market: 'cairo', submarket: '6th of October',
-      type: 'warehouse', size: 12000, clearHeight: 12, dockDoors: 8, power: 2000, floorLoading: 50,
-      rent: 85, rentCurrency: 'EGP', hasColdStorage: false, compliance: [], status: 'available' },
-    { id: 'i002', name: 'Dubai Industrial City Unit 14', anonName: 'Grade A DC · DIC', market: 'dubai', submarket: 'DIC',
-      type: 'distribution-center', size: 25000, clearHeight: 14, dockDoors: 16, power: 5000, floorLoading: 60,
-      rent: 380, rentCurrency: 'AED', hasColdStorage: true, compliance: ['food-grade'], status: 'available' },
-    { id: 'i003', name: 'Nairobi Industrial Park Unit 7', anonName: 'Warehouse · Industrial Area', market: 'nairobi', submarket: 'Industrial Area',
-      type: 'warehouse', size: 5000, clearHeight: 8, dockDoors: 3, power: 800, floorLoading: 40,
-      rent: 650, rentCurrency: 'KES', hasColdStorage: false, compliance: [], status: 'available' },
-  ],
-
   // Subscription plans
   plans: [
     { id: 'trial', name: 'Trial', price: 0, credits: 3, features: ['3 property reveals', '24h access', 'Basic search'] },
