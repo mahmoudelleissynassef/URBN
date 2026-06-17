@@ -889,6 +889,14 @@ function handleAdmin(req, res, urlPath) {
         const mediaRows = await sbGet(`listing_media?building_id=eq.${encodeURIComponent(id)}&select=*`);
         const media = [];
         for (const m of mediaRows) { const url = await signStorageUrl(m.bucket, m.path, 3600); media.push({ ...m, signedUrl: url }); }
+        // Resolve who uploaded the building + each unit (listing). Building has
+        // submitted_by (auth id); units carry request_id → the original request.
+        const au = await listAuthUsers(); const emailById = {}; au.forEach((u) => { emailById[u.id] = u.email; });
+        building.uploaderEmail = emailById[building.submitted_by] || null;
+        const reqIds = [...new Set(units.map((u) => u.request_id).filter(Boolean))];
+        const reqById = {};
+        if (reqIds.length) { try { (await sbGet(`client_requests?id=in.(${reqIds.join(',')})&select=id,email,name`)).forEach((r) => { reqById[r.id] = r; }); } catch (e) {} }
+        units.forEach((u) => { const r = reqById[u.request_id]; u.uploaderEmail = (r && r.email) || building.uploaderEmail || null; u.uploaderName = (r && r.name) || null; });
         return sendJson(res, 200, { ok: true, building, units, media });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/construction-costs') {
