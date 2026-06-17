@@ -88,8 +88,9 @@ function updateAdminNav() {
 async function hydrateSaved() {
   try {
     if (!URBNAuth.client || !URBNAuth.user) return;
-    const { data } = await URBNAuth.client.from('saved_properties').select('building_id').eq('user_id', URBNAuth.user.id);
-    if (Array.isArray(data)) { USER.saved = data.map(r => r.building_id); }
+    // Favorites are keyed on the unit (listing) now, not the building.
+    const { data } = await URBNAuth.client.from('saved_properties').select('unit_id').eq('user_id', URBNAuth.user.id);
+    if (Array.isArray(data)) { USER.saved = data.map(r => r.unit_id).filter(Boolean); }
   } catch (e) { /* table may not exist yet */ }
 }
 
@@ -445,10 +446,10 @@ async function toggleSave(id,btn) {
   btn.innerHTML = heartSVG(USER.saved.includes(id));
   try {
     if (adding) {
-      await URBNAuth.client.from('saved_properties').insert({ user_id: URBNAuth.user.id, building_id: id });
+      await URBNAuth.client.from('saved_properties').insert({ user_id: URBNAuth.user.id, unit_id: id });
       showToast('Added to shortlist');
     } else {
-      await URBNAuth.client.from('saved_properties').delete().eq('user_id', URBNAuth.user.id).eq('building_id', id);
+      await URBNAuth.client.from('saved_properties').delete().eq('user_id', URBNAuth.user.id).eq('unit_id', id);
       showToast('Removed from shortlist');
     }
   } catch (e) {
@@ -511,7 +512,7 @@ function cardImg(b) { return imgFor(b); }
 // ── Listing card ─────────────────────────────────────────
 // Listings are anonymized by default — `b.name` is the verified label unless the
 // viewer has an approved reveal grant (server-enforced; see /api/listings).
-function renderCard(b, base='') {
+function renderCard(b, base='', opts={}) {
   const saved=USER.saved.includes(b.id);
   const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
   const fallback = getImg(b.market);
@@ -523,7 +524,7 @@ function renderCard(b, base='') {
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
-      <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>
+      ${opts.noSave?'':`<button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>`}
     </div>
     <div class="lc-body">
       <div class="lc-name">${b.name}</div>
@@ -552,6 +553,43 @@ function renderCard(b, base='') {
           <div class="lc-rent-sub">${b.anonymized ? 'indicative / ' : 'per '}${b.rentUnit}</div>
         </div>
         <span class="btn btn-ghost btn-sm">${b.anonymized ? 'Details on request →' : 'View →'}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Listing card (per UNIT — the public-facing, favoritable entity) ───────────
+function renderListingCard(L, base='') {
+  const saved = USER.saved.includes(L.id);
+  const mkt = (typeof URBN_DATA !== 'undefined') ? URBN_DATA.markets.find(m => m.id === L.market) : null;
+  const fallback = getImg(L.market);
+  const blur = L.imageClear === false;
+  const img = L.image || fallback;
+  const usd = (L.rentUsd && L.rentCurrency && L.rentCurrency !== 'USD') ? ` <span style="color:var(--text-2);font-weight:400;">(~USD ${fmt(L.rentUsd)})</span>` : '';
+  return `
+  <div class="lc" onclick="window.location.href='/building?id=${L.buildingId}&u=${L.id}'">
+    <div class="lc-img">
+      <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${L.name}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
+      <div class="lc-img-grad"></div>
+      ${gradeTag(L.grade)}
+      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
+      <button class="lc-save ${saved?'on':''}" onclick="event.stopPropagation();toggleSave('${L.id}',this);">${heartSVG(saved)}</button>
+    </div>
+    <div class="lc-body">
+      <div class="lc-name">${L.name}</div>
+      <div class="lc-district">${L.submarket||''} · ${mkt?.country||''}${L.offeringType?' · '+L.offeringType:''}</div>
+      <div class="lc-data">
+        <div class="lc-datum"><div class="lc-d-val">${fmt(L.size)} sqm</div><div class="lc-d-key">Size</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${L.floor||'—'}</div><div class="lc-d-key">Floor</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${L.desks?fmt(L.desks):'—'}</div><div class="lc-d-key">Desks</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${parkingDatum(L)}</div><div class="lc-d-key">Parking</div></div>
+      </div>
+      <div class="lc-foot">
+        <div>
+          <div class="lc-rent">${L.rentCurrency||''} ${fmt(L.rent)}${usd}</div>
+          <div class="lc-rent-sub">${L.anonymized?'indicative / ':'per '}${L.rentUnit||'sqm'}</div>
+        </div>
+        <span class="btn btn-ghost btn-sm">${L.anonymized?'Details on request →':'View →'}</span>
       </div>
     </div>
   </div>`;

@@ -114,8 +114,8 @@ async function loadDashboard(user) {
   } catch (e) { tablesMissing = true; }
 
   try {
-    const { data: sp } = await c.from('saved_properties').select('building_id').eq('user_id', user.id);
-    saved = Array.isArray(sp) ? sp.map(r => r.building_id) : [];
+    const { data: sp } = await c.from('saved_properties').select('unit_id').eq('user_id', user.id);
+    saved = Array.isArray(sp) ? sp.map(r => r.unit_id).filter(Boolean) : [];
   } catch (e) { tablesMissing = true; }
 
   try {
@@ -150,11 +150,11 @@ async function loadDashboard(user) {
   // Saved properties (joined with current building data source)
   const grid = document.getElementById('shortlist-grid');
   grid.innerHTML = saved.map(id => {
-    const b = URBN_LISTINGS.find(id);
-    return b ? renderCard(b, '../') : unavailableCard(id);
+    const l = URBN_LISTINGS.findListing(id);
+    return l ? renderListingCard(l, '../') : unavailableCard(id);
   }).join('');
   document.getElementById('shortlist-empty').innerHTML = saved.length ? '' :
-    `<div style="padding:30px 0;color:var(--text-2);font-size:14px;">No saved properties yet. Browse <a href="../search.html" class="text-navy" style="text-decoration:underline;">offices</a> and tap the heart to save.</div>`;
+    `<div style="padding:30px 0;color:var(--text-2);font-size:14px;">No saved listings yet. Browse <a href="/offices" class="text-navy" style="text-decoration:underline;">offices</a> and tap the heart to save. <a href="/saved" class="text-navy" style="text-decoration:underline;">View all saved →</a></div>`;
 
   // Requests table
   const reqRows = requests.map(r => `<tr>

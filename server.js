@@ -1225,6 +1225,30 @@ async function signStorageUrl(bucket, objectPath, expiresIn = 3600) {
   } catch (e) { return null; }
 }
 
+// ── FX: USD-base rates, cached for the day ───────────────────────────────────
+// ECB reference rates don't cover most of our African currencies, so we use a
+// free no-key USD-base feed (ExchangeRate-API open endpoint). Cached in-process.
+let FX_CACHE = { rates: null, date: null, at: 0 };
+async function getFx() {
+  const TWELVE_H = 12 * 60 * 60 * 1000;
+  if (FX_CACHE.rates && (Date.now() - FX_CACHE.at) < TWELVE_H) return FX_CACHE;
+  try {
+    const r = await httpsRequest('https://open.er-api.com/v6/latest/USD', { method: 'GET', headers: {} });
+    if (r.status >= 200 && r.status < 300) {
+      const j = JSON.parse(r.body || '{}');
+      if (j && j.rates) FX_CACHE = { rates: j.rates, date: (j.time_last_update_utc || '').slice(0, 16) || null, at: Date.now() };
+    }
+  } catch (e) { /* keep stale cache on failure */ }
+  return FX_CACHE;
+}
+// Convert a local amount to USD (rates[CUR] = local units per 1 USD).
+function toUsd(amount, cur, rates) {
+  if (!amount || !cur || !rates) return null;
+  if (cur === 'USD') return Math.round(amount);
+  const rate = rates[cur];
+  return rate ? Math.round(amount / rate) : null;
+}
+
 function handlePublicListings(req, res) {
   (async () => {
     try {
@@ -1254,8 +1278,24 @@ function handlePublicListings(req, res) {
         shaped.imageClear = granted || paying;
         out.push(shaped);
       }
-      return sendJson(res, 200, { ok: true, buildings: out });
-    } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [] }); }
+      // Per-unit LISTINGS — the public-facing entity (favorited & compared). Each
+      // listing is one approved unit, flattened with its building's context.
+      const fx = await getFx();
+      const listings = [];
+      out.forEach((b) => {
+        (b.units || []).forEach((u) => {
+          listings.push({
+            id: u.id, buildingId: b.id, name: b.name, label: b.label, revealed: b.revealed, anonymized: b.anonymized,
+            market: b.market, submarket: b.submarket, grade: b.grade, amenities: b.amenities, parking: b.parking,
+            sustainability: b.sustainability, image: b.image, imageClear: b.imageClear, hasPublicImage: b.hasPublicImage,
+            address: b.address, mapsUrl: b.mapsUrl, floors: b.floors, floorplate: b.floorplate, yearBuilt: b.yearBuilt, buildingHeight: b.buildingHeight, gla: b.gla,
+            floor: u.floor, size: u.size, desks: u.desks, meetingRooms: u.meetingRooms, offeringType: u.type, fitOut: u.fitOut,
+            rent: u.rent, rentCurrency: b.rentCurrency, rentUnit: b.rentUnit, rentUsd: toUsd(u.rent, b.rentCurrency, fx.rates),
+          });
+        });
+      });
+      return sendJson(res, 200, { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)' } });
+    } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [], listings: [] }); }
   })();
 }
 
