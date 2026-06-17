@@ -11,7 +11,9 @@ create table if not exists public.listing_access_grants (
   user_id     uuid references auth.users(id) on delete cascade,
   company_id  uuid references public.companies(id) on delete set null,
   building_id text references public.buildings(id) on delete cascade,
-  unit_id     uuid references public.units(id) on delete set null,
+  -- NOTE: public.units.id is TEXT in production (unit ids look like 'u_<uuid>'),
+  -- so unit_id must be text to match the FK target. Do NOT change units.id.
+  unit_id     text references public.units(id) on delete set null,
   request_id  uuid references public.client_requests(id) on delete set null,
   granted_by  uuid references auth.users(id),
   granted_at  timestamptz,
