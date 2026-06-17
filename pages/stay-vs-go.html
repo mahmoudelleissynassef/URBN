@@ -20,7 +20,15 @@
     <div style="display:grid;grid-template-columns:360px 1fr;gap:36px;align-items:start;">
       <!-- Inputs -->
       <div class="card" style="padding:26px;">
-        <div class="form-sec-title" style="margin-top:0;">Your requirement</div>
+        <div class="form-sec-title" style="margin-top:0;">Your situation</div>
+        <div class="fg" style="margin-bottom:8px;">
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="radio" name="sg-mode" value="entrant" checked onchange="applyMode()"><span><strong>New to this market</strong> — I'll take a space and fit it out (core &amp; shell, CAT A, etc.)</span></label>
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="radio" name="sg-mode" value="relocate" onchange="applyMode()"><span><strong>Relocating / reviewing</strong> — compare my current office to the ones I've saved</span></label>
+          </div>
+        </div>
+
+        <div class="form-sec-title">Your requirement</div>
         <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" id="sg-market" onchange="loadCosts()"><option value="">Select market...</option></select></div>
         <div id="sg-cost-status" style="font-size:12px;margin:-4px 0 12px;color:var(--text-2);"></div>
         <div class="fgs">
@@ -43,14 +51,14 @@
           <p style="font-size:11px;color:var(--text-2);margin-top:6px;">Untick everything for a bare <strong>core &amp; shell</strong>; tick all for a <strong>plug-and-play</strong> fitted, furnished office. We only cost what isn't already provided.</p>
         </div>
         <div class="fgs">
-          <div class="fg"><label class="fl">Rent (per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="1200" oninput="recalc()"></div>
+          <div class="fg"><label class="fl">Assumed market rent (per sqm / month)</label><input type="number" class="fi" id="sg-rent" value="1200" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Used for the generic options below. Saved offices use their own rent.</p></div>
           <div class="fg"><label class="fl">Service charge (per sqm / month)</label><input type="number" class="fi" id="sg-svc" value="150" oninput="recalc()"></div>
         </div>
         <div class="fgs">
           <div class="fg"><label class="fl">Parking cost (per month, total)</label><input type="number" class="fi" id="sg-parking" value="0" oninput="recalc()"></div>
-          <div class="fg"><label class="fl">Coworking (per desk / month)</label><input type="number" class="fi" id="sg-cowork" value="0" oninput="recalc()"></div>
+          <div class="fg" id="sg-cowork-fg"><label class="fl">Coworking rate (per desk / month) — optional</label><input type="number" class="fi" id="sg-cowork" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Only needed to include a coworking option.</p></div>
         </div>
-        <div class="fg"><label class="fl">Current office cost (per month, for "Stay")</label><input type="number" class="fi" id="sg-stay" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Leave 0 if you have no current office in this market.</p></div>
+        <div class="fg" id="sg-stay-fg" style="display:none;"><label class="fl">Your current office cost (per month, all-in)</label><input type="number" class="fi" id="sg-stay" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Rent + service charge + parking you pay today — the baseline we compare your saved options against.</p></div>
 
         <div id="sg-manual" class="hidden" style="border-top:1px solid var(--border);margin-top:8px;padding-top:14px;">
           <div class="form-sec-title" style="margin-top:0;">Manual CAPEX assumptions</div>
@@ -69,6 +77,7 @@
           <div class="form-sec-title" style="margin-top:0;">Compare your saved offices</div>
           <p style="font-size:11.5px;color:var(--text-2);margin:-4px 0 10px;">Pick up to 3 saved offices to compare side by side using the brief above.</p>
           <div id="sg-saved"><p style="font-size:12px;color:var(--text-2);">Loading your saved offices…</p></div>
+          <a href="/offices" class="btn btn-outline btn-sm" style="margin-top:10px;">Browse offices to save &rarr;</a>
         </div>
       </div>
 
@@ -101,6 +110,14 @@ let CURRENCY = '';
 let SG_COST_MARKETS = {};   // id -> { name, currency }
 let COST_BY_MARKET = {};    // id -> full cost row
 let SELECTED_SAVED = [];    // building ids selected for comparison (max 3)
+let MODE = 'entrant';       // 'entrant' (find & fit out) | 'relocate' (compare current vs saved)
+
+function applyMode() {
+  MODE = (document.querySelector('input[name=sg-mode]:checked') || {}).value || 'entrant';
+  const stayFg = document.getElementById('sg-stay-fg');
+  if (stayFg) stayFg.style.display = (MODE === 'relocate') ? '' : 'none';
+  recalc();
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../'); injectFooter('../');
@@ -128,6 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   else if (sel.options.length > 1) sel.value = sel.options[1].value;
   loadCosts();
   renderSavedPicker();
+  applyMode();
 });
 
 function sgEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
@@ -242,7 +260,10 @@ function recalc() {
   ];
   scenarios.forEach(s => { s.total = s.avail ? (s.upfront + s.monthly * term + s.end) : null; });
 
-  const ranked = scenarios.filter(s => s.avail && s.total != null).sort((a, b) => a.total - b.total);
+  // The "Stay (current office)" baseline now lives in the relocate comparison
+  // column, so the generic options table shows the three "go" routes only.
+  const tableScenarios = scenarios.filter(s => s.key !== 'stay');
+  const ranked = tableScenarios.filter(s => s.avail && s.total != null).sort((a, b) => a.total - b.total);
   const best = ranked.length ? ranked[0].key : null;
 
   // ── Upfront CAPEX breakdown (condition-aware; only costs what's not in place) ─
@@ -283,12 +304,15 @@ function recalc() {
     }
   }
 
-  document.getElementById('sg-results').innerHTML = `
+  const resultsEl = document.getElementById('sg-results');
+  resultsEl.style.display = (MODE === 'entrant') ? '' : 'none';   // relocate focuses on the saved comparison
+  resultsEl.innerHTML = `
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Generic options for this brief</div>
     <div class="card" style="padding:0;overflow:auto;">
       <table class="data-table">
         <thead><tr><th>Option</th><th>Upfront CAPEX</th><th>Monthly cost</th><th>Total over ${term||0} mo</th></tr></thead>
         <tbody>
-        ${scenarios.map(s => `<tr style="${s.key===best?'background:rgba(36,58,94,.05);':''}">
+        ${tableScenarios.map(s => `<tr style="${s.key===best?'background:rgba(36,58,94,.05);':''}">
           <td><strong>${s.name}</strong>${s.key===best?' <span class="badge badge-available" style="font-size:9px;">Lowest total</span>':''}${s.note?`<div style="font-size:11px;color:var(--text-2);margin-top:3px;">${s.note}</div>`:''}</td>
           <td>${s.avail?money(s.upfront):'—'}</td>
           <td>${s.avail?money(s.monthly):'—'}</td>
@@ -333,10 +357,17 @@ function onSavedToggle() {
 }
 function renderComparison() {
   const wrap = document.getElementById('sg-compare'); if (!wrap) return;
-  if (!SELECTED_SAVED.length || typeof URBN_LISTINGS === 'undefined') { wrap.innerHTML = ''; return; }
   const area = n('sg-area'), desks = n('sg-desks'), term = n('sg-term'), svc = n('sg-svc'), parking = n('sg-parking');
+  const stayMonthly = n('sg-stay');
   const level = document.getElementById('sg-fitlevel').value;
   const cond = conditionFlags();
+  if (!SELECTED_SAVED.length || typeof URBN_LISTINGS === 'undefined') {
+    // In relocate mode, nudge the user to pick saved offices to compare against.
+    wrap.innerHTML = (MODE === 'relocate')
+      ? `<div class="card" style="padding:22px;margin-bottom:18px;"><div class="form-sec-title" style="margin-top:0;">Compare to your saved offices</div><p style="font-size:13px;color:var(--text-2);">Tick up to 3 of your saved offices on the left to compare them against your current office${stayMonthly > 0 ? '' : ' (and enter your current monthly cost above)'}.</p></div>`
+      : '';
+    return;
+  }
   const cols = SELECTED_SAVED.map(id => {
     const b = URBN_LISTINGS.find(id); if (!b) return null;
     const row = COST_BY_MARKET[b.market] || null;
@@ -349,21 +380,26 @@ function renderComparison() {
     return { b, row, cur, rent, monthly, cap, total };
   }).filter(Boolean);
   if (!cols.length) { wrap.innerHTML = ''; return; }
+  // Relocate mode: prepend the user's current office as the baseline column.
+  if (MODE === 'relocate' && stayMonthly > 0) {
+    cols.unshift({ current: true, cur: CURRENCY, rent: null, monthly: stayMonthly, cap: { upfront: 0 }, total: stayMonthly * term, row: null });
+  }
   const totals = cols.filter(c => c.total != null);
   const best = totals.length ? totals.reduce((a, b) => a.total < b.total ? a : b) : null;
   const rowsDef = [
-    ['Market', c => sgEsc(marketLabel(c.b.market))],
-    ['Indicative rent', c => fmtMoney(c.cur, c.rent) + ' /m²/mo'],
-    ['Monthly occupancy', c => fmtMoney(c.cur, c.monthly)],
-    ['Upfront CAPEX', c => c.cap ? fmtMoney(c.cur, c.cap.upfront) : '—'],
+    ['Market', c => c.current ? 'Your current office' : sgEsc(marketLabel(c.b.market))],
+    ['Indicative rent', c => (c.current || c.rent == null) ? '—' : fmtMoney(c.cur, c.rent) + ' /m²/mo'],
+    ['Monthly cost', c => fmtMoney(c.cur, c.monthly)],
+    ['Upfront CAPEX', c => c.current ? fmtMoney(c.cur, 0) : (c.cap ? fmtMoney(c.cur, c.cap.upfront) : '—')],
     ['Total over ' + term + ' mo', c => c.total != null ? '<strong>' + fmtMoney(c.cur, c.total) + '</strong>' : 'n/a'],
     ['Prices as of', c => (c.row && c.row.effective_date) ? fmtAsOf(c.row.effective_date) : '—'],
   ];
+  const title = (MODE === 'relocate') ? 'Your current office vs saved options' : 'Saved-office comparison';
   wrap.innerHTML = `
     <div class="card" style="padding:0;overflow:auto;margin-bottom:18px;">
-      <div style="padding:16px 18px 0;"><div class="form-sec-title" style="margin-top:0;">Saved-office comparison</div><p style="font-size:11.5px;color:var(--text-2);margin:-6px 0 8px;">Same brief (${area} m², ${desks} desks, ${term} mo, ${level} fit-out + ticked conditions) applied to each saved office. Identity stays anonymised until reveal.</p></div>
+      <div style="padding:16px 18px 0;"><div class="form-sec-title" style="margin-top:0;">${title}</div><p style="font-size:11.5px;color:var(--text-2);margin:-6px 0 8px;">Same brief (${area} m², ${desks} desks, ${term} mo, ${level} fit-out + ticked conditions) applied to each option. Identity stays anonymised until reveal.</p></div>
       <table class="data-table">
-        <thead><tr><th></th>${cols.map(c => `<th>${sgEsc(c.b.name)}${best && c === best ? ' <span class="badge badge-available" style="font-size:8px;">Lowest total</span>' : ''}</th>`).join('')}</tr></thead>
+        <thead><tr><th></th>${cols.map(c => `<th>${c.current ? 'Your current office' : sgEsc(c.b.name)}${best && c === best ? ' <span class="badge badge-available" style="font-size:8px;">Lowest total</span>' : ''}</th>`).join('')}</tr></thead>
         <tbody>${rowsDef.map(([label, fn]) => `<tr><td style="color:var(--text-2);">${label}</td>${cols.map(c => `<td>${fn(c)}</td>`).join('')}</tr>`).join('')}</tbody>
       </table>
       <p style="font-size:11px;color:var(--text-2);padding:10px 18px 14px;">Where a saved office's market has no CAPEX benchmark, upfront shows "—". Columns may be in different currencies where markets differ.</p>
