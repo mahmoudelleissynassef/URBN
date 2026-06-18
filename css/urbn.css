@@ -40,7 +40,7 @@
   --nav-h:   72px;
   --maxw:  1280px;
   --maxw-sm: 860px;
-  --section: 120px;
+  --section: 72px;
   --gap:      28px;
   --pad:      28px;
 
@@ -243,7 +243,7 @@ h4 { font-size: 18px; }
   margin-bottom: 14px;
 }
 .section-head { margin-bottom: 44px; }
-.section-head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
+.section-head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 28px; }
 
 /* ── Listing Card — FT editorial style ────────────────── */
 .lc {
@@ -640,11 +640,11 @@ textarea.fi { resize: vertical; min-height: 100px; }
   .plan-grid { grid-template-columns: 1fr 1fr; }
   .ms { grid-template-columns: 1fr 1fr; }
   .stat-strip { grid-template-columns: 1fr 1fr; }
-  :root { --section: 80px; }
+  :root { --section: 64px; }
 }
 @media (max-width: 768px) {
   html, body { overflow-x: hidden; max-width: 100vw; }
-  :root { --nav-h: 64px; --section: 64px; }
+  :root { --nav-h: 64px; --section: 56px; }
   .nav-links { display: none; }
   .nav-right { display: none; }            /* auth buttons live in the hamburger menu on mobile */
   .nav-i { padding: 0 16px; }              /* full 48px padding overflowed narrow screens */
@@ -697,7 +697,7 @@ textarea.fi { resize: vertical; min-height: 100px; }
   .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
   .w { padding: 0 16px; }
   .w-sm { padding: 0 16px; }
-  :root { --section: 48px; }
+  :root { --section: 44px; }
   .hero h1 { font-size: 28px; line-height: 1.2; }
   .hero-actions { flex-direction: column; width: 100%; }
   .hero-actions .btn { width: 100%; justify-content: center; }

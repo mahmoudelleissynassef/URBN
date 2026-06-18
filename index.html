@@ -60,8 +60,8 @@
   </div>
 </section>
 
-<!-- MARKET TICKER -->
-<div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
+<!-- MARKET TICKER (signed-in only) -->
+<div class="ticker-wrap" data-auth="in"><div class="ticker-inner" id="ticker"></div></div>
 
 <!-- FEATURED OFFICES -->
 <section class="section" style="background:var(--bg-white);border-bottom:1px solid var(--border);">
@@ -97,8 +97,8 @@
   </div>
 </section>
 
-<!-- OFFICES BY CITY (SEO internal links) -->
-<section class="section" style="background:var(--bg);border-bottom:1px solid var(--border);">
+<!-- OFFICES BY CITY (SEO internal links) — signed-in only (footer keeps these links for crawlers) -->
+<section class="section" data-auth="in" style="background:var(--bg);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
       <div><div class="section-rule"></div><h2>Find offices by city</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">City guides to office space, serviced offices and coworking across our core African markets.</p></div>
@@ -129,8 +129,8 @@
   </div>
 </section>
 
-<!-- DISTRICTS -->
-<section class="section" style="background:var(--bg-white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+<!-- DISTRICTS (signed-in only) -->
+<section class="section" data-auth="in" style="background:var(--bg-white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
       <div><div class="section-rule"></div><h2>Prime Office Districts</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Key office locations with indicative rent bands.</p></div>
@@ -240,6 +240,10 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   injectNav(''); injectFooter('');
   initHeroCarousel();
   await URBN_LISTINGS.load();
+  // Signed-out visitors get a leaner landing: no rates ticker, name-only market
+  // cards, and the districts / offices-by-city sections hidden (data-auth="in").
+  try { await URBNAuth.init(); } catch (e) {}
+  const signedIn = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user);
 
   // Ticker
   const ticker=document.getElementById('ticker');
@@ -260,6 +264,10 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     const live=bc>0;
     const subs=m.submarkets.slice(0,2).join(', ');
     const href=live?`/offices?m=${m.id}`:'/market-scan';
+    if(!signedIn){
+      mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}><div class="city-card-region">${m.region}</div><div class="city-card-name" style="margin-top:6px;">${m.name}, ${m.country}</div></a>`;
+      return;
+    }
     mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}>
       <div class="city-card-region">${m.region}</div>
       <div class="city-card-name">${m.name}, ${m.country} ${live?'':'<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">Coming soon</span>'}</div>
