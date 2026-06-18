@@ -732,7 +732,12 @@ function buildingKeyId(r) {
   return 'b_' + h.toString(36);
 }
 async function approveBatchRowRec(row, adminId) {
-  const r = row.raw || {}, now = new Date().toISOString(), bId = buildingKeyId(r);
+  const r = row.raw || {}, now = new Date().toISOString();
+  // If the row carries an existing building_id / unit_id (e.g. from an exported
+  // inventory CSV that was edited in Excel), upsert THOSE records — so a re-upload
+  // updates in place instead of creating duplicates. Otherwise create new.
+  const bId = (r.building_id && String(r.building_id).trim()) || buildingKeyId(r);
+  const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_' + row.id);
   await sbUpsert('buildings', [{
     id: bId, name: r.building_name || 'Untitled', market: r.market || null, submarket: r.submarket || null, address: r.address || null,
     google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
@@ -747,7 +752,7 @@ async function approveBatchRowRec(row, adminId) {
     status: 'approved', approved_by: adminId, approved_at: now,
   }]);
   await sbUpsert('units', [{
-    id: 'u_' + row.id, building_id: bId, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null,
+    id: uId, building_id: bId, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null,
     fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent),
     currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge),
     service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved',
@@ -789,6 +794,25 @@ function handleAdmin(req, res, urlPath) {
         const status = (req.url.split('status=')[1] || 'approved').split('&')[0];
         if (status === 'rejected') return sendJson(res, 200, { ok: true, listings: await sbGet(`client_requests?request_type=eq.list-building&status=eq.rejected&order=reviewed_at.desc`) });
         return sendJson(res, 200, { ok: true, buildings: await sbGet(`buildings?status=eq.approved&order=approved_at.desc`) });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/export-listings') {
+        // Export the full inventory as a CSV that round-trips through the bulk
+        // uploader: same columns as the import template, plus building_id / unit_id
+        // so an edited re-upload UPDATES the same records instead of duplicating.
+        const EXPORT_COLS = ['building_id', 'unit_id', 'building_ref', 'building_name', 'market', 'submarket', 'address', 'google_maps_url', 'grade', 'year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'parking_spaces_available', 'parking_arrangement', 'parking_included_in_rent', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_available', 'parking_monthly_membership_price', 'parking_notes', 'certifications', 'amenities', 'main_photo_url', 'unit_floor', 'size_sqm', 'offering_type', 'fit_out', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'service_charge', 'service_charge_basis', 'availability_date', 'minimum_term', 'notes'];
+        const csvCell = (v) => { if (v == null) return ''; let s = Array.isArray(v) ? v.join(';') : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+        const allB = await sbGet('buildings?order=market.asc,name.asc');
+        const allU = await sbGet('units?order=building_id.asc,unit_floor.asc');
+        const uByB = {}; allU.forEach((u) => { (uByB[u.building_id] = uByB[u.building_id] || []).push(u); });
+        const bFields = (b) => ({ building_id: b.id, unit_id: '', building_ref: b.id, building_name: b.name, market: b.market, submarket: b.submarket, address: b.address, google_maps_url: b.google_maps_url, grade: b.grade, year_built: b.year_built, floors: b.floors, building_height_m: b.building_height_m, total_gla_sqm: b.total_gla_sqm, typical_floorplate_sqm: b.typical_floorplate_sqm, parking_ratio: b.parking_ratio, parking_spaces_available: b.parking_spaces_available, parking_arrangement: b.parking_arrangement, parking_included_in_rent: b.parking_included_in_rent, parking_price_per_spot_month: b.parking_price_per_spot_month, visitor_parking_hourly_rate: b.visitor_parking_hourly_rate, parking_monthly_membership_available: b.parking_monthly_membership_available ? 'yes' : 'no', parking_monthly_membership_price: b.parking_monthly_membership_price, parking_notes: b.parking_notes, certifications: b.certifications, amenities: b.amenities, main_photo_url: b.image_url });
+        const rows = [];
+        for (const b of allB) {
+          const us = uByB[b.id] || [];
+          if (!us.length) { rows.push(bFields(b)); continue; }
+          for (const u of us) rows.push(Object.assign(bFields(b), { unit_id: u.id, unit_floor: u.unit_floor, size_sqm: u.size_sqm, offering_type: u.offering_type, fit_out: u.fit_out, desks: u.desks, meeting_rooms: u.meeting_rooms, asking_rent: u.asking_rent, currency: u.currency, pricing_basis: u.pricing_basis, service_charge: u.service_charge, service_charge_basis: u.service_charge_basis, availability_date: u.availability_date, minimum_term: u.min_term, notes: u.notes }));
+        }
+        const csv = [EXPORT_COLS.join(',')].concat(rows.map((r) => EXPORT_COLS.map((c) => csvCell(r[c])).join(','))).join('\n');
+        return sendJson(res, 200, { ok: true, csv, count: rows.length });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/listing-batches') {
         return sendJson(res, 200, { ok: true, batches: await sbGet(`listing_batches?order=created_at.desc`), rows: await sbGet(`listing_batch_rows?order=row_index.asc`) });

@@ -411,7 +411,10 @@ async function loadBuildings() {
   const panel = document.getElementById('panel-buildings');
   panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
     <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}</div>
-    <button class="btn btn-navy btn-sm" onclick="openCreateBuilding()">+ Add building</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="exportListings(this)">⬇ Export all (CSV)</button>
+      <button class="btn btn-navy btn-sm" onclick="openCreateBuilding()">+ Add building</button>
+    </div>
   </div><div id="bld-list">${loadingBox()}</div>`;
   const q = BLD_STATUS ? '/api/admin/buildings?status=' + encodeURIComponent(BLD_STATUS) : '/api/admin/buildings';
   const j = await adminFetch(q, 'GET');
@@ -419,6 +422,20 @@ async function loadBuildings() {
   if (!j.ok) { list.innerHTML = errBox(j); return; }
   if (!j.buildings || !j.buildings.length) { list.innerHTML = emptyBox('No buildings for this status.'); return; }
   list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name || '')}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> ${b.status === 'archived' ? `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',true,this)">Restore</button>` : `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',false,this)">Archive</button>`}</td></tr>`).join('')}</tbody></table></div>`;
+}
+// Download the full inventory as a round-trippable CSV (edit in Excel, then
+// re-upload via List Your Space → Bulk upload; building_id/unit_id make it update
+// existing records on approval rather than create duplicates).
+async function exportListings(btn) {
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/export-listings', 'GET');
+  setBtnBusy(btn, false);
+  if (!j.ok) { showToast('Export failed: ' + (j.error || 'error'), 'error'); return; }
+  const blob = new Blob([j.csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'urbn-inventory.csv';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  showToast((j.count || 0) + ' rows exported');
 }
 function fieldInput(label, id, val, type) { return `<div class="fg"><label class="fl">${esc(label)}</label><input type="${type || 'text'}" class="fi" id="${id}" value="${esc(val == null ? '' : val)}"></div>`; }
 // Open a building's editor (with its photo gallery) from any tab — activate the
