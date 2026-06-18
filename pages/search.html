@@ -23,6 +23,18 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin="" defer></script>
+  <style>
+    /* URBN cluster styling — restrained navy/off-white, overrides markercluster defaults.
+       Only the inner circle is transformed on hover (Leaflet positions the marker icon
+       itself via transform, so scaling the icon would break placement). */
+    .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: rgba(36,58,94,0.16); }
+    .marker-cluster-small div  { background: #243A5E; }
+    .marker-cluster-medium div { background: #2F4B73; }
+    .marker-cluster-large div  { background: #1C2E4A; }
+    .marker-cluster div { color: #fff; border: 1.5px solid rgba(255,255,255,0.92); box-shadow: 0 1px 5px rgba(15,27,48,.35); transition: background .12s ease, transform .12s ease; }
+    .marker-cluster span { color: #fff; font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-weight: 600; font-size: 12px; }
+    .marker-cluster:hover div { background: #34527d; transform: scale(1.06); }
+  </style>
 </head>
 <body>
 <div id="nav-placeholder"></div>
@@ -396,11 +408,11 @@ function updateVisibleList() {
   if (!grid || !MAP || DISPLAY !== 'map') return;
   let b; try { b = MAP.getBounds(); } catch (e) { return; }
   const inView = MAP_ITEMS.filter(it => b.contains([it.lat, it.lng]));
-  if (head) head.textContent = `Buildings in view (${inView.length})`;
+  if (head) head.textContent = inView.length ? `${inView.length} building${inView.length === 1 ? '' : 's'} in view` : 'Buildings in view';
   const cap = 60;
   grid.innerHTML = inView.length
-    ? inView.slice(0, cap).map(it => mapListCard(it.l)).join('') + (inView.length > cap ? `<div style="color:var(--text-2);font-size:12px;grid-column:1/-1;">Showing ${cap} of ${inView.length} — zoom in to narrow.</div>` : '')
-    : '<div style="color:var(--text-2);font-size:13px;grid-column:1/-1;padding:8px 0;">No buildings in this area — zoom out or pan the map.</div>';
+    ? inView.slice(0, cap).map(it => mapListCard(it.l)).join('') + (inView.length > cap ? `<div style="color:var(--text-2);font-size:11.5px;grid-column:1/-1;padding-top:4px;">Showing the nearest ${cap} of ${inView.length}. Zoom in to refine the area.</div>` : '')
+    : '<div style="color:var(--text-2);font-size:13px;grid-column:1/-1;padding:8px 0;">No buildings in this area. Zoom out or pan the map.</div>';
 }
 function mapListCard(l) {
   const locked = !!l.unitLocked;
@@ -412,11 +424,13 @@ function mapListCard(l) {
     : ([l.size ? f(l.size) + ' sqm' : '', l.rent ? ((l.rentCurrency || '') + ' ' + f(l.rent)) : ''].filter(Boolean).join(' · ') || '—');
   const href = `/building?id=${encodeURIComponent(l.buildingId || l.id)}${l.buildingId ? '&u=' + encodeURIComponent(l.id) : ''}`;
   const name = String(l.name || 'Verified office').replace(/</g, '&lt;');
-  return `<a href="${href}" style="display:block;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;text-decoration:none;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--navy);margin-bottom:4px;">${l.grade === 'A+' ? 'GRADE A+' : 'GRADE A'}</div>
-    <div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3;">${name}</div>
-    <div style="font-size:11.5px;color:var(--text-2);margin-top:2px;">${String(sub).replace(/</g, '&lt;')}</div>
-    <div style="font-size:12px;color:${locked ? 'var(--text-2)' : 'var(--navy)'};margin-top:6px;">${detail}</div>
+  return `<a href="${href}" style="display:block;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;text-decoration:none;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.25;">${name}</div>
+      <span style="font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--navy);white-space:nowrap;">${l.grade === 'A+' ? 'A+' : 'A'}</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-2);margin-top:1px;">${String(sub).replace(/</g, '&lt;')}</div>
+    <div style="font-size:11.5px;color:${locked ? 'var(--text-3)' : 'var(--navy)'};margin-top:5px;">${detail}</div>
   </a>`;
 }
 </script>
