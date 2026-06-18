@@ -538,13 +538,18 @@ function bulkValidate(r) {
   if (!r.building_name) errs.push('building_name');
   const mk = URBN_DATA.markets.some(m => m.id === r.market); if (!mk) errs.push('market');
   if (!r.submarket) errs.push('submarket');
-  if (!r.offering_type) errs.push('offering_type');
-  if (!r.fit_out) errs.push('fit_out');
-  if (!num(r.asking_rent)) errs.push('asking_rent');
-  if (mk && (!r.currency || !allowedCurrencies(r.market).includes(r.currency))) errs.push('currency');
-  if (!r.pricing_basis) errs.push('pricing_basis');
-  if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
-  if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  // Unit-level fields are only required when the row describes a unit. Building-only
+  // rows (no unit/pricing data) can be uploaded without pricing.
+  const hasUnit = !!(r.offering_type || r.unit_floor || num(r.size_sqm) || num(r.desks) || num(r.asking_rent) || r.pricing_basis);
+  if (hasUnit) {
+    if (!r.offering_type) errs.push('offering_type');
+    if (!r.fit_out) errs.push('fit_out');
+    if (!num(r.asking_rent)) errs.push('asking_rent');
+    if (mk && (!r.currency || !allowedCurrencies(r.market).includes(r.currency))) errs.push('currency');
+    if (!r.pricing_basis) errs.push('pricing_basis');
+    if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
+    if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  }
   ['year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge', 'parking_spaces_available', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_price'].forEach(k => { if (r[k] && !num(r[k])) errs.push(k); });
   if (r.parking_arrangement && !['free', 'paid', 'mixed', 'none'].includes(String(r.parking_arrangement).toLowerCase())) errs.push('parking_arrangement');
   if (r.parking_included_in_rent && !['yes', 'no', 'partially'].includes(String(r.parking_included_in_rent).toLowerCase())) errs.push('parking_included_in_rent');
