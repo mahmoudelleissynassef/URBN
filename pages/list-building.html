@@ -34,6 +34,22 @@
       <div class="reason"><div class="reason-num">03</div><h4>Verified, not recycled</h4><p>Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
     </div>
 
+    <!-- Auth gate for signed-out visitors (hero above already explains the page) -->
+    <div id="ll-gate" style="display:none;">
+      <div class="card" style="padding:32px;">
+        <div class="overline label-navy" style="margin-bottom:8px;">Operators &amp; landlords</div>
+        <h2 style="font-size:24px;margin-bottom:10px;">Sign in to list your space</h2>
+        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Listing a building or unit on URBN requires a verified account — so we can protect your identity, log and commission-protect introductions, and review every submission before it goes live. Create a free account or sign in to add a listing (single or bulk upload).</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/sign-up?next=%2Flist-building" class="btn btn-navy">Create a free account</a>
+          <a href="/sign-in?next=%2Flist-building" class="btn btn-outline">Sign in</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive listing app (signed-in only; starts hidden so it never flashes) -->
+    <div id="ll-app" style="display:none;">
+
     <!-- Submitting as (from the signed-in profile; populated by JS) -->
     <div id="ll-submitter" style="margin-bottom:18px;">
       <div style="padding:34px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">LOADING ACCOUNT…</div>
@@ -192,12 +208,30 @@
         <div class="fld-err" id="bulk-err" style="margin-top:12px;"></div>
       </div>
     </div>
+    </div><!-- /#ll-app -->
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="../js/urbn.js"></script>
 <script>
+// Decide synchronously — before paint — whether to show the listing app or the
+// gate, so the form NEVER flashes for signed-out visitors. #ll-app starts hidden
+// in the markup; reveal it only if a Supabase auth token is present. The async
+// check in DOMContentLoaded confirms and corrects (stale token -> gate).
+(function () {
+  let hasToken = false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && /^sb-.*-auth-token$/.test(k)) { const v = localStorage.getItem(k); if (v && v.length > 20) { hasToken = true; break; } }
+    }
+  } catch (e) {}
+  const app = document.getElementById('ll-app'), gate = document.getElementById('ll-gate');
+  if (hasToken) { if (app) app.style.display = ''; if (gate) gate.style.display = 'none'; }
+  else { if (app) app.style.display = 'none'; if (gate) gate.style.display = ''; }
+})();
+
 let LL_PROFILE = null;
 const USER_TYPE_LABELS = { occupier: 'Occupier', broker: 'Broker', developer: 'Developer', landlord_owner: 'Landlord / Owner', coworking_operator: 'Coworking Operator', serviced_office_operator: 'Serviced Office Operator', advisor: 'Advisor', other: 'Other' };
 // Mirrors AMENITY_OPTIONS in server.js (kept in sync; server also exposes it via /api/config).
@@ -209,9 +243,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sel = document.getElementById('ll-market');
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
   renderAmenities();
-  const user = await URBNAuth.requireAuth('/pages/signin.html');   // listing requires sign-in
-  if (!user) return;
-  await loadSubmitter(user);
+  // Members-only: show the gate (not a redirect) so the URL is preserved and the
+  // form never flashes. The synchronous check above made the first decision; this
+  // confirms it authoritatively.
+  try { await URBNAuth.init(); } catch (e) {}
+  const gate = document.getElementById('ll-gate'), app = document.getElementById('ll-app');
+  if (!URBNAuth.user) {
+    if (app) app.style.display = 'none';
+    if (gate) gate.style.display = '';
+    return;
+  }
+  if (gate) gate.style.display = 'none';
+  if (app) app.style.display = '';
+  await loadSubmitter(URBNAuth.user);
   await loadBuildingsPicker();
 });
 
