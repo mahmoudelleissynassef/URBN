@@ -410,6 +410,27 @@ h4 { font-size: 18px; }
 .stat-n { font-family: var(--fmono); font-size: 40px; font-weight: 500; color: var(--text); line-height: 1; margin-bottom: 6px; letter-spacing: -0.01em; }
 /* Intelligence/data elements use the mono face for tabular scannability. */
 .lc-rent, .lc-d-val, .city-card-value, .district-rent, .ti-val { font-family: var(--fmono); }
+
+/* District rent-band intelligence table */
+.dr-table { width: 100%; border-collapse: collapse; }
+.dr-table th { text-align: left; font-family: var(--fmono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); padding: 12px 18px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.dr-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.dr-table tbody tr:last-child td { border-bottom: none; }
+.dr-table tbody tr:hover { background: var(--navy-dim); }
+.dr-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.dr-sub { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+.dr-rent { font-family: var(--fmono); font-size: 13px; font-weight: 500; color: var(--navy); }
+.dr-bar { height: 4px; background: var(--bg-off); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.dr-bar span { display: block; height: 100%; background: #C2A36B; border-radius: 2px; }
+
+/* Cookie consent banner */
+.uc-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500; background: var(--bg-white); border-top: 1px solid var(--border-2); box-shadow: 0 -4px 20px rgba(15,27,48,.08); }
+.uc-inner { max-width: var(--maxw); margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.uc-copy { font-size: 12.5px; color: var(--text-2); line-height: 1.6; max-width: 760px; }
+.uc-copy strong { color: var(--text); }
+.uc-tog { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-2); margin-top: 6px; }
+.uc-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+@media (max-width: 640px) { .uc-actions { width: 100%; } .uc-actions .btn { flex: 1; } }
 .stat-l { font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-2); }
 
 /* ── Forms ────────────────────────────────────────────── */
@@ -587,6 +608,14 @@ textarea.fi { resize: vertical; min-height: 100px; }
 .legal-s li { font-size: 14px; color: var(--text-2); line-height: 1.8; margin-bottom: 6px; }
 .legal-s a { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
 .legal-s strong { color: var(--text); font-weight: 600; }
+.legal-tbl { width: 100%; border-collapse: collapse; margin: 8px 0 16px; }
+.legal-tbl th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text); padding: 10px 14px; border-bottom: 2px solid var(--border-2); vertical-align: bottom; }
+.legal-tbl td { font-size: 13px; color: var(--text-2); line-height: 1.65; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.legal-tbl td:first-child { white-space: nowrap; }
+.legal-tbl tbody tr:last-child td { border-bottom: none; }
+.legal-tag { display: inline-block; margin-top: 5px; font-family: var(--fmono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; color: #1C5D3A; background: #E7F4EC; border-radius: 3px; padding: 2px 7px; }
+.legal-tag.off { color: var(--text-2); background: var(--navy-dim); }
+.mono-inline { font-family: var(--fmono); font-size: .92em; }
 
 /* ── Forms: validation + success ──────────────────────── */
 .fi.fi-err { border-color: #B42318; background: #FEF3F2; }

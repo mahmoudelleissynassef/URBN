@@ -42,6 +42,8 @@ const ROUTES = {
   '/admin': '/pages/dashboards/admin.html',
   '/terms': '/pages/terms.html',
   '/privacy': '/pages/privacy.html',
+  '/cookies': '/pages/cookies.html',
+  '/data-request': '/pages/data-request.html',
   '/documents': '/pages/documents.html',
   // SEO city landing pages
   '/offices-in-cairo': '/pages/markets/cairo.html',
@@ -87,6 +89,16 @@ const REQUEST_TYPES = {
   'list-building': 'List Your Building',
   'membership': 'Membership Request',
   'membership-change': 'Membership Change',
+  'privacy-request': 'Data / Privacy Request',
+};
+// Data-subject request kinds for the GDPR data-request form (/data-request).
+const PRIVACY_REQUEST_KINDS = {
+  'access': 'Access my data',
+  'correction': 'Correct my data',
+  'deletion': 'Delete my data / account',
+  'withdraw-consent': 'Withdraw consent',
+  'object-restrict': 'Object to / restrict processing',
+  'question': 'General privacy question',
 };
 // In-app, listing-centric requests (require a signed-in user + a building).
 // Handled by the authenticated POST /api/listing-request, not the public form.
@@ -367,6 +379,7 @@ function buildUserConfirmation(type, data, name, requestId, createdAt) {
     'membership':    { thing: 'a membership change', title: 'Membership request received', badge: 'Membership Requested' },
     'membership-change': { thing: 'a membership change', title: 'Membership request received', badge: 'Membership Requested' },
     'batch':         { thing: 'a batch upload', title: 'Batch upload received', badge: 'Pending Review' },
+    'privacy-request': { thing: 'a data / privacy request', title: 'Privacy request received', badge: 'Received' },
   };
   const m = map[type] || map['access'];
   const hi = name || (data && data.name) || 'there';
@@ -413,7 +426,14 @@ function handleLeadRequest(req, res) {
     // Server-side validation (mirrors the client; never trust the client).
     const num = (x) => x !== '' && !isNaN(Number(x));
     const errs = [];
-    if (!isCorporateEmail(email)) errs.push('email');
+    // Data-subject requests may legitimately come from a personal email, so we
+    // only require a syntactically valid address; everything else needs corporate.
+    if (type === 'privacy-request') { if (!isEmail(email)) errs.push('email'); }
+    else if (!isCorporateEmail(email)) errs.push('email');
+    if (type === 'privacy-request') {
+      if (!PRIVACY_REQUEST_KINDS[s(data.requestKind)]) errs.push('requestKind');
+      if (data.privacyConsent !== true) errs.push('privacyConsent');
+    }
     if (type === 'access') { if (!company) errs.push('company'); if (!market) errs.push('market'); }
     if (type === 'market-scan') { if (!company) errs.push('company'); if (!market) errs.push('market'); if (!area) errs.push('area'); }
     if (type === 'list-building') {
@@ -493,20 +513,28 @@ function handleLeadRequest(req, res) {
       const noReplyFrom = process.env.NO_REPLY_FROM || process.env.LEAD_FROM;
 
       // (a) Internal admin notification to LEAD_TO, from the routed sender.
-      let adminMail, adminFrom;
+      let adminMail, adminFrom, adminTo;
       if (type === 'list-building') {
         adminMail = buildListingEmail(data, payload, requestId, createdAt);
         adminFrom = listingsFrom;
       } else if (type === 'membership' || type === 'membership-change') {
         adminMail = buildMembershipAdminEmail({ name, email, company, currentTier: data.currentTier, requestedTier: data.requestedTier }, payload);
         adminFrom = requestsFrom;
+      } else if (type === 'privacy-request') {
+        const kind = PRIVACY_REQUEST_KINDS[s(data.requestKind)] || s(data.requestKind);
+        const fields = { 'Request type': kind, Name: name, Email: email, Company: company, Phone: phone, Message: message };
+        const g = buildGenericEmail(label, fields, payload);
+        adminMail = { subject: `Data / Privacy request (${kind}) — ${name || email}`, html: g.html, text: g.text };
+        adminFrom = requestsFrom;
+        // Route data-subject requests to the privacy mailbox when configured.
+        adminTo = process.env.PRIVACY_CONTACT_EMAIL || undefined;
       } else {
         const fields = { Name: name, Email: email, Company: company, Phone: phone, Market: marketName(market) || market, Area: area, Building: building, Message: message };
         const g = buildGenericEmail(label, fields, payload);
         adminMail = { subject: `New ${label} request — ${company || name || email}`, html: g.html, text: g.text };
         adminFrom = requestsFrom;
       }
-      await sendResendEmail({ subject: adminMail.subject, text: adminMail.text, html: adminMail.html, replyTo: email || undefined, from: adminFrom });
+      await sendResendEmail({ subject: adminMail.subject, text: adminMail.text, html: adminMail.html, replyTo: email || undefined, from: adminFrom, to: adminTo });
 
       // (b) User confirmation to the submitter, from no-reply.
       if (email) {
