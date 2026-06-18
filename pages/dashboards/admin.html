@@ -407,21 +407,53 @@ async function revokeGrant(id, btn) { if (!confirm('Revoke this access grant? Th
 
 // ── Buildings management ─────────────────────────────────────────────────────
 let BLD_STATUS = 'approved';
+let BLD_VIS = 'visible';   // admin-only visibility filter: visible | hidden | all
+let BLD_SHOWN = [];        // ids currently displayed (for "hide all")
 async function loadBuildings() {
   const panel = document.getElementById('panel-buildings');
-  panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+  panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
     <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}</div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="exportListings(this)">⬇ Export all (CSV)</button>
       <button class="btn btn-navy btn-sm" onclick="openCreateBuilding()">+ Add building</button>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <div class="chips" style="font-size:11px;">Admin view: ${['visible', 'hidden', 'all'].map(v => `<button class="chip ${BLD_VIS === v ? 'on' : ''}" onclick="BLD_VIS='${v}';loadBuildings()">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="hideSelected(true)">Hide selected</button>
+      <button class="btn btn-ghost btn-sm" onclick="hideSelected(false)">Unhide selected</button>
+      <button class="btn btn-ghost btn-sm" onclick="hideAllVisible()">Hide all shown</button>
     </div>
   </div><div id="bld-list">${loadingBox()}</div>`;
   const q = BLD_STATUS ? '/api/admin/buildings?status=' + encodeURIComponent(BLD_STATUS) : '/api/admin/buildings';
   const j = await adminFetch(q, 'GET');
   const list = document.getElementById('bld-list');
   if (!j.ok) { list.innerHTML = errBox(j); return; }
-  if (!j.buildings || !j.buildings.length) { list.innerHTML = emptyBox('No buildings for this status.'); return; }
-  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name || '')}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> ${b.status === 'archived' ? `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',true,this)">Restore</button>` : `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',false,this)">Archive</button>`}</td></tr>`).join('')}</tbody></table></div>`;
+  let rows = j.buildings || [];
+  if (BLD_VIS === 'visible') rows = rows.filter(b => !b.admin_hidden);
+  else if (BLD_VIS === 'hidden') rows = rows.filter(b => !!b.admin_hidden);
+  BLD_SHOWN = rows.map(b => b.id);
+  if (!rows.length) { list.innerHTML = emptyBox(`No ${BLD_VIS === 'all' ? '' : BLD_VIS + ' '}buildings for this status.`); return; }
+  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+async function setBuildingHidden(ids, hidden, btn) {
+  if (!ids || !ids.length) { showToast('Select at least one building', 'info'); return; }
+  if (btn) setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/set-building-hidden', 'POST', { buildingIds: ids, hidden });
+  if (btn) setBtnBusy(btn, false);
+  if (j.ok) { showToast(`${j.updated} building(s) ${hidden ? 'hidden' : 'unhidden'}`); loadBuildings(); }
+  else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+function hideSelected(hidden) {
+  const ids = [...document.querySelectorAll('.bld-chk:checked')].map(c => c.value);
+  if (!ids.length) { showToast('Select buildings first', 'info'); return; }
+  setBuildingHidden(ids, hidden);
+}
+function hideAllVisible() {
+  if (!BLD_SHOWN.length) { showToast('Nothing to hide', 'info'); return; }
+  if (!confirm(`Hide all ${BLD_SHOWN.length} building(s) currently shown? This only affects the admin view — public listings are unaffected, and you can unhide from the Hidden filter.`)) return;
+  setBuildingHidden(BLD_SHOWN.slice(), true);
 }
 // Download the full inventory as a round-trippable CSV (edit in Excel, then
 // re-upload via List Your Space → Bulk upload; building_id/unit_id make it update

@@ -39,7 +39,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../');
   injectFooter('../');
   await URBN_LISTINGS.load();
+  try { await URBNAuth.init(); } catch (e) {}
+  const signedIn = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user);
   const mg = document.getElementById('markets-grid');
+
+  // Logged-out: teaser only — market names + coverage, no supply counts or rent
+  // bands. (Protected building/unit data is already gated server-side in /api/listings.)
+  if (!signedIn) {
+    mg.innerHTML = URBN_DATA.markets.map(m => `<div class="city-card">
+      <div class="city-card-region">${m.region}</div>
+      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-divider"></div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.6;">Verified supply, building counts and indicative rent bands are available to members.</div>
+    </div>`).join('');
+    const cta = document.createElement('div');
+    cta.setAttribute('style', 'grid-column:1/-1;margin-top:8px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--r);padding:24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;');
+    cta.innerHTML = `<div><div style="font-family:var(--fd);font-size:20px;margin-bottom:4px;">See verified market detail</div><p style="font-size:13px;color:var(--text-2);max-width:520px;">Sign in to view supply counts and indicative rent bands, or request a managed Market Scan for live pricing.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="/sign-up" class="btn btn-navy">Create account</a><a href="/market-scan" class="btn btn-outline">Request Market Scan</a></div>`;
+    mg.appendChild(cta);
+    return;
+  }
+
   URBN_DATA.markets.forEach(m => {
     const s = URBN_DATA.marketStats[m.id];
     const bc = URBN_LISTINGS.count(m.id);

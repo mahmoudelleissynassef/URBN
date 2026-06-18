@@ -1000,6 +1000,21 @@ function handleAdmin(req, res, urlPath) {
         await sbPatch('units', `building_id=eq.${encodeURIComponent(body.buildingId)}`, { status });
         return sendJson(res, 200, { ok: true, status });
       }
+      if (urlPath === '/api/admin/set-building-hidden') {
+        // Admin-only soft visibility in the admin Buildings view. Does NOT touch
+        // status, so public listings are unaffected. Reversible (filter Hidden/All).
+        const ids = Array.isArray(body.buildingIds) ? body.buildingIds.filter(Boolean) : (body.buildingId ? [body.buildingId] : []);
+        if (!ids.length) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const hidden = body.hidden === true;
+        let n = 0;
+        for (let i = 0; i < ids.length; i += 50) {
+          const chunk = ids.slice(i, i + 50);
+          try { await sbPatch('buildings', `id=in.(${chunk.map((x) => encodeURIComponent(x)).join(',')})`, { admin_hidden: hidden }); n += chunk.length; }
+          catch (e) { console.error('[admin/set-building-hidden]', e.message); }
+        }
+        console.log(`[audit] admin ${user.email} ${hidden ? 'hid' : 'unhid'} ${n} building(s)`);
+        return sendJson(res, 200, { ok: true, updated: n, hidden });
+      }
       if (urlPath === '/api/admin/reject-listing') {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
@@ -1620,6 +1635,21 @@ function handleConstructionCosts(req, res) {
 }
 
 // ── Server ───────────────────────────────────────────────────────────────────
+// ── Lightweight in-memory rate limiter (single-instance; per-IP, sliding window) ──
+// Anti-spam/brute baseline. For multi-instance scale, move to Redis/edge — TODO.
+const RL = new Map();
+function rateLimited(key, max, windowMs) {
+  const now = Date.now();
+  const arr = (RL.get(key) || []).filter((t) => now - t < windowMs);
+  arr.push(now);
+  RL.set(key, arr);
+  if (RL.size > 5000) { for (const [k, v] of RL) { if (!v.length || now - v[v.length - 1] > windowMs) RL.delete(k); } }
+  return arr.length > max;
+}
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
 const server = http.createServer((req, res) => {
   // Baseline security headers (safe for the current static + inline-JS architecture).
   // A strict Content-Security-Policy is intentionally NOT set yet: the site relies on
@@ -1633,6 +1663,14 @@ const server = http.createServer((req, res) => {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
   const urlPath = req.url.split('?')[0];
+
+  // Anti-spam: cap POSTs to sensitive write endpoints per IP (30/min). Auth and
+  // per-tier monthly caps are enforced separately inside the handlers.
+  if (req.method === 'POST' && /^\/api\/(request|listing-request|batch)$/.test(urlPath)) {
+    if (rateLimited('post:' + clientIp(req) + ':' + urlPath, 30, 60000)) {
+      return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+    }
+  }
 
   if (urlPath === '/api/request') {
     if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
