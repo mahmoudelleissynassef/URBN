@@ -130,6 +130,15 @@ const MARKET_NAMES = {
 };
 function marketName(id) { return MARKET_NAMES[id] || (id ? String(id) : ''); }
 const FRANCOPHONE_WA_MARKETS = ['dakar', 'abidjan', 'bamako', 'ouagadougou', 'lome', 'cotonou', 'niamey'];
+// Accept market as a case-insensitive id ("Cairo" -> "cairo") or display name
+// ("Cape Town" -> "capetown"); returns the canonical id (or the lowercased input).
+function normalizeMarket(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (!s) return s;
+  if (MARKET_CURRENCY[s] || FRANCOPHONE_WA_MARKETS.includes(s)) return s;
+  for (const id in MARKET_NAMES) { if (MARKET_NAMES[id].toLowerCase() === s) return id; }
+  return s;
+}
 function allowedCurrenciesForMarket(marketId) {
   const local = MARKET_CURRENCY[marketId];
   const out = [];
@@ -541,7 +550,8 @@ function validateBatchRow(r) {
   const errs = [];
   // Required (building level)
   if (!r.building_name) errs.push('building_name');
-  const marketOk = !!MARKET_CURRENCY[r.market] || FRANCOPHONE_WA_MARKETS.includes(r.market);
+  const market = normalizeMarket(r.market);
+  const marketOk = !!MARKET_CURRENCY[market] || FRANCOPHONE_WA_MARKETS.includes(market);
   if (!marketOk) errs.push('market');
   if (!r.submarket) errs.push('submarket');
   // Unit-level requirements only apply when the row actually describes a unit.
@@ -549,7 +559,7 @@ function validateBatchRow(r) {
     if (!r.offering_type) errs.push('offering_type');
     if (!r.fit_out) errs.push('fit_out');
     if (!num(r.asking_rent)) errs.push('asking_rent');
-    if (marketOk && (!r.currency || !allowedCurrenciesForMarket(r.market).includes(r.currency))) errs.push('currency');
+    if (marketOk && (!r.currency || !allowedCurrenciesForMarket(market).includes(r.currency))) errs.push('currency');
     if (!r.pricing_basis) errs.push('pricing_basis');
     // Conditional: traditional offerings need size_sqm; coworking/serviced need desks.
     if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
@@ -748,7 +758,7 @@ async function approveBatchRowRec(row, adminId) {
   const bId = (r.building_id && String(r.building_id).trim()) || buildingKeyId(r);
   const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_' + row.id);
   await sbUpsert('buildings', [{
-    id: bId, name: r.building_name || 'Untitled', market: r.market || null, submarket: r.submarket || null, address: r.address || null,
+    id: bId, name: r.building_name || 'Untitled', market: normalizeMarket(r.market) || null, submarket: r.submarket || null, address: r.address || null,
     google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
     total_gla_sqm: numOrNull(r.total_gla_sqm), typical_floorplate_sqm: numOrNull(r.typical_floorplate_sqm), parking_ratio: numOrNull(r.parking_ratio),
     certifications: arrOrNull(r.certifications), amenities: arrOrNull(r.amenities), image_url: r.main_photo_url || null,

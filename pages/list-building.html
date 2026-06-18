@@ -536,7 +536,11 @@ function bulkParseCSV(text) { const lines = text.replace(/\r\n?/g, '\n').split('
 function bulkValidate(r) {
   const errs = [], num = x => x !== '' && x != null && !isNaN(Number(x)), isUrl = x => /^https?:\/\/\S+$/i.test(String(x || '').trim());
   if (!r.building_name) errs.push('building_name');
-  const mk = URBN_DATA.markets.some(m => m.id === r.market); if (!mk) errs.push('market');
+  // Accept market by id or name, any case (e.g. "Cairo" -> "cairo").
+  const ms = String(r.market || '').trim().toLowerCase();
+  const mkObj = URBN_DATA.markets.find(m => m.id === ms || (m.name || '').toLowerCase() === ms);
+  const market = mkObj ? mkObj.id : ms;
+  const mk = !!mkObj; if (!mk) errs.push('market');
   if (!r.submarket) errs.push('submarket');
   // Unit-level fields are only required when the row describes a unit. Building-only
   // rows (no unit/pricing data) can be uploaded without pricing.
@@ -545,7 +549,7 @@ function bulkValidate(r) {
     if (!r.offering_type) errs.push('offering_type');
     if (!r.fit_out) errs.push('fit_out');
     if (!num(r.asking_rent)) errs.push('asking_rent');
-    if (mk && (!r.currency || !allowedCurrencies(r.market).includes(r.currency))) errs.push('currency');
+    if (mk && (!r.currency || !allowedCurrencies(market).includes(r.currency))) errs.push('currency');
     if (!r.pricing_basis) errs.push('pricing_basis');
     if (BULK_DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
     if (BULK_AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
