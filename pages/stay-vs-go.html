@@ -20,12 +20,11 @@
     <!-- Auth gate: shown to signed-out visitors instead of the tool -->
     <div id="sg-gate" style="display:none;max-width:680px;">
       <div class="card" style="padding:32px;">
-        <div class="overline label-navy" style="margin-bottom:8px;">Members only</div>
-        <h2 style="font-size:24px;margin-bottom:10px;">Sign in to run a Stay vs Go analysis</h2>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:14px;">Stay vs Go compares four ways to occupy space in a new market — staying in your current office, fitting out a traditional lease, taking an already-fitted office, or coworking — showing upfront CAPEX, monthly cost and total cost over the lease term using URBN's verified construction-cost benchmarks. You can also pull in your own saved offices and compare them side by side.</p>
-        <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:20px;">It's free — create an account or sign in to use the tool.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="/sign-up?next=%2Fstay-vs-go" class="btn btn-navy">Create a free account</a>
+        <div class="overline label-navy" style="margin-bottom:8px;">Paid feature</div>
+        <h2 id="sg-gate-title" style="font-size:24px;margin-bottom:10px;">Stay vs Go is available on Starter and above</h2>
+        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Stay vs Go compares four ways to occupy space in a new market — staying in your current office, fitting out a traditional lease, taking an already-fitted office, or coworking — with upfront CAPEX, monthly cost and total cost over the lease term, using URBN's verified construction-cost benchmarks. You can also pull in your own saved offices and compare them side by side.</p>
+        <div id="sg-gate-cta" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/pricing" class="btn btn-navy">View plans</a>
           <a href="/sign-in?next=%2Fstay-vs-go" class="btn btn-outline">Sign in</a>
         </div>
       </div>
@@ -158,9 +157,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // return here after authenticating via ?next=/stay-vs-go).
   try { await URBNAuth.init(); } catch (e) {}
   const tool = document.getElementById('sg-tool'), gate = document.getElementById('sg-gate');
-  if (!URBNAuth.user) {
-    if (tool) tool.style.display = 'none';     // corrects a stale-token optimistic reveal
+  // Stay vs Go is a PAID feature (server entitlement). Gate free/anon users.
+  const ent = await URBNEnt.load().catch(() => null);
+  if (!ent || !ent.stayVsGo) {
+    if (tool) tool.style.display = 'none';
     if (gate) gate.style.display = '';
+    const title = document.getElementById('sg-gate-title'), cta = document.getElementById('sg-gate-cta');
+    if (URBNAuth.user) {   // signed in but not on a paid tier
+      if (title) title.textContent = 'Stay vs Go is a paid feature';
+      if (cta) cta.innerHTML = '<a href="/pricing" class="btn btn-navy">Upgrade to Starter or above</a><a href="/offices" class="btn btn-outline">Browse offices</a>';
+    } else {               // signed out
+      if (title) title.textContent = 'Sign in to use Stay vs Go';
+      if (cta) cta.innerHTML = '<a href="/sign-up?next=%2Fstay-vs-go" class="btn btn-navy">Create an account</a><a href="/sign-in?next=%2Fstay-vs-go" class="btn btn-outline">Sign in</a>';
+    }
     return;
   }
   if (tool) tool.style.display = 'grid';
