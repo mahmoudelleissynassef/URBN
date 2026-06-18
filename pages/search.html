@@ -122,7 +122,7 @@
         </select>
       </div>
     </div>
-    <div id="map" style="display:none;height:480px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;background:var(--bg-off);"></div>
+    <div id="map" style="display:none;height:72vh;min-height:440px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;background:var(--bg-off);"></div>
     <p id="map-note" style="display:none;font-size:11.5px;color:var(--text-2);margin:-6px 0 16px;">Pins show <strong>approximate areas only</strong> — exact building locations are shared after a verified introduction.</p>
     <div id="results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;"></div>
     <div id="no-results" class="hidden" style="text-align:center;padding:72px 24px;color:var(--text-2);">
@@ -324,8 +324,11 @@ function renderMap(listings) {
   }
   if (!MAP) {
     MAP = L.map('map', { scrollWheelZoom: false }).setView([5, 20], 3);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 16, attribution: '&copy; OpenStreetMap contributors',
+    // CARTO Positron — clean, light, institutional basemap. Free, no API key.
+    // (Future upgrade options: Mapbox Light / MapTiler Basic — both need an API key.)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19, subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     }).addTo(MAP);
   }
   MARKERS.forEach(m => MAP.removeLayer(m)); MARKERS = [];

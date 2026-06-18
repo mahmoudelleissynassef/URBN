@@ -170,7 +170,7 @@
   <div class="w">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(194,163,107,0.5);">
       <div style="padding:32px 32px 0 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;" id="stat-markets">16</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Active Markets</div></div>
-      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;" id="stat-buildings">—</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Verified Buildings</div></div>
+      <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;" id="stat-buildings">Verified</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Office supply</div></div>
       <div style="padding:32px 32px 0;border-right:1px solid rgba(255,255,255,0.10);"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">A/A+</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Grade Standard Only</div></div>
       <div style="padding:32px 0 0 32px;"><div style="font-family:var(--fd);font-size:44px;color:#fff;line-height:1;margin-bottom:6px;">24mo</div><div style="font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Introduction Protection</div></div>
     </div>
@@ -310,9 +310,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   const sb=document.getElementById('stat-buildings');
   const sbl=sb?sb.nextElementSibling:null;
   if(sb){
-    const n=URBN_LISTINGS.buildings.length;
-    if(n>=5){ sb.textContent=n; if(sbl) sbl.textContent='Verified Buildings'; }
-    else { sb.textContent='100%'; if(sbl) sbl.textContent='Verified at Source'; }
+    const n=(URBN_LISTINGS.buildings||[]).length;
+    if(n>0){ sb.textContent=n.toLocaleString(); if(sbl) sbl.textContent=(n===1?'Verified Building':'Verified Buildings'); }
+    else { sb.textContent='Verified'; sb.style.fontSize='30px'; if(sbl) sbl.textContent='Office supply'; }  // qualitative fallback — never a dash
   }
 });
 </script>
