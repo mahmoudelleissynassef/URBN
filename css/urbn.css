@@ -9,7 +9,7 @@
    Type:     Playfair Display · Inter
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -36,6 +36,7 @@
 
   --fd: 'Playfair Display', Georgia, serif;
   --fi: 'Inter', -apple-system, sans-serif;
+  --fmono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --nav-h:   72px;
   --maxw:  1280px;
@@ -406,7 +407,9 @@ h4 { font-size: 18px; }
   padding: 32px 0; border-right: 1px solid var(--border); padding-right: 32px; margin-right: 32px;
 }
 .stat-c:last-child { border-right: none; }
-.stat-n { font-family: var(--fd); font-size: 44px; font-weight: 400; color: var(--text); line-height: 1; margin-bottom: 6px; }
+.stat-n { font-family: var(--fmono); font-size: 40px; font-weight: 500; color: var(--text); line-height: 1; margin-bottom: 6px; letter-spacing: -0.01em; }
+/* Intelligence/data elements use the mono face for tabular scannability. */
+.lc-rent, .lc-d-val, .city-card-value, .district-rent, .ti-val { font-family: var(--fmono); }
 .stat-l { font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-2); }
 
 /* ── Forms ────────────────────────────────────────────── */
