@@ -65,7 +65,10 @@
     <div id="ll-manual" class="hidden">
     <div id="ll-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
 
-      <div class="form-sec-title">Building &amp; location</div>
+      <!-- STEP 1: the building (existing or new) -->
+      <div id="ll-step1">
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;">Step 1 of 2 — The building</div>
+      <div class="form-sec-title" style="margin-top:0;">Building &amp; location</div>
       <div class="fg">
         <label class="fl">Use an existing building or add a new one</label>
         <select class="fi fi-sel" id="ll-existing" onchange="llExistingChanged()"><option value="">+ Add a new building</option></select>
@@ -82,6 +85,45 @@
         <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"><div class="fld-err" id="err-ll-district">Enter the district / submarket.</div></div>
         <div class="fg"><label class="fl">Google Maps URL (pin)</label><input type="url" class="fi" id="ll-maps" placeholder="https://maps.google.com/..."><div class="fld-err" id="err-ll-maps">Enter a valid URL (or leave blank).</div></div>
       </div>
+      <div class="form-sec-title">Amenities</div>
+      <p style="font-size:12.5px;color:var(--text-2);margin:-6px 0 12px;">Tick everything the building offers.</p>
+      <div id="ll-amenities" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;margin-bottom:8px;"></div>
+
+      <div class="form-sec-title">Parking</div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Parking spaces available</label><input type="number" class="fi" id="ll-pk-spaces" placeholder="e.g. 120"><div class="fld-err" id="err-ll-pk-spaces">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Parking arrangement</label>
+          <select class="fi fi-sel" id="ll-pk-arrangement"><option value="">Select...</option><option value="free">Free</option><option value="paid">Paid</option><option value="mixed">Mixed</option><option value="none">None</option></select>
+        </div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Parking included in rent?</label>
+          <select class="fi fi-sel" id="ll-pk-included"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option><option value="partially">Partially</option></select>
+        </div>
+        <div class="fg"><label class="fl">Price per spot / month (if paid)</label><input type="number" class="fi" id="ll-pk-price" placeholder="e.g. 1,500"><div class="fld-err" id="err-ll-pk-price">Must be numeric.</div></div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Visitor parking hourly rate (optional)</label><input type="number" class="fi" id="ll-pk-visitor" placeholder="e.g. 30"><div class="fld-err" id="err-ll-pk-visitor">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Monthly parking membership available?</label>
+          <select class="fi fi-sel" id="ll-pk-membership"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price">Must be numeric.</div></div>
+        <div class="fg"><label class="fl">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
+      </div>
+
+      <div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-navy btn-lg" onclick="llContinue()">Continue to space details →</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:10px;">Choose an existing building or add a new one. Next, you&#39;ll add the available space — floor, size, rent and photos.</p>
+      </div>
+      </div><!-- /#ll-step1 -->
+
+      <!-- STEP 2: the unit / space being listed -->
+      <div id="ll-step2" class="hidden">
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;">Step 2 of 2 — The space</div>
+      <div id="ll-step2-bldhdr" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-off);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;"></div>
+      <div class="form-sec-title" style="margin-top:0;">The space you&#39;re listing</div>
       <div class="fg"><label class="fl">Floor Number / Range (optional)</label><input type="text" class="fi" id="ll-floor" placeholder="e.g. 12, or 8–14"></div>
 
       <div class="form-sec-title">Space &amp; offering</div>
@@ -138,34 +180,6 @@
       </div>
       <div class="fg"><label class="fl">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
 
-      <div class="form-sec-title">Amenities</div>
-      <p style="font-size:12.5px;color:var(--text-2);margin:-6px 0 12px;">Tick everything the building offers.</p>
-      <div id="ll-amenities" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;margin-bottom:8px;"></div>
-
-      <div class="form-sec-title">Parking</div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Parking spaces available</label><input type="number" class="fi" id="ll-pk-spaces" placeholder="e.g. 120"><div class="fld-err" id="err-ll-pk-spaces">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Parking arrangement</label>
-          <select class="fi fi-sel" id="ll-pk-arrangement"><option value="">Select...</option><option value="free">Free</option><option value="paid">Paid</option><option value="mixed">Mixed</option><option value="none">None</option></select>
-        </div>
-      </div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Parking included in rent?</label>
-          <select class="fi fi-sel" id="ll-pk-included"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option><option value="partially">Partially</option></select>
-        </div>
-        <div class="fg"><label class="fl">Price per spot / month (if paid)</label><input type="number" class="fi" id="ll-pk-price" placeholder="e.g. 1,500"><div class="fld-err" id="err-ll-pk-price">Must be numeric.</div></div>
-      </div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Visitor parking hourly rate (optional)</label><input type="number" class="fi" id="ll-pk-visitor" placeholder="e.g. 30"><div class="fld-err" id="err-ll-pk-visitor">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Monthly parking membership available?</label>
-          <select class="fi fi-sel" id="ll-pk-membership"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option></select>
-        </div>
-      </div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
-      </div>
-
       <div class="form-sec-title">Photos &amp; floorplans</div>
       <div class="form-note">
         <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="/sign-in" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="/sign-up" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
@@ -187,6 +201,7 @@
         <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Listing for Review</button>
         <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and verifies the listing at source before publishing. Typical response within 3 business days.</p>
       </div>
+    </div><!-- /#ll-step2 -->
     </div>
     </div><!-- /#ll-manual -->
 
@@ -363,6 +378,37 @@ function setMode(mode) {
   document.getElementById('ll-bulk').classList.toggle('hidden', mode !== 'bulk');
   document.getElementById('mode-manual-btn').className = 'btn btn-sm ' + (mode === 'manual' ? 'btn-dark' : 'btn-ghost');
   document.getElementById('mode-bulk-btn').className = 'btn btn-sm ' + (mode === 'bulk' ? 'btn-dark' : 'btn-ghost');
+  if (mode === 'manual') llBackToBuilding();   // always start on step 1
+}
+
+// Two-step manual flow: building (step 1) -> the space/unit (step 2).
+function llContinue() {
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const isUrl = x => /^https?:\/\/\S+$/i.test(x);
+  let ok = true;
+  const set = (id, errId, bad) => { fldErr(id, errId, bad); if (bad) ok = false; };
+  // Building identity is only entered when adding a NEW building.
+  if (!LL_EXISTING_ID) {
+    set('ll-building', 'err-ll-building', !v('ll-building'));
+    set('ll-market', 'err-ll-market', !v('ll-market'));
+    set('ll-district', 'err-ll-district', !v('ll-district'));
+    set('ll-maps', 'err-ll-maps', !!v('ll-maps') && !isUrl(v('ll-maps')));
+  }
+  if (!ok) { try { showToast('Complete the building details to continue', 'error'); } catch (e) {} return; }
+  // Header on step 2 shows which building the space is being added to.
+  const b = LL_EXISTING_ID ? (LL_BUILDINGS[LL_EXISTING_ID] || {}) : null;
+  const bname = b ? b.name : v('ll-building');
+  const bsub = b ? b.submarket : v('ll-district');
+  const hdr = document.getElementById('ll-step2-bldhdr');
+  if (hdr) hdr.innerHTML = `<div><div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:4px;">${LL_EXISTING_ID ? 'Adding a space to' : 'New building'}</div><div style="font-size:15px;font-weight:600;color:var(--text);">${llEsc(bname || 'New building')}${bsub ? ' — ' + llEsc(bsub) : ''}</div></div><button type="button" class="btn btn-ghost btn-sm" onclick="llBackToBuilding()">← Change building</button>`;
+  document.getElementById('ll-step1').classList.add('hidden');
+  document.getElementById('ll-step2').classList.remove('hidden');
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+}
+function llBackToBuilding() {
+  const s2 = document.getElementById('ll-step2'), s1 = document.getElementById('ll-step1');
+  if (s2) s2.classList.add('hidden');
+  if (s1) s1.classList.remove('hidden');
 }
 
 // Currency options depend on the selected market (local + USD, +EUR for XOF/Francophone WA).
