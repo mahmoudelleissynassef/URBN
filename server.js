@@ -218,7 +218,9 @@ async function insertSupabase(row) {
 async function sendResendEmail({ subject, text, html, replyTo, from, to }) {
   const key = process.env.RESEND_API_KEY;
   const fromAddr = from || process.env.LEAD_FROM;
-  const toAddr = to || process.env.LEAD_TO;
+  // Admin notifications (no explicit `to`) go to ADMIN_NOTIFICATION_EMAIL when set,
+  // falling back to LEAD_TO for back-compat. User-facing mail passes `to` explicitly.
+  const toAddr = to || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.LEAD_TO;
   if (!key || !fromAddr || !toAddr) throw new Error('resend_env_missing');
   const body = JSON.stringify({
     from: fromAddr, to: [toAddr], subject, text, html,
@@ -263,7 +265,8 @@ function rawPayloadRow(payload) {
 function buildListingEmail(data, payload, requestId, createdAt) {
   const mkt = marketName(data.market) || (data.market || '');
   const building = data.building || '(no name)';
-  const subject = `New listing submission: ${building} — ${mkt || '(no market)'} — Pending Review`;
+  const uploader = data.name || data.email || 'A user';
+  const subject = `${uploader} uploaded a new building — ${building} (${mkt || 'no market'})`;
   const photoPaths = Array.isArray(data.photoPaths) ? data.photoPaths : [];
   const floorplanYN = data.floorplanPath ? 'Yes' : 'No';
   const bucket = data.mediaBucket || 'listing-media';
@@ -298,6 +301,7 @@ function buildListingEmail(data, payload, requestId, createdAt) {
       (data.floorplanPath ? emailRow('Floorplan', data.floorplanPath) : '')) +
     emailSection('Notes', emailRow('Notes', data.message)) +
     emailSection('System',
+      emailRow('Review', '<a href="https://urbnoffices.com/admin?tab=pending" style="color:#243A5E;">Open in admin console &rarr;</a>', true) +
       emailRow('Supabase Request ID', requestId) + emailRow('Source Page', data.sourcePage) + emailRow('Submitted', ts)) +
     rawPayloadRow(payload);
 
@@ -1174,13 +1178,14 @@ function handleBatch(req, res) {
       }
       // Notify admin (listings sender) + confirm to the uploader (no-reply).
       try {
-        const sum = emailSection('Batch', emailRow('Filename', data.filename) + emailRow('Uploaded By', user.email) +
+        const sum = emailSection('Bulk upload', emailRow('Uploaded By', user.email) + emailRow('Filename', data.filename) +
           emailRow('Rows Processed', String(rows.length)) + emailRow('Accepted', String(accepted.length)) +
-          emailRow('Rejected', String(rejected.length)) + emailRow('Status', 'pending_review'));
+          emailRow('Rejected', String(rejected.length)) + emailRow('Status', 'pending_review') +
+          emailRow('Review', '<a href="https://urbnoffices.com/admin?tab=batches" style="color:#243A5E;">Open in admin console &rarr;</a>', true));
         const errSec = rejected.length ? emailSection('Validation Errors (first 20)',
           rejected.slice(0, 20).map((e) => emailRow('Row ' + (e.i + 1), e.errs.join(', '))).join('')) : '';
         await sendResendEmail({
-          subject: `Batch upload: ${data.filename || 'listings'} — ${accepted.length}/${rows.length} accepted — Pending Review`,
+          subject: `${user.email} uploaded ${accepted.length} listing${accepted.length === 1 ? '' : 's'} (bulk) — pending review`,
           html: emailShell('New Batch Upload', 'Pending Review', sum + errSec),
           text: `BATCH UPLOAD — PENDING REVIEW\nFile: ${data.filename}\nUploaded by: ${user.email}\nProcessed: ${rows.length} · Accepted: ${accepted.length} · Rejected: ${rejected.length}`,
           from: process.env.LISTINGS_FROM || process.env.LEAD_FROM, replyTo: user.email,
@@ -1616,6 +1621,17 @@ function handleConstructionCosts(req, res) {
 
 // ── Server ───────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
+  // Baseline security headers (safe for the current static + inline-JS architecture).
+  // A strict Content-Security-Policy is intentionally NOT set yet: the site relies on
+  // inline <script> blocks and inline event handlers throughout, so a strict CSP would
+  // require 'unsafe-inline' (weak) or a full refactor to external handlers + nonces.
+  // TODO(security): refactor inline handlers, then add a strict CSP.
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
   const urlPath = req.url.split('?')[0];
 
   if (urlPath === '/api/request') {
