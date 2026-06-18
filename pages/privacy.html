@@ -26,12 +26,14 @@
     <div class="mb48">
       <span class="overline label-navy">Legal Framework</span>
       <h1 style="font-size:44px;">Privacy Policy</h1>
-      <p style="font-size:14px;color:var(--text-2);margin-top:12px;line-height:1.8;">Last updated 16 June 2026. This policy explains what URBN collects when you use the platform, why we collect it, how long we keep it, and the rights you have over your data.</p>
+      <p style="font-size:14px;color:var(--text-2);margin-top:12px;line-height:1.8;">Last updated 18 June 2026. This policy explains what URBN Offices collects when you use the platform, why we collect it, how long we keep it, and the rights you have over your data.</p>
     </div>
+
+    <div class="form-note" style="margin-bottom:28px;"><p style="font-size:12.5px;"><strong>TODO (to finalise before launch):</strong> registered legal entity name, registered address, and the name/contact of the data protection contact or DPO (if appointed). Replace the placeholders marked <em>[TODO]</em> below. This policy is a practical foundation and should be reviewed by qualified counsel.</p></div>
 
     <section class="legal-s">
       <h2>1. Who we are</h2>
-      <p>URBN ("URBN", "we", "us") operates a corporate office discovery and introduction platform covering markets across Africa and MENA. For the purposes of applicable data protection law, including the EU/UK General Data Protection Regulation (GDPR) where it applies, URBN is the data controller for the personal data described in this policy. Questions and data-rights requests can be sent to <a href="mailto:privacy@urbnoffices.com">privacy@urbnoffices.com</a>.</p>
+      <p>URBN Offices ("URBN", "we", "us") operates a corporate office discovery and introduction platform covering markets across Africa and MENA. The controller of the personal data described in this policy is <strong>[TODO: legal entity name]</strong>, registered at <strong>[TODO: registered address]</strong>. For the purposes of applicable data protection law, including the EU/UK General Data Protection Regulation (GDPR) where it applies, URBN is the data controller. Privacy questions and data-rights requests can be sent to <a href="mailto:privacy@urbnoffices.com">privacy@urbnoffices.com</a> <strong>[TODO: confirm privacy contact / DPO]</strong> or via our <a href="/data-request" class="text-navy">data &amp; privacy request form</a>.</p>
     </section>
 
     <section class="legal-s">
@@ -39,8 +41,11 @@
       <p>We collect only the information you choose to provide and a limited amount of technical data needed to run the service:</p>
       <ul>
         <li><strong>Contact and company details</strong> you submit through our forms — corporate email address, company name, target market, required area, desk and meeting-room counts, timelines, and any notes you add.</li>
-        <li><strong>Account and activity data</strong> if you register — saved buildings, shortlists, and introduction requests.</li>
-        <li><strong>Technical data</strong> — IP address, browser type, and basic usage analytics used to keep the service secure and working.</li>
+        <li><strong>Account and authentication data</strong> if you register — name, job title, user type, your hashed password (handled by our authentication provider), saved buildings and shortlists.</li>
+        <li><strong>Listings you upload</strong> as a landlord, operator or broker — building and unit details, location, commercials, amenities, parking, and any photos or floorplans you provide. These are reviewed before publication and shown to occupiers in anonymised form until you choose to reveal them.</li>
+        <li><strong>Request data</strong> — reveal, site-visit, offer and introduction requests you submit, including the building, any message, and timestamps, used to operate and commission-protect introductions.</li>
+        <li><strong>Operational notifications</strong> — when you upload a listing or submit a request, an internal notification email is sent to our team so we can review it.</li>
+        <li><strong>Technical data</strong> — IP address and browser type, used to keep the service secure and to apply anti-abuse rate limits. The site does not currently run analytics, advertising or tracking cookies.</li>
       </ul>
       <p>We do not intentionally collect special-category personal data, and we ask that you do not submit it through free-text fields.</p>
     </section>
@@ -60,8 +65,21 @@
     </section>
 
     <section class="legal-s">
-      <h2>5. Who we share it with</h2>
-      <p>We share personal data only as needed to deliver the service: with the relevant landlord, operator, or their representative when you ask us to make an introduction; with vetted service providers (e.g. hosting, email delivery) acting on our instructions; and where required by law. We do not sell your personal data.</p>
+      <h2>5. Who we share it with (processors / subprocessors)</h2>
+      <p>We share personal data only as needed to deliver the service: with the relevant landlord, operator, or their representative when you ask us to make an introduction; with the service providers below, acting on our instructions; and where required by law. We do not sell your personal data.</p>
+      <ul>
+        <li><strong>Supabase</strong> — database, authentication and file storage (account data, listings, uploaded media).</li>
+        <li><strong>Resend</strong> — transactional and internal notification email delivery.</li>
+        <li><strong>Railway</strong> — application hosting.</li>
+        <li><strong>OpenStreetMap / CARTO</strong> — map basemap tiles (your IP is visible to the tile provider when a map loads).</li>
+        <li><strong>Google Fonts</strong> — web font delivery (your IP is visible to Google when fonts load).</li>
+      </ul>
+      <p style="font-size:12.5px;color:var(--text-2);"><em>[TODO: confirm the final processor list, their locations, and that data processing agreements are in place with each.]</em></p>
+    </section>
+
+    <section class="legal-s">
+      <h2>5a. Cookies &amp; local storage</h2>
+      <p>We use a small number of strictly necessary cookies and browser local storage to keep you signed in, remember your preferences, and operate core features. We do not currently use analytics, advertising or tracking cookies. You can review categories and manage your choice at any time via the cookie banner or "Cookie settings" in the footer. Full detail is in our <a href="/cookies" class="text-navy">Cookie Policy</a>.</p>
     </section>
 
     <section class="legal-s">

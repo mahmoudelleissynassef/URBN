@@ -148,7 +148,7 @@
       <div><div class="section-rule"></div><h2>Prime Office Districts</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Key office locations with indicative rent bands.</p></div>
       <a href="pages/districts.html" class="btn btn-ghost">All Districts →</a>
     </div>
-    <div class="g5" id="districts-grid"></div>
+    <div id="districts-grid"></div>
   </div>
 </section>
 
@@ -296,25 +296,40 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     </a>`;
   });
 
-  // Districts
+  // Districts — compact rent-band intelligence table. Indicative rent figures are
+  // existing reference data (not live listings); bars are normalised WITHIN each
+  // currency so only same-currency districts are visually comparable.
   const dg=document.getElementById('districts-grid');
-  [{name:'New Cairo',city:'Cairo',country:'Egypt',market:'cairo',desc:'Dominant Grade A submarket.',rent:'EGP 950–1,400'},
-   {name:'DIFC',city:'Dubai',country:'UAE',market:'dubai',desc:'Gulf premier financial district.',rent:'AED 2,200–3,500'},
-   {name:'KAFD',city:'Riyadh',country:'KSA',market:'riyadh',desc:'Kingdom flagship CBD.',rent:'SAR 1,800–2,800'},
-   {name:'Victoria Island',city:'Lagos',country:'Nigeria',market:'lagos',desc:'Lagos prime corporate address.',rent:'NGN 45k–75k'},
-   {name:'Westlands',city:'Nairobi',country:'Kenya',market:'nairobi',desc:'Nairobi top commercial suburb.',rent:'KES 1,200–1,800'},
-   {name:'Sandton',city:'Johannesburg',country:'South Africa',market:'johannesburg',desc:'Africa premier CBD.',rent:'ZAR 220–380'},
-   {name:'Business Bay',city:'Dubai',country:'UAE',market:'dubai',desc:'Canal district, metro access.',rent:'AED 1,600–2,400'},
-   {name:'Casa Finance City',city:'Casablanca',country:'Morocco',market:'casablanca',desc:'Morocco financial hub.',rent:'MAD 1,800–2,800'},
-   {name:'CBD',city:'Cairo',country:'Egypt',market:'cairo',desc:'Historic Nile-front prestige.',rent:'EGP 1,100–1,600'},
-   {name:'Abdali',city:'Amman',country:'Jordan',market:'amman',desc:'Amman modern CBD.',rent:'JOD 14–22'},
-  ].forEach(d=>dg.innerHTML+=`<a href="pages/districts.html?d=${encodeURIComponent(d.name)}" class="district-card">
-    <div class="district-city">${d.city} · ${d.country}</div>
-    <div class="district-name">${d.name}</div>
-    <div class="district-desc">${d.desc}</div>
-    <div class="district-rent">${d.rent}</div>
-    <div class="district-rent-label">Indicative rent band</div>
-  </a>`);
+  const DISTRICTS=[
+    {name:'New Cairo',city:'Cairo',country:'Egypt',grade:'A',rent:'EGP 950–1,400'},
+    {name:'CBD',city:'Cairo',country:'Egypt',grade:'A',rent:'EGP 1,100–1,600'},
+    {name:'DIFC',city:'Dubai',country:'UAE',grade:'A+',rent:'AED 2,200–3,500'},
+    {name:'Business Bay',city:'Dubai',country:'UAE',grade:'A',rent:'AED 1,600–2,400'},
+    {name:'KAFD',city:'Riyadh',country:'KSA',grade:'A+',rent:'SAR 1,800–2,800'},
+    {name:'Victoria Island',city:'Lagos',country:'Nigeria',grade:'A',rent:'NGN 45k–75k'},
+    {name:'Westlands',city:'Nairobi',country:'Kenya',grade:'A',rent:'KES 1,200–1,800'},
+    {name:'Sandton',city:'Johannesburg',country:'South Africa',grade:'A+',rent:'ZAR 220–380'},
+    {name:'Casa Finance City',city:'Casablanca',country:'Morocco',grade:'A+',rent:'MAD 1,800–2,800'},
+    {name:'Abdali',city:'Amman',country:'Jordan',grade:'A+',rent:'JOD 14–22'},
+  ];
+  if(dg){
+    const curOf=s=>(String(s).match(/[A-Z]{3}/)||[''])[0];
+    const rentHigh=s=>{const parts=String(s).replace(/[A-Z]{3}\s*/,'').split('–');let v=(parts[parts.length-1]||'').trim().toLowerCase().replace(/,/g,'');let mult=1;if(v.endsWith('k')){mult=1000;v=v.slice(0,-1);}return (parseFloat(v)||0)*mult;};
+    const maxByCur={}; DISTRICTS.forEach(d=>{const c=curOf(d.rent);maxByCur[c]=Math.max(maxByCur[c]||0,rentHigh(d.rent));});
+    const rows=DISTRICTS.map(d=>{
+      const c=curOf(d.rent), w=maxByCur[c]?Math.round(rentHigh(d.rent)/maxByCur[c]*100):0;
+      const rentCell=d.rent?`<div class="dr-rent">${d.rent}</div><div class="dr-bar"><span style="width:${w}%;"></span></div>`:'<span style="color:var(--text-3);">Not available</span>';
+      return `<tr onclick="location.href='/districts?d=${encodeURIComponent(d.name)}'" style="cursor:pointer;">
+        <td><div class="dr-name">${d.name}</div><div class="dr-sub">${d.city} · ${d.country}</div></td>
+        <td><span class="badge badge-grade" style="font-size:9px;">${d.grade||'—'}</span></td>
+        <td style="text-align:right;">${rentCell}</td>
+      </tr>`;
+    }).join('');
+    dg.innerHTML=`<div class="card" style="padding:0;overflow:auto;"><table class="dr-table">
+      <thead><tr><th>District</th><th>Grade</th><th style="text-align:right;">Indicative rent / m² / mo</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:10px;">Indicative reference bands, not live quotes. Rent bars compare districts within the same currency only.</p>`;
+  }
 
   // Coverage panel — group the markets by region and show a restrained dot map.
   const cr=document.getElementById('coverage-regions');

@@ -270,19 +270,68 @@ function injectFooter(base='') {
           <div class="fc-title">Legal</div>
           <ul>
             <li><a href="/terms">Terms of Use</a></li>
-            <li><a href="/documents">Commission Agreement</a></li>
             <li><a href="/privacy">Privacy Policy</a></li>
-            <li><a href="/sign-in">Sign In</a></li>
+            <li><a href="/cookies">Cookie Policy</a></li>
+            <li><a href="/data-request">Data &amp; privacy requests</a></li>
+            <li><a href="/documents">Commission Agreement</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-rule"></div>
       <div class="footer-bot">
         <p>© 2026 URBN Platform · Corporate Office Intelligence</p>
-        <p>Dubai, UAE · All Rights Reserved</p>
+        <p>Dubai, UAE · <a href="#" onclick="URBNConsent.open();return false;" style="color:inherit;text-decoration:underline;">Cookie settings</a></p>
       </div>
     </div>
   </footer>`;
+  injectConsentBanner(base);
+}
+
+// ── Cookie consent (GDPR-conscious) ──────────────────────────────────────────
+// The site currently loads NO analytics/tracking scripts. Necessary cookies and
+// localStorage (sign-in, preferences, security) always apply. The analytics and
+// marketing categories are scaffolded for the future and MUST be checked via
+// URBNConsent.allowed('analytics') before any such script is ever loaded.
+const URBNConsent = {
+  KEY: 'urbn_consent_v1',
+  get() { try { return JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) { return null; } },
+  save(prefs) {
+    try { localStorage.setItem(this.KEY, JSON.stringify({ necessary: true, analytics: !!(prefs && prefs.analytics), marketing: !!(prefs && prefs.marketing), ts: new Date().toISOString() })); } catch (e) {}
+    this.hide();
+  },
+  allowed(cat) { if (cat === 'necessary') return true; const c = this.get(); return !!(c && c[cat]); },
+  hide() { const b = document.getElementById('urbn-consent'); if (b) b.style.display = 'none'; },
+  open() {
+    const b = document.getElementById('urbn-consent'); if (!b) return;
+    b.style.display = 'block';
+    const p = document.getElementById('uc-prefs'); if (p) p.style.display = 'block';
+    const c = this.get() || {};
+    const a = document.getElementById('uc-analytics'); if (a) a.checked = !!c.analytics;
+    const m = document.getElementById('uc-marketing'); if (m) m.checked = !!c.marketing;
+  },
+};
+function injectConsentBanner() {
+  if (document.getElementById('urbn-consent')) return;
+  const el = document.createElement('div');
+  el.id = 'urbn-consent'; el.className = 'uc-bar';
+  el.innerHTML = `
+    <div class="uc-inner">
+      <div class="uc-copy">
+        <strong>Cookies &amp; privacy.</strong> URBN uses necessary cookies and local storage for sign-in, preferences and core service operation. We do not run analytics, marketing or tracking cookies. See our <a href="/cookies">Cookie Policy</a> and <a href="/privacy">Privacy Policy</a>.
+        <div id="uc-prefs" style="display:none;margin-top:12px;">
+          <label class="uc-tog"><input type="checkbox" checked disabled> <span><strong>Necessary</strong> — always on (sign-in, preferences, security)</span></label>
+          <label class="uc-tog"><input type="checkbox" id="uc-analytics"> <span><strong>Analytics</strong> — not currently in use</span></label>
+          <label class="uc-tog"><input type="checkbox" id="uc-marketing"> <span><strong>Marketing</strong> — not currently in use</span></label>
+        </div>
+      </div>
+      <div class="uc-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uc-prefs').style.display='block'">Manage preferences</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="URBNConsent.save({analytics:(document.getElementById('uc-analytics')||{}).checked, marketing:(document.getElementById('uc-marketing')||{}).checked})">Save preferences</button>
+        <button type="button" class="btn btn-navy btn-sm" onclick="URBNConsent.save({})">Accept necessary</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  if (URBNConsent.get()) el.style.display = 'none';   // a choice was already stored
 }
 
 // ── Access modal (injected on every page so "Request Access" works site-wide) ──
