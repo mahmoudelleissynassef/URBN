@@ -31,7 +31,7 @@
       </div>
     </div>
 
-    <div id="sg-tool" style="display:grid;grid-template-columns:360px 1fr;gap:36px;align-items:start;">
+    <div id="sg-tool" style="display:none;grid-template-columns:360px 1fr;gap:36px;align-items:start;">
       <!-- Inputs -->
       <div class="card" style="padding:26px;">
         <div class="form-sec-title" style="margin-top:0;">Your situation</div>
@@ -118,6 +118,24 @@
 <script src="../js/urbn.js"></script>
 <script src="../js/listings.js"></script>
 <script>
+// Decide synchronously — before the browser paints — whether to show the tool or
+// the gate, so the actual tool NEVER flashes for signed-out visitors. #sg-tool
+// starts hidden in the markup; we only reveal it if a Supabase auth token is
+// present in localStorage. The async check in DOMContentLoaded then confirms and
+// corrects (e.g. a stale/expired token falls back to the gate).
+(function () {
+  let hasToken = false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && /^sb-.*-auth-token$/.test(k)) { const v = localStorage.getItem(k); if (v && v.length > 20) { hasToken = true; break; } }
+    }
+  } catch (e) {}
+  const tool = document.getElementById('sg-tool'), gate = document.getElementById('sg-gate');
+  if (hasToken) { if (tool) tool.style.display = 'grid'; if (gate) gate.style.display = 'none'; }
+  else { if (tool) tool.style.display = 'none'; if (gate) gate.style.display = ''; }
+})();
+
 let COSTS = null;           // construction costs row for the selected market (or null)
 let CURRENCY = '';
 
@@ -139,11 +157,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // sign-up / sign-in prompt instead of the tool (the URL is preserved so they
   // return here after authenticating via ?next=/stay-vs-go).
   try { await URBNAuth.init(); } catch (e) {}
+  const tool = document.getElementById('sg-tool'), gate = document.getElementById('sg-gate');
   if (!URBNAuth.user) {
-    const tool = document.getElementById('sg-tool'); if (tool) tool.style.display = 'none';
-    const gate = document.getElementById('sg-gate'); if (gate) gate.style.display = '';
+    if (tool) tool.style.display = 'none';     // corrects a stale-token optimistic reveal
+    if (gate) gate.style.display = '';
     return;
   }
+  if (tool) tool.style.display = 'grid';
+  if (gate) gate.style.display = 'none';
   const sel = document.getElementById('sg-market');
   // The market list is driven by which markets we actually have CAPEX data for,
   // so the analysis always has figures to show. Markets without data (or without
