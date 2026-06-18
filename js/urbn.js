@@ -179,12 +179,16 @@ function injectNav(base='') {
   // WCAG: expose a <main> landmark + skip-link target by tagging the page's
   // primary content wrapper (the element following the nav placeholder) once.
   try {
-    let main = document.querySelector('.pt-nav');
-    if (!main && el.nextElementSibling) main = el.nextElementSibling;
-    if (main && main.id !== 'main-content') {
-      main.id = 'main-content';
+    let main = document.querySelector('main, .pt-nav') || el.nextElementSibling;
+    if (main) {
       main.setAttribute('role', 'main');
       if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+      // Do NOT clobber an existing id — pages like building.html use #bpage as their
+      // render target. Only assign our own id when the element has none, then point
+      // the skip link at whatever id the main content actually has.
+      if (!main.id) main.id = 'main-content';
+      const skip = el.querySelector('.skip-link');
+      if (skip) skip.setAttribute('href', '#' + main.id);
     }
   } catch (e) {}
 }
