@@ -527,25 +527,34 @@ async function getAuthUser(token) {
   } catch (e) { return null; }
 }
 
+// A row describes a UNIT (vs a building-only row) when it carries any unit data.
+// Building-only rows can be uploaded without pricing; units cannot.
+function rowHasUnit(r) {
+  const num = (x) => x !== '' && x != null && !isNaN(Number(x));
+  return !!(r.offering_type || r.unit_floor || num(r.size_sqm) || num(r.desks) || num(r.asking_rent) || r.pricing_basis);
+}
 function validateBatchRow(r) {
   const num = (x) => x !== '' && x != null && !isNaN(Number(x));
   const isUrl = (x) => /^https?:\/\/\S+$/i.test(String(x || '').trim());
   const DESK = ['Coworking desks', 'Serviced office suite'];
   const AREA = ['Whole building', 'Full floor', 'Partial floor', 'Private office'];
   const errs = [];
-  // Required
+  // Required (building level)
   if (!r.building_name) errs.push('building_name');
   const marketOk = !!MARKET_CURRENCY[r.market] || FRANCOPHONE_WA_MARKETS.includes(r.market);
   if (!marketOk) errs.push('market');
   if (!r.submarket) errs.push('submarket');
-  if (!r.offering_type) errs.push('offering_type');
-  if (!r.fit_out) errs.push('fit_out');
-  if (!num(r.asking_rent)) errs.push('asking_rent');
-  if (marketOk && (!r.currency || !allowedCurrenciesForMarket(r.market).includes(r.currency))) errs.push('currency');
-  if (!r.pricing_basis) errs.push('pricing_basis');
-  // Conditional: traditional offerings need size_sqm; coworking/serviced need desks.
-  if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
-  if (AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  // Unit-level requirements only apply when the row actually describes a unit.
+  if (rowHasUnit(r)) {
+    if (!r.offering_type) errs.push('offering_type');
+    if (!r.fit_out) errs.push('fit_out');
+    if (!num(r.asking_rent)) errs.push('asking_rent');
+    if (marketOk && (!r.currency || !allowedCurrenciesForMarket(r.market).includes(r.currency))) errs.push('currency');
+    if (!r.pricing_basis) errs.push('pricing_basis');
+    // Conditional: traditional offerings need size_sqm; coworking/serviced need desks.
+    if (DESK.includes(r.offering_type) && !num(r.desks)) errs.push('desks');
+    if (AREA.includes(r.offering_type) && !num(r.size_sqm)) errs.push('size_sqm');
+  }
   // Numeric if present
   ['year_built', 'floors', 'building_height_m', 'total_gla_sqm', 'typical_floorplate_sqm', 'parking_ratio', 'size_sqm', 'desks', 'meeting_rooms', 'service_charge',
     'parking_spaces_available', 'parking_price_per_spot_month', 'visitor_parking_hourly_rate', 'parking_monthly_membership_price',
@@ -751,12 +760,16 @@ async function approveBatchRowRec(row, adminId) {
     parking_monthly_membership_price: numOrNull(r.parking_monthly_membership_price), parking_notes: r.parking_notes || null,
     status: 'approved', approved_by: adminId, approved_at: now,
   }]);
-  await sbUpsert('units', [{
-    id: uId, building_id: bId, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null,
-    fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent),
-    currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge),
-    service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved',
-  }]);
+  // Only create a unit when the row actually describes one — building-only rows
+  // (no pricing/unit data) add the building alone; units/prices can be added later.
+  if (rowHasUnit(r)) {
+    await sbUpsert('units', [{
+      id: uId, building_id: bId, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null,
+      fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent),
+      currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge),
+      service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved',
+    }]);
+  }
   const media = [];
   if (r.main_photo_url) media.push({ url: r.main_photo_url, kind: 'photo' });
   for (let i = 1; i <= 5; i++) if (r['photo_url_' + i]) media.push({ url: r['photo_url_' + i], kind: 'photo' });
