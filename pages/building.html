@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await URBN_LISTINGS.load();
   const id = p('id');
   B = URBN_LISTINGS.find(id);
-  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not available</div><p style="color:var(--text-2);margin-bottom:20px;">This building isn’t currently available, or it hasn’t been approved for listing yet.</p><a href="search.html" class="btn btn-navy">Browse Offices</a></div>'; return; }
+  if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not available</div><p style="color:var(--text-2);margin-bottom:20px;">This building isn’t currently available, or it hasn’t been approved for listing yet.</p><a href="/offices" class="btn btn-navy">Browse Offices</a></div>'; return; }
 
   try {
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
@@ -107,22 +107,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.title = B.name + ' — URBN';
 
   document.getElementById('bpage').innerHTML = `
-  <!-- Image hero -->
-  <div style="height:420px;position:relative;overflow:hidden;">
-    <img src="${img.replace('600','1200')}" onerror="this.onerror=null;this.src='${getImg(B.market)}'" alt="${B.name}" style="width:100%;height:100%;object-fit:cover;opacity:.5;${B.imageClear===false?'filter:blur(22px);transform:scale(1.05);':''}">
-    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,8,.2) 0%,rgba(8,8,8,.85) 100%);"></div>
-    <div class="w" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;padding-bottom:36px;">
-      <a href="search.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);margin-bottom:20px;transition:color .2s;" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-2)'">← Back to Offices</a>
-      <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          ${gradeB(B.grade)}
-          <span class="badge badge-verified">Verified Listing</span>
-          ${(B.sustainability||[]).slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
-        </div>
-        <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;">${B.name}</h1>
-        <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
-      </div>
+  <!-- Image banner (no overlaid text — labels sit below for legibility) -->
+  <div style="height:300px;position:relative;overflow:hidden;background:var(--bg-off);">
+    <img src="${img.replace('600','1200')}" onerror="this.onerror=null;this.src='${getImg(B.market)}'" alt="${B.name}" style="width:100%;height:100%;object-fit:cover;${B.imageClear===false?'filter:blur(22px);transform:scale(1.06);':''}">
+  </div>
+  <!-- Title block: under the image, on the page background -->
+  <div class="w" style="padding:24px 40px 0;">
+    <a href="/offices" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);transition:color .2s;" onmouseover="this.style.color='var(--navy)'" onmouseout="this.style.color='var(--text-2)'">← Back to Offices</a>
+    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 10px;flex-wrap:wrap;">
+      ${gradeB(B.grade)}
+      <span class="badge badge-verified">Verified Listing</span>
+      ${(B.sustainability||[]).slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
     </div>
+    <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;color:var(--text);">${B.name}</h1>
+    <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
   </div>
 
   <!-- Body -->
