@@ -721,8 +721,18 @@ async function approveRequestRow(row, adminId, existingBuildingId) {
 }
 
 // Approve a batch row (external media URLs) -> buildings + units + listing_media.
+// Stable building id from a grouping key, so multiple unit-rows of the SAME
+// building collapse into one building (instead of one building per row). Uses an
+// explicit `building_ref` column when present, else building_name|market|submarket.
+function buildingKeyId(r) {
+  const key = (r.building_ref && String(r.building_ref).trim())
+    || [r.building_name, r.market, r.submarket].map((x) => String(x || '').trim().toLowerCase()).join('|');
+  let h = 5381;
+  for (let i = 0; i < key.length; i++) h = (((h * 33) ^ key.charCodeAt(i)) >>> 0);
+  return 'b_' + h.toString(36);
+}
 async function approveBatchRowRec(row, adminId) {
-  const r = row.raw || {}, now = new Date().toISOString(), bId = 'b_' + row.id;
+  const r = row.raw || {}, now = new Date().toISOString(), bId = buildingKeyId(r);
   await sbUpsert('buildings', [{
     id: bId, name: r.building_name || 'Untitled', market: r.market || null, submarket: r.submarket || null, address: r.address || null,
     google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
