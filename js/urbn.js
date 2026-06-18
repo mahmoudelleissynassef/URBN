@@ -4,6 +4,23 @@
 // (URBNAuth below). `saved` is hydrated from saved_properties when signed in.
 const USER = { saved: [], intros: [], alerts: [] };
 
+// ── Entitlements (client mirror of /api/entitlements; gating is enforced server-side) ──
+const URBNEnt = {
+  _ready: null, data: null,
+  load() {
+    if (this._ready) return this._ready;
+    this._ready = (async () => {
+      try {
+        const headers = {};
+        if (typeof URBNAuth !== 'undefined') { await URBNAuth.init(); if (URBNAuth.session && URBNAuth.session.access_token) headers.Authorization = 'Bearer ' + URBNAuth.session.access_token; }
+        this.data = await fetch('/api/entitlements', { headers }).then(r => r.json());
+      } catch (e) { this.data = { tier: 'anon', unitDetail: false, stayVsGo: false, saveCap: 5, revealCap: 0, revealUsed: 0 }; }
+      return this.data;
+    })();
+    return this._ready;
+  },
+};
+
 // ── Supabase Auth ────────────────────────────────────────
 // Loads the Supabase JS client from CDN (no build step / npm needed) and reads
 // the publishable anon key from /api/config. The service-role key is never used
@@ -434,6 +451,15 @@ async function toggleSave(id,btn) {
     return;
   }
   const adding = !USER.saved.includes(id);
+  // Free plan: cap the shortlist (paid tiers = unlimited). Server-enforced caps on
+  // requests; saves are capped here as a plan nudge.
+  if (adding) {
+    const ent = await URBNEnt.load();
+    if (ent && ent.saveCap != null && USER.saved.length >= ent.saveCap) {
+      showToast(`Your plan saves up to ${ent.saveCap} listings — upgrade for unlimited`, 'info');
+      return;
+    }
+  }
   // Optimistic UI
   if (adding) { USER.saved.push(id); btn.classList.add('on'); }
   else { USER.saved.splice(USER.saved.indexOf(id), 1); btn.classList.remove('on'); }
@@ -528,7 +554,7 @@ function renderCard(b, base='', opts={}) {
       <div class="lc-district">${b.submarket} · ${mkt?.country||''}</div>
       <div class="lc-data">
         <div class="lc-datum">
-          <div class="lc-d-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div>
+          <div class="lc-d-val">${b.unitLocked?'•••':fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm'}</div>
           <div class="lc-d-key">Available Area</div>
         </div>
         <div class="lc-datum">
@@ -545,11 +571,14 @@ function renderCard(b, base='', opts={}) {
         </div>
       </div>
       <div class="lc-foot">
+        ${b.unitLocked ? `
+        <div style="font-size:11.5px;color:var(--text-2);">🔒 Pricing hidden on your plan</div>
+        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">Upgrade →</a>` : `
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
           <div class="lc-rent-sub">${b.anonymized ? 'indicative / ' : 'per '}${b.rentUnit}</div>
         </div>
-        <span class="btn btn-ghost btn-sm">${b.anonymized ? 'Details on request →' : 'View →'}</span>
+        <span class="btn btn-ghost btn-sm">${b.anonymized ? 'Details on request →' : 'View →'}</span>`}
       </div>
     </div>
   </div>`;
@@ -574,7 +603,18 @@ function renderListingCard(L, base='') {
     </div>
     <div class="lc-body">
       <div class="lc-name">${L.name}</div>
-      <div class="lc-district">${L.submarket||''} · ${mkt?.country||''}${L.offeringType?' · '+L.offeringType:''}</div>
+      <div class="lc-district">${L.submarket||''} · ${mkt?.country||''}${(!L.unitLocked && L.offeringType)?' · '+L.offeringType:''}</div>
+      ${L.unitLocked ? `
+      <div class="lc-data" style="filter:blur(3px);opacity:.55;pointer-events:none;user-select:none;">
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Size</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Floor</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Desks</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Rent</div></div>
+      </div>
+      <div class="lc-foot">
+        <div style="font-size:11.5px;color:var(--text-2);line-height:1.4;">🔒 Unit size, floor &amp; pricing<br>hidden on your plan</div>
+        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">Upgrade to view →</a>
+      </div>` : `
       <div class="lc-data">
         <div class="lc-datum"><div class="lc-d-val">${fmt(L.size)} sqm</div><div class="lc-d-key">Size</div></div>
         <div class="lc-datum"><div class="lc-d-val">${L.floor||'—'}</div><div class="lc-d-key">Floor</div></div>
@@ -587,7 +627,7 @@ function renderListingCard(L, base='') {
           <div class="lc-rent-sub">${L.anonymized?'indicative / ':'per '}${L.rentUnit||'sqm'}</div>
         </div>
         <span class="btn btn-ghost btn-sm">${L.anonymized?'Details on request →':'View →'}</span>
-      </div>
+      </div>`}
     </div>
   </div>`;
 }
@@ -608,6 +648,14 @@ async function requestListingAction(type, buildingId, extra = {}) {
       body: JSON.stringify({ type, buildingId, sourcePage: location.pathname, ...extra }),
     });
     let j = {}; try { j = await res.json(); } catch (e) {}
+    if (res.status === 429 || j.error === 'limit_reached') {
+      showToast(`Monthly request limit reached (${j.used != null ? j.used : ''}/${j.cap != null ? j.cap : ''}${j.tier ? ' on ' + j.tier : ''}). Upgrade for more.`, 'info');
+      return { ok: false, handled: true, json: j };
+    }
+    if (res.status === 409 || j.error === 'already_requested') {
+      showToast('You already have a pending or approved request for this building.', 'info');
+      return { ok: false, handled: true, json: j };
+    }
     return { ok: res.ok && j.ok === true, json: j };
   } catch (e) { return { ok: false, json: { error: 'network' } }; }
 }

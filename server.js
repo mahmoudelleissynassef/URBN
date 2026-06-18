@@ -1042,7 +1042,9 @@ function handleAdmin(req, res, urlPath) {
       }
       if (urlPath === '/api/admin/set-tier') {
         if (!body.companyId || !MEMBERSHIP_TIERS.includes(body.tier)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', requested_by: user.id }]);
+        // Starter is scoped to one market; admin can set which. Cleared for other tiers.
+        const assignedMarket = body.tier === 'starter' ? (normalizeMarket(body.assignedMarket) || null) : null;
+        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/unpublish-building') {
@@ -1265,6 +1267,48 @@ async function isPayingUser(userId) {
     return subs.some((s) => s.tier && String(s.tier).toLowerCase() !== 'free');
   } catch (e) { return false; }
 }
+
+// ── Entitlements: the single source of truth for tier-based access ────────────
+// Reveal grants (real identity) are handled separately and are tier-INDEPENDENT.
+const TIER_REVEAL_CAP = { free: 1, starter: 5, membership: 25, enterprise: 100000 };
+async function getUserEntitlements(userId, isAdminFlag) {
+  if (isAdminFlag) {
+    return { tier: 'admin', isAdmin: true, unitDetail: true, markets: 'all', stayVsGo: true, saveCap: null, revealCap: 100000, assignedMarket: null };
+  }
+  let tier = 'free', assignedMarket = null;
+  if (userId) {
+    try {
+      const prof = (await sbGet(`profiles?id=eq.${userId}&select=company_id`))[0];
+      if (prof && prof.company_id) {
+        const subs = await sbGet(`company_subscriptions?company_id=eq.${prof.company_id}&status=eq.active&select=tier,assigned_market&order=created_at.desc`);
+        const active = subs.find((s) => s.tier && String(s.tier).toLowerCase() !== 'free') || subs[0];
+        if (active) { tier = String(active.tier || 'free').toLowerCase(); assignedMarket = active.assigned_market || null; }
+      }
+    } catch (e) { /* default to free */ }
+  }
+  const paid = tier === 'starter' || tier === 'membership' || tier === 'enterprise';
+  // Starter sees full detail in ONE assigned market; Membership/Enterprise = all.
+  const markets = tier === 'starter' ? (assignedMarket ? [assignedMarket] : []) : 'all';
+  return {
+    tier, isAdmin: false,
+    unitDetail: paid,                                  // Free: anonymized cards only
+    markets,                                            // Starter: [assignedMarket]; else 'all'
+    stayVsGo: paid,                                     // Free: disabled
+    saveCap: tier === 'free' ? 5 : null,                // null = unlimited
+    revealCap: TIER_REVEAL_CAP[tier] != null ? TIER_REVEAL_CAP[tier] : 1,
+    assignedMarket,
+  };
+}
+function entMarketAllowed(ent, market) {
+  if (!ent) return false;
+  if (ent.markets === 'all') return true;
+  return Array.isArray(ent.markets) && ent.markets.includes(market);
+}
+// Per-building gate: unit detail (size/floor/desks/rent/offering/fit-out) + clear
+// photos. A reveal grant OR an entitled+market-allowed tier unlocks unit detail.
+function canViewUnitDetails(ent, market, granted) {
+  return !!granted || (!!ent && ent.unitDetail && entMarketAllowed(ent, market));
+}
 // Create a short-lived signed URL for a private storage object (service role).
 async function signStorageUrl(bucket, objectPath, expiresIn = 3600) {
   const base = process.env.SUPABASE_URL;
@@ -1309,8 +1353,9 @@ function handlePublicListings(req, res) {
   (async () => {
     try {
       const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-      let grantedIds = new Set(), admin = false, paying = false;
-      if (token) { const user = await getAuthUser(token); if (user && user.id) { admin = await isAdmin(user.id); if (admin) { paying = true; } else { grantedIds = await approvedGrantsFor(user.id); paying = await isPayingUser(user.id); } } }
+      let grantedIds = new Set(), admin = false, userId = null;
+      if (token) { const user = await getAuthUser(token); if (user && user.id) { userId = user.id; admin = await isAdmin(user.id); if (!admin) grantedIds = await approvedGrantsFor(user.id); } }
+      const ent = await getUserEntitlements(userId, admin);
       const [buildings, units, media] = await Promise.all([
         sbGet('buildings?status=eq.approved&select=*'),
         sbGet('units?status=eq.approved&select=*'),
@@ -1329,9 +1374,17 @@ function handlePublicListings(req, res) {
           const main = ms.find((m) => m.is_main) || ms.find((m) => m.approved_for_public) || ms[0];
           if (main && main.path) { const url = await signStorageUrl(main.bucket, main.path, 3600); if (url) shaped.image = url; }
         }
-        // Photos are shown clear to admins, reveal-granted users and paying tiers;
-        // free/anonymous viewers see the public-safe image BLURRED (an upsell tease).
-        shaped.imageClear = granted || paying;
+        // Unit detail (size/floor/desks/rent/offering/fit-out) + clear photos are
+        // gated by entitlement (or a reveal grant). Free / out-of-market viewers get
+        // anonymized cards with the price + unit fields STRIPPED server-side.
+        const unitOk = canViewUnitDetails(ent, b.market, granted);
+        shaped.imageClear = unitOk;
+        shaped.unitLocked = !unitOk;
+        if (!unitOk) {
+          shaped.rentMin = null; shaped.rentMax = null; shaped.availMin = null; shaped.availMax = null;
+          shaped.unitCount = (shaped.units || []).length;
+          shaped.units = (shaped.units || []).map((u) => ({ id: u.id, locked: true }));
+        }
         out.push(shaped);
       }
       // Per-unit LISTINGS — the public-facing entity (favorited & compared). Each
@@ -1340,18 +1393,51 @@ function handlePublicListings(req, res) {
       const listings = [];
       out.forEach((b) => {
         (b.units || []).forEach((u) => {
-          listings.push({
+          // Anonymized card fields are always present; unit detail + price are only
+          // included when the building isn't unit-locked for this viewer.
+          const base = {
             id: u.id, buildingId: b.id, name: b.name, label: b.label, revealed: b.revealed, anonymized: b.anonymized,
-            market: b.market, submarket: b.submarket, grade: b.grade, amenities: b.amenities, parking: b.parking,
-            sustainability: b.sustainability, image: b.image, imageClear: b.imageClear, hasPublicImage: b.hasPublicImage,
-            address: b.address, mapsUrl: b.mapsUrl, floors: b.floors, floorplate: b.floorplate, yearBuilt: b.yearBuilt, buildingHeight: b.buildingHeight, gla: b.gla,
+            market: b.market, submarket: b.submarket, grade: b.grade, image: b.image, imageClear: b.imageClear,
+            hasPublicImage: b.hasPublicImage, unitLocked: !!b.unitLocked,
+          };
+          if (b.unitLocked) { listings.push(base); return; }
+          listings.push(Object.assign(base, {
+            amenities: b.amenities, parking: b.parking, sustainability: b.sustainability,
+            address: b.address, mapsUrl: b.mapsUrl, floors: b.floors, floorplate: b.floorplate,
+            yearBuilt: b.yearBuilt, buildingHeight: b.buildingHeight, gla: b.gla,
             floor: u.floor, size: u.size, desks: u.desks, meetingRooms: u.meetingRooms, offeringType: u.type, fitOut: u.fitOut,
             rent: u.rent, rentCurrency: b.rentCurrency, rentUnit: b.rentUnit, rentUsd: toUsd(u.rent, b.rentCurrency, fx.rates),
-          });
+          }));
         });
       });
       return sendJson(res, 200, { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)' } });
     } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [], listings: [] }); }
+  })();
+}
+
+// The frontend's view of the current user's entitlements (for locked states,
+// caps and gating). Identity reveal is per-building and not included here.
+function handleEntitlements(req, res) {
+  (async () => {
+    try {
+      const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+      const user = await getAuthUser(token);
+      if (!user || !user.id) {
+        return sendJson(res, 200, { ok: true, authenticated: false, tier: 'anon', unitDetail: false, stayVsGo: false, saveCap: 5, revealCap: 0, revealUsed: 0, markets: [], assignedMarket: null });
+      }
+      const admin = await isAdmin(user.id);
+      const ent = await getUserEntitlements(user.id, admin);
+      let revealUsed = 0;
+      if (user.email) {
+        try {
+          const now = new Date();
+          const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+          const used = await sbGet(`client_requests?email=eq.${encodeURIComponent(user.email)}&request_type=in.(reveal-listing,site-visit,offer,introduction)&created_at=gte.${encodeURIComponent(monthStart)}&select=id`);
+          revealUsed = Array.isArray(used) ? used.length : 0;
+        } catch (e) {}
+      }
+      return sendJson(res, 200, { ok: true, authenticated: true, tier: ent.tier, isAdmin: ent.isAdmin, unitDetail: ent.unitDetail, stayVsGo: ent.stayVsGo, saveCap: ent.saveCap, revealCap: ent.revealCap, revealUsed, markets: ent.markets, assignedMarket: ent.assignedMarket });
+    } catch (e) { return sendJson(res, 200, { ok: true, authenticated: false, tier: 'anon', unitDetail: false, stayVsGo: false, saveCap: 5, revealCap: 0, revealUsed: 0, markets: [], assignedMarket: null }); }
   })();
 }
 
@@ -1448,6 +1534,28 @@ function handleListingRequest(req, res) {
       const prof = (await sbGet(`profiles?id=eq.${user.id}&select=full_name,company_id`))[0] || {};
       let companyName = '';
       if (prof.company_id) { const c = (await sbGet(`companies?id=eq.${prof.company_id}&select=name`))[0]; companyName = (c && c.name) || ''; }
+
+      // Tier-based monthly cap on reveal / site-visit / offer / introduction requests.
+      const reqAdmin = await isAdmin(user.id);
+      const ent = await getUserEntitlements(user.id, reqAdmin);
+      const now = new Date();
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+      if (user.email) {
+        try {
+          const used = await sbGet(`client_requests?email=eq.${encodeURIComponent(user.email)}&request_type=in.(reveal-listing,site-visit,offer,introduction)&created_at=gte.${encodeURIComponent(monthStart)}&select=id`);
+          if (Array.isArray(used) && used.length >= ent.revealCap) {
+            return sendJson(res, 429, { ok: false, error: 'limit_reached', cap: ent.revealCap, used: used.length, tier: ent.tier });
+          }
+        } catch (e) { /* fail open on count errors */ }
+      }
+      // Prevent duplicate reveal requests for the same building (pending or approved).
+      if (type === 'reveal-listing') {
+        try {
+          const dup = await sbGet(`listing_access_grants?user_id=eq.${user.id}&building_id=eq.${encodeURIComponent(buildingId)}&status=in.(requested,approved)&select=id`);
+          if (Array.isArray(dup) && dup.length) return sendJson(res, 409, { ok: false, error: 'already_requested' });
+        } catch (e) {}
+      }
+
       const s = (v) => (typeof v === 'string' ? v.trim() : (v == null ? '' : String(v))).slice(0, 2000);
       const payload = {
         userId: user.id, companyId: prof.company_id || null, buildingId, unitId: s(data.unitId) || null,
@@ -1524,6 +1632,10 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/listings') {
     if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handlePublicListings(req, res);
+  }
+  if (urlPath === '/api/entitlements') {
+    if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    return handleEntitlements(req, res);
   }
   if (urlPath === '/api/buildings-picker') {
     if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
