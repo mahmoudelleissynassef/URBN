@@ -237,37 +237,46 @@ function resetFilters() {
 }
 
 function applyFilters() {
-  // Listings (units) are the public entity now — filter and render per unit.
-  let res = [...URBN_LISTINGS.listings];
-  if (F.market.length) res = res.filter(l => F.market.includes(l.market));
-  if (F.grade.length) res = res.filter(l => F.grade.includes(l.grade));
-  if (F.cert.length) res = res.filter(l => (l.sustainability || []).some(s => F.cert.some(c => s.includes(c))));
+  // Buildings view shows every verified building (incl. those without units yet);
+  // Units view shows per-unit listings (the favoritable/comparable entity).
+  const buildingsView = (view === 'buildings');
+  let res = buildingsView ? [...URBN_LISTINGS.buildings] : [...URBN_LISTINGS.listings];
+  if (F.market.length) res = res.filter(x => F.market.includes(x.market));
+  if (F.grade.length) res = res.filter(x => F.grade.includes(x.grade));
+  if (F.cert.length) res = res.filter(x => (x.sustainability || []).some(s => F.cert.some(c => s.includes(c))));
+  const sizeOf = x => buildingsView ? (x.availMax || x.gla || 0) : (x.size || 0);
   const minA = +document.getElementById('minArea')?.value;
   const maxA = +document.getElementById('maxArea')?.value;
-  if (minA) res = res.filter(l => (l.size || 0) >= minA);
-  if (maxA) res = res.filter(l => (l.size || 0) <= maxA);
-  const minD = +document.getElementById('minDesks')?.value;
-  if (minD) res = res.filter(l => (l.desks || 0) >= minD);
-  const minMR = +document.getElementById('minMR')?.value;
-  if (minMR) res = res.filter(l => (l.meetingRooms || 0) >= minMR);
+  if (minA) res = res.filter(x => sizeOf(x) >= minA);
+  if (maxA) res = res.filter(x => { const s = sizeOf(x); return !s || s <= maxA; });
+  if (!buildingsView) {
+    const minD = +document.getElementById('minDesks')?.value;
+    if (minD) res = res.filter(l => (l.desks || 0) >= minD);
+    const minMR = +document.getElementById('minMR')?.value;
+    if (minMR) res = res.filter(l => (l.meetingRooms || 0) >= minMR);
+  }
 
+  const rentOf = x => buildingsView ? (x.rentMin || 0) : (x.rent || 0);
   const sort = document.getElementById('sort-sel')?.value;
-  if (sort === 'rent-asc') res.sort((a, b) => (a.rent || 0) - (b.rent || 0));
-  if (sort === 'rent-desc') res.sort((a, b) => (b.rent || 0) - (a.rent || 0));
-  if (sort === 'size-desc') res.sort((a, b) => (b.size || 0) - (a.size || 0));
+  if (sort === 'rent-asc') res.sort((a, b) => rentOf(a) - rentOf(b));
+  if (sort === 'rent-desc') res.sort((a, b) => rentOf(b) - rentOf(a));
+  if (sort === 'size-desc') res.sort((a, b) => sizeOf(b) - sizeOf(a));
   if (sort === 'grade') res.sort((a, b) => a.grade === 'A+' ? -1 : 1);
 
   const mnames = F.market.length ? F.market.map(id => URBN_DATA.markets.find(m => m.id === id)?.name).join(', ') : 'Browse Offices';
   document.getElementById('search-title').textContent = mnames;
-  document.getElementById('search-count').textContent = `${res.length} listing${res.length !== 1 ? 's' : ''} found`;
+  const noun = buildingsView ? 'building' : 'listing';
+  document.getElementById('search-count').textContent = `${res.length} ${noun}${res.length !== 1 ? 's' : ''} found`;
 
   LAST_RES = res;
   const grid = document.getElementById('results');
   const noR = document.getElementById('no-results');
   if (!res.length) { grid.innerHTML = ''; noR.classList.remove('hidden'); if (DISPLAY === 'map') renderMap([]); return; }
   noR.classList.add('hidden');
-  grid.style.gridTemplateColumns = (view === 'list') ? '1fr' : 'repeat(3,1fr)';
-  grid.innerHTML = res.map(l => renderListingCard(l, '../')).join('');
+  grid.style.gridTemplateColumns = 'repeat(3,1fr)';
+  grid.innerHTML = buildingsView
+    ? res.map(b => renderCard(b, '../', { noSave: true })).join('')
+    : res.map(l => renderListingCard(l, '../')).join('');
   if (DISPLAY === 'map') renderMap(res);
 }
 
@@ -324,7 +333,7 @@ function renderMap(listings) {
         <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${(l.name || 'Verified office').replace(/</g,'&lt;')}</div>
         <div style="font-size:11px;color:#6B7280;">${(l.submarket || '').replace(/</g,'&lt;')}${l.offeringType ? ' · ' + String(l.offeringType).replace(/</g,'&lt;') : ''}</div>
         <div style="font-size:12px;margin:6px 0;">${(l.size ? Number(l.size).toLocaleString() + ' sqm' : '')}${rent.trim() ? ' · ' + rent : ''}</div>
-        <a href="/building?id=${encodeURIComponent(l.buildingId)}&u=${encodeURIComponent(l.id)}" style="font-size:12px;color:#243A5E;font-weight:600;">View listing →</a>
+        <a href="/building?id=${encodeURIComponent(l.buildingId || l.id)}${l.buildingId ? '&u=' + encodeURIComponent(l.id) : ''}" style="font-size:12px;color:#243A5E;font-weight:600;">View →</a>
         <div style="font-size:10px;color:#9aa0aa;margin-top:6px;">Approximate area only</div>
       </div>`
     );
