@@ -23,26 +23,26 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w-sm">
     <div class="mb48">
-      <span class="overline label-navy">For Operators &amp; Landlords</span>
-      <h1 style="font-size:44px;">List Your<br><em>Space</em></h1>
-      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;">URBN connects verified Grade A and A+ buildings with corporate occupiers and multinationals entering Africa &amp; MENA. Every enquiry is a qualified corporate requirement, and every introduction is protected.</p>
+      <span class="overline label-navy" data-i18n="lb.overline">For Operators &amp; Landlords</span>
+      <h1 style="font-size:44px;" data-i18n-html="lb.h1">List Your<br><em>Space</em></h1>
+      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;" data-i18n="lb.intro">URBN connects verified Grade A and A+ buildings with corporate occupiers and multinationals entering Africa &amp; MENA. Every enquiry is a qualified corporate requirement, and every introduction is protected.</p>
     </div>
 
     <div class="g3" style="margin-bottom:44px;">
-      <div class="reason"><div class="reason-num">01</div><h4>Qualified corporate demand</h4><p>Occupiers reach you with a defined market, area, and timeline — not speculative enquiries.</p></div>
-      <div class="reason"><div class="reason-num">02</div><h4>Protected introductions</h4><p>Each introduction is timestamped, logged, and commission-protected for 24 months. No disputed origination.</p></div>
-      <div class="reason"><div class="reason-num">03</div><h4>Verified, not recycled</h4><p>Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
+      <div class="reason"><div class="reason-num">01</div><h4 data-i18n="lb.reason1Title">Qualified corporate demand</h4><p data-i18n="lb.reason1Body">Occupiers reach you with a defined market, area, and timeline — not speculative enquiries.</p></div>
+      <div class="reason"><div class="reason-num">02</div><h4 data-i18n="lb.reason2Title">Protected introductions</h4><p data-i18n="lb.reason2Body">Each introduction is timestamped, logged, and commission-protected for 24 months. No disputed origination.</p></div>
+      <div class="reason"><div class="reason-num">03</div><h4 data-i18n="lb.reason3Title">Verified, not recycled</h4><p data-i18n="lb.reason3Body">Your availability is published directly from source — never stale broker data — so it reaches occupiers accurately.</p></div>
     </div>
 
     <!-- Auth gate for signed-out visitors (hero above already explains the page) -->
     <div id="ll-gate" style="display:none;">
       <div class="card" style="padding:32px;">
-        <div class="overline label-navy" style="margin-bottom:8px;">Operators &amp; landlords</div>
-        <h2 style="font-size:24px;margin-bottom:10px;">Sign in to list your space</h2>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Listing a building or unit on URBN requires a verified account — so we can protect your identity, log and commission-protect introductions, and review every submission before it goes live. Create a free account or sign in to add a listing (single or bulk upload).</p>
+        <div class="overline label-navy" style="margin-bottom:8px;" data-i18n="lb.gateOverline">Operators &amp; landlords</div>
+        <h2 style="font-size:24px;margin-bottom:10px;" data-i18n="lb.gateTitle">Sign in to list your space</h2>
+        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;" data-i18n="lb.gateBody">Listing a building or unit on URBN requires a verified account — so we can protect your identity, log and commission-protect introductions, and review every submission before it goes live. Create a free account or sign in to add a listing (single or bulk upload).</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="/sign-up?next=%2Flist-building" class="btn btn-navy">Create a free account</a>
-          <a href="/sign-in?next=%2Flist-building" class="btn btn-outline">Sign in</a>
+          <a href="/sign-up?next=%2Flist-building" class="btn btn-navy" data-i18n="lb.gateCreate">Create a free account</a>
+          <a href="/sign-in?next=%2Flist-building" class="btn btn-outline" data-i18n="lb.gateSignIn">Sign in</a>
         </div>
       </div>
     </div>
@@ -57,8 +57,8 @@
 
     <!-- Choose how to add listings -->
     <div id="ll-modes" class="hidden" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-      <button class="btn btn-dark btn-sm" id="mode-manual-btn" onclick="setMode('manual')">Add one listing</button>
-      <button class="btn btn-ghost btn-sm" id="mode-bulk-btn" onclick="setMode('bulk')">Bulk upload (CSV)</button>
+      <button class="btn btn-dark btn-sm" id="mode-manual-btn" onclick="setMode('manual')" data-i18n="lb.modeManual">Add one listing</button>
+      <button class="btn btn-ghost btn-sm" id="mode-bulk-btn" onclick="setMode('bulk')" data-i18n="lb.modeBulk">Bulk upload (CSV)</button>
     </div>
 
     <!-- Manual single-listing panel -->
@@ -67,127 +67,127 @@
 
       <!-- STEP 1: the building (existing or new) -->
       <div id="ll-step1">
-      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;">Step 1 of 2 — The building</div>
-      <div class="form-sec-title" style="margin-top:0;">Building &amp; location</div>
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;" data-i18n="lb.step1">Step 1 of 2 — The building</div>
+      <div class="form-sec-title" style="margin-top:0;" data-i18n="lb.secBuildingLocation">Building &amp; location</div>
       <div class="fg">
-        <label class="fl">Use an existing building or add a new one</label>
+        <label class="fl" data-i18n="lb.existingLabel">Use an existing building or add a new one</label>
         <select class="fi fi-sel" id="ll-existing" onchange="llExistingChanged()"><option value="">+ Add a new building</option></select>
         <p style="font-size:11.5px;color:var(--text-2);margin-top:4px;" id="ll-existing-hint">Pick a building already in the URBN inventory to reuse its location and details, or add a new one.</p>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name"><div class="fld-err" id="err-ll-building">Enter the building name.</div></div>
-        <div class="fg"><label class="fl">Market</label>
+        <div class="fg"><label class="fl" data-i18n="lb.buildingName">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name" data-i18n-placeholder="lb.buildingNamePh"><div class="fld-err" id="err-ll-building" data-i18n="lb.errBuilding">Enter the building name.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.market">Market</label>
           <select class="fi fi-sel" id="ll-market" onchange="llMarketChanged()"><option value="">Select market...</option></select>
-          <div class="fld-err" id="err-ll-market">Select the building&#39;s market.</div>
+          <div class="fld-err" id="err-ll-market" data-i18n="lb.errMarket">Select the building&#39;s market.</div>
         </div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"><div class="fld-err" id="err-ll-district">Enter the district / submarket.</div></div>
-        <div class="fg"><label class="fl">Google Maps URL (pin)</label><input type="url" class="fi" id="ll-maps" placeholder="https://maps.google.com/..."><div class="fld-err" id="err-ll-maps">Enter a valid URL (or leave blank).</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.district">District / Submarket</label><input type="text" class="fi" id="ll-district" placeholder="e.g. New Cairo, DIFC"><div class="fld-err" id="err-ll-district" data-i18n="lb.errDistrict">Enter the district / submarket.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.mapsUrl">Google Maps URL (pin)</label><input type="url" class="fi" id="ll-maps" placeholder="https://maps.google.com/..."><div class="fld-err" id="err-ll-maps" data-i18n="lb.errMaps">Enter a valid URL (or leave blank).</div></div>
       </div>
-      <div class="form-sec-title">Amenities</div>
-      <p style="font-size:12.5px;color:var(--text-2);margin:-6px 0 12px;">Tick everything the building offers.</p>
+      <div class="form-sec-title" data-i18n="lb.secAmenities">Amenities</div>
+      <p style="font-size:12.5px;color:var(--text-2);margin:-6px 0 12px;" data-i18n="lb.amenitiesHint">Tick everything the building offers.</p>
       <div id="ll-amenities" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;margin-bottom:8px;"></div>
 
-      <div class="form-sec-title">Parking</div>
+      <div class="form-sec-title" data-i18n="lb.secParking">Parking</div>
       <div class="fgs">
-        <div class="fg"><label class="fl">Parking spaces available</label><input type="number" class="fi" id="ll-pk-spaces" placeholder="e.g. 120"><div class="fld-err" id="err-ll-pk-spaces">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Parking arrangement</label>
-          <select class="fi fi-sel" id="ll-pk-arrangement"><option value="">Select...</option><option value="free">Free</option><option value="paid">Paid</option><option value="mixed">Mixed</option><option value="none">None</option></select>
+        <div class="fg"><label class="fl" data-i18n="lb.pkSpaces">Parking spaces available</label><input type="number" class="fi" id="ll-pk-spaces" placeholder="e.g. 120"><div class="fld-err" id="err-ll-pk-spaces" data-i18n="lb.errNumeric">Must be numeric.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.pkArrangement">Parking arrangement</label>
+          <select class="fi fi-sel" id="ll-pk-arrangement"><option value="" data-i18n="lb.optSelect">Select...</option><option value="free" data-i18n="lb.pkFree">Free</option><option value="paid" data-i18n="lb.pkPaid">Paid</option><option value="mixed" data-i18n="lb.pkMixed">Mixed</option><option value="none" data-i18n="lb.pkNone">None</option></select>
         </div>
       </div>
       <div class="fgs">
-        <div class="fg"><label class="fl">Parking included in rent?</label>
-          <select class="fi fi-sel" id="ll-pk-included"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option><option value="partially">Partially</option></select>
+        <div class="fg"><label class="fl" data-i18n="lb.pkIncluded">Parking included in rent?</label>
+          <select class="fi fi-sel" id="ll-pk-included"><option value="" data-i18n="lb.optSelect">Select...</option><option value="yes" data-i18n="lb.optYes">Yes</option><option value="no" data-i18n="lb.optNo">No</option><option value="partially" data-i18n="lb.optPartially">Partially</option></select>
         </div>
-        <div class="fg"><label class="fl">Price per spot / month (if paid)</label><input type="number" class="fi" id="ll-pk-price" placeholder="e.g. 1,500"><div class="fld-err" id="err-ll-pk-price">Must be numeric.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.pkPrice">Price per spot / month (if paid)</label><input type="number" class="fi" id="ll-pk-price" placeholder="e.g. 1,500"><div class="fld-err" id="err-ll-pk-price" data-i18n="lb.errNumeric">Must be numeric.</div></div>
       </div>
       <div class="fgs">
-        <div class="fg"><label class="fl">Visitor parking hourly rate (optional)</label><input type="number" class="fi" id="ll-pk-visitor" placeholder="e.g. 30"><div class="fld-err" id="err-ll-pk-visitor">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Monthly parking membership available?</label>
-          <select class="fi fi-sel" id="ll-pk-membership"><option value="">Select...</option><option value="yes">Yes</option><option value="no">No</option></select>
+        <div class="fg"><label class="fl" data-i18n="lb.pkVisitor">Visitor parking hourly rate (optional)</label><input type="number" class="fi" id="ll-pk-visitor" placeholder="e.g. 30"><div class="fld-err" id="err-ll-pk-visitor" data-i18n="lb.errNumeric">Must be numeric.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.pkMembership">Monthly parking membership available?</label>
+          <select class="fi fi-sel" id="ll-pk-membership"><option value="" data-i18n="lb.optSelect">Select...</option><option value="yes" data-i18n="lb.optYes">Yes</option><option value="no" data-i18n="lb.optNo">No</option></select>
         </div>
       </div>
       <div class="fgs">
-        <div class="fg"><label class="fl">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price">Must be numeric.</div></div>
-        <div class="fg"><label class="fl">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
+        <div class="fg"><label class="fl" data-i18n="lb.pkMembershipPrice">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price" data-i18n="lb.errNumeric">Must be numeric.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.pkNotes">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
       </div>
 
       <div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border);">
-        <button type="button" class="btn btn-navy btn-lg" onclick="llContinue()">Continue to space details →</button>
-        <p style="font-size:11px;color:var(--text-2);margin-top:10px;">Choose an existing building or add a new one. Next, you&#39;ll add the available space — floor, size, rent and photos.</p>
+        <button type="button" class="btn btn-navy btn-lg" onclick="llContinue()"><span data-i18n="lb.continueBtn">Continue to space details</span> →</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:10px;" data-i18n="lb.continueHint">Choose an existing building or add a new one. Next, you&#39;ll add the available space — floor, size, rent and photos.</p>
       </div>
       </div><!-- /#ll-step1 -->
 
       <!-- STEP 2: the unit / space being listed -->
       <div id="ll-step2" class="hidden">
-      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;">Step 2 of 2 — The space</div>
+      <div style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin-bottom:14px;" data-i18n="lb.step2">Step 2 of 2 — The space</div>
       <div id="ll-step2-bldhdr" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-off);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;"></div>
-      <div class="form-sec-title" style="margin-top:0;">The space you&#39;re listing</div>
-      <div class="fg"><label class="fl">Floor Number / Range (optional)</label><input type="text" class="fi" id="ll-floor" placeholder="e.g. 12, or 8–14"></div>
+      <div class="form-sec-title" style="margin-top:0;" data-i18n="lb.spaceListing">The space you&#39;re listing</div>
+      <div class="fg"><label class="fl" data-i18n="lb.floor">Floor Number / Range (optional)</label><input type="text" class="fi" id="ll-floor" placeholder="e.g. 12, or 8–14"></div>
 
-      <div class="form-sec-title">Space &amp; offering</div>
+      <div class="form-sec-title" data-i18n="lb.secSpaceOffering">Space &amp; offering</div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Fit-Out Condition</label>
+        <div class="fg"><label class="fl" data-i18n="lb.fitout">Fit-Out Condition</label>
           <select class="fi fi-sel" id="ll-fitout">
-            <option value="">Select condition...</option>
-            <option>Shell &amp; Core</option><option>CAT A</option><option>CAT B</option>
-            <option>Fitted</option><option>Furnished</option>
-            <option>Serviced / Managed</option><option>Coworking / Flexible workspace</option>
+            <option value="" data-i18n="lb.fitoutSelect">Select condition...</option>
+            <option data-i18n="lb.fitoutShellCore">Shell &amp; Core</option><option>CAT A</option><option>CAT B</option>
+            <option data-i18n="lb.fitoutFitted">Fitted</option><option data-i18n="lb.fitoutFurnished">Furnished</option>
+            <option data-i18n="lb.fitoutServiced">Serviced / Managed</option><option data-i18n="lb.fitoutCoworking">Coworking / Flexible workspace</option>
           </select>
-          <div class="fld-err" id="err-ll-fitout">Select the fit-out condition.</div>
+          <div class="fld-err" id="err-ll-fitout" data-i18n="lb.errFitout">Select the fit-out condition.</div>
         </div>
-        <div class="fg"><label class="fl">Offering Type</label>
+        <div class="fg"><label class="fl" data-i18n="lb.offering">Offering Type</label>
           <select class="fi fi-sel" id="ll-offering">
-            <option value="">Select offering...</option>
-            <option>Whole building</option><option>Full floor</option><option>Partial floor</option>
-            <option>Private office</option><option>Coworking desks</option><option>Serviced office suite</option>
+            <option value="" data-i18n="lb.offeringSelect">Select offering...</option>
+            <option data-i18n="lb.offeringWholeBuilding">Whole building</option><option data-i18n="lb.offeringFullFloor">Full floor</option><option data-i18n="lb.offeringPartialFloor">Partial floor</option>
+            <option data-i18n="lb.offeringPrivateOffice">Private office</option><option data-i18n="lb.offeringCoworkingDesks">Coworking desks</option><option data-i18n="lb.offeringServicedSuite">Serviced office suite</option>
           </select>
-          <div class="fld-err" id="err-ll-offering">Select the offering type.</div>
+          <div class="fld-err" id="err-ll-offering" data-i18n="lb.errOffering">Select the offering type.</div>
         </div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"><div class="fld-err" id="err-ll-area">Enter the available area in sqm.</div></div>
-        <div class="fg"><label class="fl">Available Desks / Seats</label><input type="number" class="fi" id="ll-seats" placeholder="e.g. 40"><div class="fld-err" id="err-ll-seats">Enter the number of desks / seats.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.area">Available Area (sqm)</label><input type="number" class="fi" id="ll-area" placeholder="e.g. 2,500"><div class="fld-err" id="err-ll-area" data-i18n="lb.errArea">Enter the available area in sqm.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.seats">Available Desks / Seats</label><input type="number" class="fi" id="ll-seats" placeholder="e.g. 40"><div class="fld-err" id="err-ll-seats" data-i18n="lb.errSeats">Enter the number of desks / seats.</div></div>
       </div>
-      <p style="font-size:11px;color:var(--text-2);margin:-6px 0 4px;">Area is required for whole-building / floor / private-office offerings; desks &amp; seats are required for coworking / serviced-office offerings.</p>
+      <p style="font-size:11px;color:var(--text-2);margin:-6px 0 4px;" data-i18n="lb.areaSeatsHint">Area is required for whole-building / floor / private-office offerings; desks &amp; seats are required for coworking / serviced-office offerings.</p>
 
-      <div class="form-sec-title">Commercials</div>
+      <div class="form-sec-title" data-i18n="lb.secCommercials">Commercials</div>
       <div class="fr3">
-        <div class="fg"><label class="fl">Asking Rent / Price</label><input type="number" class="fi" id="ll-rent" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-rent">Enter a numeric price.</div></div>
-        <div class="fg"><label class="fl">Currency</label>
+        <div class="fg"><label class="fl" data-i18n="lb.rent">Asking Rent / Price</label><input type="number" class="fi" id="ll-rent" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-rent" data-i18n="lb.errRent">Enter a numeric price.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.currency">Currency</label>
           <select class="fi fi-sel" id="ll-currency"><option value="">Select market first</option></select>
-          <div class="fld-err" id="err-ll-currency">Select a valid currency for the market.</div>
+          <div class="fld-err" id="err-ll-currency" data-i18n="lb.errCurrency">Select a valid currency for the market.</div>
         </div>
-        <div class="fg"><label class="fl">Pricing Basis</label>
+        <div class="fg"><label class="fl" data-i18n="lb.basis">Pricing Basis</label>
           <select class="fi fi-sel" id="ll-basis">
-            <option value="">Select basis...</option>
-            <option>per sqm / year</option><option>per sqm / month</option><option>per desk / month</option>
-            <option>per office / month</option><option>total monthly rent</option>
+            <option value="" data-i18n="lb.basisSelect">Select basis...</option>
+            <option data-i18n="lb.basisSqmYear">per sqm / year</option><option data-i18n="lb.basisSqmMonth">per sqm / month</option><option data-i18n="lb.basisDeskMonth">per desk / month</option>
+            <option data-i18n="lb.basisOfficeMonth">per office / month</option><option data-i18n="lb.basisTotalMonthly">total monthly rent</option>
           </select>
-          <div class="fld-err" id="err-ll-basis">Select a pricing basis.</div>
+          <div class="fld-err" id="err-ll-basis" data-i18n="lb.errBasis">Select a pricing basis.</div>
         </div>
       </div>
       <div class="fr3">
-        <div class="fg"><label class="fl">Service Charge (optional)</label><input type="number" class="fi" id="ll-svc" placeholder="e.g. 150"><div class="fld-err" id="err-ll-svc">Service charge must be numeric.</div></div>
-        <div class="fg"><label class="fl">Service Charge Basis</label>
+        <div class="fg"><label class="fl" data-i18n="lb.svc">Service Charge (optional)</label><input type="number" class="fi" id="ll-svc" placeholder="e.g. 150"><div class="fld-err" id="err-ll-svc" data-i18n="lb.errSvc">Service charge must be numeric.</div></div>
+        <div class="fg"><label class="fl" data-i18n="lb.svcBasis">Service Charge Basis</label>
           <select class="fi fi-sel" id="ll-svcbasis">
             <option value="">—</option>
-            <option>per sqm / year</option><option>per sqm / month</option><option>Included in rent</option><option>Other</option>
+            <option data-i18n="lb.basisSqmYear">per sqm / year</option><option data-i18n="lb.basisSqmMonth">per sqm / month</option><option data-i18n="lb.svcIncluded">Included in rent</option><option data-i18n="lb.svcOther">Other</option>
           </select>
         </div>
-        <div class="fg"><label class="fl">Availability Date</label><input type="date" class="fi" id="ll-avail"></div>
+        <div class="fg"><label class="fl" data-i18n="lb.availDate">Availability Date</label><input type="date" class="fi" id="ll-avail"></div>
       </div>
-      <div class="fg"><label class="fl">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
+      <div class="fg"><label class="fl" data-i18n="lb.term">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
 
-      <div class="form-sec-title">Photos &amp; floorplans</div>
+      <div class="form-sec-title" data-i18n="lb.secPhotos">Photos &amp; floorplans</div>
       <div class="form-note">
-        <p>Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="/sign-in" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="/sign-up" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
+        <p data-i18n-html="lb.uploadNote">Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="/sign-in" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="/sign-up" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
       </div>
-      <div class="fg"><label class="fl">Photos — at least 3 (JPG / PNG / WEBP)</label><input type="file" class="fi" id="ll-photos" accept="image/jpeg,image/png,image/webp" multiple><div class="fld-err" id="err-ll-photos">Select at least 3 photos (JPG/PNG/WEBP, max 8 MB each).</div></div>
-      <div class="fg"><label class="fl">Floorplan (optional — PDF / image)</label><input type="file" class="fi" id="ll-floorplan" accept="application/pdf,image/jpeg,image/png,image/webp"><div class="fld-err" id="err-ll-floorplan">Floorplan must be PDF / JPG / PNG / WEBP, max 15 MB.</div></div>
+      <div class="fg"><label class="fl" data-i18n="lb.photos">Photos — at least 3 (JPG / PNG / WEBP)</label><input type="file" class="fi" id="ll-photos" accept="image/jpeg,image/png,image/webp" multiple><div class="fld-err" id="err-ll-photos" data-i18n="lb.errPhotos">Select at least 3 photos (JPG/PNG/WEBP, max 8 MB each).</div></div>
+      <div class="fg"><label class="fl" data-i18n="lb.floorplan">Floorplan (optional — PDF / image)</label><input type="file" class="fi" id="ll-floorplan" accept="application/pdf,image/jpeg,image/png,image/webp"><div class="fld-err" id="err-ll-floorplan" data-i18n="lb.errFloorplan">Floorplan must be PDF / JPG / PNG / WEBP, max 15 MB.</div></div>
 
-      <div class="fg"><label class="fl">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Certifications, amenities, parking, current availability, context..."></textarea></div>
+      <div class="fg"><label class="fl" data-i18n="lb.notes">Notes (optional)</label><textarea class="fi" id="ll-notes" placeholder="Certifications, amenities, parking, current availability, context..." data-i18n-placeholder="lb.notesPh"></textarea></div>
 
       <!-- Honeypot -->
       <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="ll-website" tabindex="-1" autocomplete="off"></label></div>
@@ -195,11 +195,11 @@
       <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
         <label class="consent">
           <input type="checkbox" id="ll-consent" required aria-required="true">
-          <span>I am authorised to represent this building and agree to URBN processing these details per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
+          <span data-i18n-html="lb.consent">I am authorised to represent this building and agree to URBN processing these details per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
-        <div class="fld-err" id="err-ll-consent" style="margin-top:8px;">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
-        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)">Submit Listing for Review</button>
-        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN reviews every submission and verifies the listing at source before publishing. Typical response within 3 business days.</p>
+        <div class="fld-err" id="err-ll-consent" style="margin-top:8px;" data-i18n="lb.errConsent">Please confirm you are authorised and accept the Privacy Policy and Terms of Use.</div>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitListing(this)" data-i18n="lb.submitListing">Submit Listing for Review</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;" data-i18n="lb.reviewNote">URBN reviews every submission and verifies the listing at source before publishing. Typical response within 3 business days.</p>
       </div>
     </div><!-- /#ll-step2 -->
     </div>
@@ -208,17 +208,17 @@
     <!-- Bulk upload panel -->
     <div id="ll-bulk" class="hidden">
       <div class="card" style="padding:28px;">
-        <div class="form-sec-title" style="margin-top:0;">Bulk upload multiple listings</div>
-        <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px;">Add many buildings/units at once. Download the template, fill <strong>one row per unit</strong>, then upload. To list a <strong>building with several units</strong>, use one row per unit and give them the same <code>building_ref</code> (and repeat the building columns on each row) — rows that share a <code>building_ref</code> are grouped into a single building. <code>amenities</code> and <code>certifications</code> are <strong>semicolon-separated</strong> (e.g. <code>24/7 access;Security;Parking</code>). For photos &amp; floorplans, paste shareable links (Google Drive, Dropbox, SharePoint, OneDrive, or direct image/PDF URLs) in the <code>photo_url_*</code> / <code>floorplan_url_*</code> columns — no file uploads needed in bulk. Every row is validated server-side and stored as <strong>pending review</strong>; an admin then approves the batch in one click.</p>
+        <div class="form-sec-title" style="margin-top:0;" data-i18n="lb.bulkTitle">Bulk upload multiple listings</div>
+        <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:16px;" data-i18n-html="lb.bulkIntro">Add many buildings/units at once. Download the template, fill <strong>one row per unit</strong>, then upload. To list a <strong>building with several units</strong>, use one row per unit and give them the same <code>building_ref</code> (and repeat the building columns on each row) — rows that share a <code>building_ref</code> are grouped into a single building. <code>amenities</code> and <code>certifications</code> are <strong>semicolon-separated</strong> (e.g. <code>24/7 access;Security;Parking</code>). For photos &amp; floorplans, paste shareable links (Google Drive, Dropbox, SharePoint, OneDrive, or direct image/PDF URLs) in the <code>photo_url_*</code> / <code>floorplan_url_*</code> columns — no file uploads needed in bulk. Every row is validated server-side and stored as <strong>pending review</strong>; an admin then approves the batch in one click.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:18px;">
-          <a class="btn btn-outline" href="/templates/urbn-listing-template.csv" download>Download CSV Template</a>
-          <label class="btn btn-navy" style="cursor:pointer;">Choose CSV…<input type="file" id="bulk-file" accept=".csv,text/csv" style="display:none;" onchange="bulkParse()"></label>
+          <a class="btn btn-outline" href="/templates/urbn-listing-template.csv" download data-i18n="lb.downloadTemplate">Download CSV Template</a>
+          <label class="btn btn-navy" style="cursor:pointer;"><span data-i18n="lb.chooseCsv">Choose CSV…</span><input type="file" id="bulk-file" accept=".csv,text/csv" style="display:none;" onchange="bulkParse()"></label>
           <span id="bulk-filename" style="font-size:13px;color:var(--text-2);"></span>
         </div>
         <div id="bulk-preview"></div>
         <div id="bulk-actions" class="hidden" style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-navy btn-lg" id="bulk-submit" onclick="bulkSubmit(this)">Submit Batch for Review</button>
-          <span style="font-size:12px;color:var(--text-2);">Only valid rows are stored. Invalid rows are reported, not uploaded.</span>
+          <button class="btn btn-navy btn-lg" id="bulk-submit" onclick="bulkSubmit(this)" data-i18n="lb.submitBatch">Submit Batch for Review</button>
+          <span style="font-size:12px;color:var(--text-2);" data-i18n="lb.bulkValidNote">Only valid rows are stored. Invalid rows are reported, not uploaded.</span>
         </div>
         <div class="fld-err" id="bulk-err" style="margin-top:12px;"></div>
       </div>
@@ -228,7 +228,7 @@
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
-<script src="/js/i18n.js"></script><script src="../js/urbn.js"></script>
+<script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../js/urbn.js"></script>
 <script>
 // Decide synchronously — before paint — whether to show the listing app or the
 // gate, so the form NEVER flashes for signed-out visitors. #ll-app starts hidden

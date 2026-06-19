@@ -14,24 +14,24 @@
   <div style="width:100%;max-width:400px;">
     <div class="text-center mb32">
       <div style="width:44px;height:44px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:20px;font-style:italic;color:#fff;margin:0 auto 18px;font-weight:500;border-radius:3px;">U</div>
-      <h2 style="font-size:32px;">Welcome back</h2>
-      <p style="font-size:13px;color:var(--text-2);margin-top:8px;">Sign in to your URBN account</p>
+      <h2 style="font-size:32px;" data-i18n="auth.signinH1">Welcome back</h2>
+      <p style="font-size:13px;color:var(--text-2);margin-top:8px;" data-i18n="auth.signinIntro">Sign in to your URBN account</p>
     </div>
     <div class="card" style="padding:32px;">
-      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="si-email" placeholder="you@company.com"></div>
-      <div class="fg"><label class="fl">Password</label><input type="password" class="fi" id="si-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitSignIn(document.getElementById('si-btn'))"></div>
+      <div class="fg"><label class="fl" data-i18n="form.corpEmail">Corporate Email</label><input type="email" class="fi" id="si-email" placeholder="you@company.com" data-i18n-placeholder="auth.emailPh"></div>
+      <div class="fg"><label class="fl" data-i18n="auth.password">Password</label><input type="password" class="fi" id="si-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitSignIn(document.getElementById('si-btn'))"></div>
       <div class="fld-err" id="si-err" style="margin-bottom:8px;"></div>
-      <button class="btn btn-navy w-full mt16" id="si-btn" onclick="submitSignIn(this)">Sign In</button>
-      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-2);">
+      <button class="btn btn-navy w-full mt16" id="si-btn" onclick="submitSignIn(this)" data-i18n="nav.signIn">Sign In</button>
+      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-2);" data-i18n-html="auth.noAccount">
         No account? <a href="/sign-up" style="color:var(--navy);">Create one</a>
       </div>
     </div>
-    <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-3);">Access to building details, pricing, and introductions requires a verified corporate account.</p>
+    <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-3);" data-i18n="auth.signinHelper">Access to building details, pricing, and introductions requires a verified corporate account.</p>
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
-<script src="/js/i18n.js"></script><script src="../js/urbn.js"></script>
+<script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../js/urbn.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => { injectNav('../'); injectFooter('../'); });
 

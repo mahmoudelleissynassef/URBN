@@ -23,85 +23,85 @@
 <div class="pt-nav" style="padding:60px 0 80px;">
   <div class="w-sm">
     <div class="mb48">
-      <span class="overline label-navy">Premium Service</span>
-      <h1 style="font-size:44px;">Request a<br><em>Market Scan</em></h1>
-      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:480px;line-height:1.8;">For corporate occupiers who prefer a managed approach. Describe your requirements and URBN will deliver a curated shortlist of verified buildings within 48 hours.</p>
+      <span class="overline label-navy" data-i18n="ms.overline">Premium Service</span>
+      <h1 style="font-size:44px;" data-i18n-html="ms.h1">Request a<br><em>Market Scan</em></h1>
+      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:480px;line-height:1.8;" data-i18n="ms.intro">For corporate occupiers who prefer a managed approach. Describe your requirements and URBN will deliver a curated shortlist of verified buildings within 48 hours.</p>
     </div>
 
     <div id="scan-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
       <div class="fr2">
-        <div class="fg"><label class="fl">Target Market</label>
+        <div class="fg"><label class="fl" data-i18n="ms.targetMarket">Target Market</label>
           <select class="fi fi-sel" id="sc-market">
-            <option value="">Select market...</option>
+            <option value="" data-i18n="ms.selectMarket">Select market...</option>
           </select>
-          <div class="fld-err" id="err-market">Please select a target market.</div>
+          <div class="fld-err" id="err-market" data-i18n="ms.errMarket">Please select a target market.</div>
         </div>
-        <div class="fg"><label class="fl">Industry / Sector</label>
+        <div class="fg"><label class="fl" data-i18n="ms.sector">Industry / Sector</label>
           <select class="fi fi-sel" id="sc-sector">
-            <option>Banking & Financial Services</option>
-            <option>Technology</option>
-            <option>Professional Services</option>
-            <option>FMCG / Consumer Goods</option>
-            <option>Energy / Resources</option>
-            <option>Manufacturing</option>
-            <option>Healthcare / Pharma</option>
-            <option>Other</option>
+            <option data-i18n="ms.sec.banking">Banking & Financial Services</option>
+            <option data-i18n="ms.sec.technology">Technology</option>
+            <option data-i18n="ms.sec.profServices">Professional Services</option>
+            <option data-i18n="ms.sec.fmcg">FMCG / Consumer Goods</option>
+            <option data-i18n="ms.sec.energy">Energy / Resources</option>
+            <option data-i18n="ms.sec.manufacturing">Manufacturing</option>
+            <option data-i18n="ms.sec.healthcare">Healthcare / Pharma</option>
+            <option data-i18n="ms.sec.other">Other</option>
           </select>
         </div>
       </div>
       <div class="fr2">
-        <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" id="sc-area" placeholder="e.g. 1,200"><div class="fld-err" id="err-area">Enter an approximate area in sqm.</div></div>
-        <div class="fg"><label class="fl">Target Commencement</label>
+        <div class="fg"><label class="fl" data-i18n="ms.area">Required Area (sqm)</label><input type="number" class="fi" id="sc-area" placeholder="e.g. 1,200"><div class="fld-err" id="err-area" data-i18n="ms.errArea">Enter an approximate area in sqm.</div></div>
+        <div class="fg"><label class="fl" data-i18n="ms.commencement">Target Commencement</label>
           <select class="fi fi-sel" id="sc-timeline">
-            <option>Immediately (0–3 months)</option>
-            <option>3–6 months</option>
-            <option>6–12 months</option>
-            <option>12+ months</option>
+            <option data-i18n="ms.tl.immediate">Immediately (0–3 months)</option>
+            <option data-i18n="ms.tl.3to6">3–6 months</option>
+            <option data-i18n="ms.tl.6to12">6–12 months</option>
+            <option data-i18n="ms.tl.12plus">12+ months</option>
           </select>
         </div>
       </div>
       <div class="fr3">
-        <div class="fg"><label class="fl">Min Desks Required</label><input type="number" class="fi" id="sc-desks" placeholder="e.g. 80"></div>
-        <div class="fg"><label class="fl">Min Meeting Rooms</label><input type="number" class="fi" id="sc-mr" placeholder="e.g. 4"></div>
-        <div class="fg"><label class="fl">Parking Spaces</label><input type="number" class="fi" id="sc-parking" placeholder="e.g. 20"></div>
+        <div class="fg"><label class="fl" data-i18n="ms.minDesks">Min Desks Required</label><input type="number" class="fi" id="sc-desks" placeholder="e.g. 80"></div>
+        <div class="fg"><label class="fl" data-i18n="ms.minMeetingRooms">Min Meeting Rooms</label><input type="number" class="fi" id="sc-mr" placeholder="e.g. 4"></div>
+        <div class="fg"><label class="fl" data-i18n="ms.parking">Parking Spaces</label><input type="number" class="fi" id="sc-parking" placeholder="e.g. 20"></div>
       </div>
-      <div class="fg"><label class="fl">Fit-Out Requirement</label>
+      <div class="fg"><label class="fl" data-i18n="ms.fitout">Fit-Out Requirement</label>
         <div class="chips" id="sc-fitout" style="margin-top:4px;">
-          <button class="chip on" onclick="this.classList.toggle('on')">Shell & Core</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Category A (Fitted)</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Turnkey / Furnished</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Flexible</button>
+          <button class="chip on" onclick="this.classList.toggle('on')" data-i18n="ms.fit.shellCore">Shell & Core</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.catA">Category A (Fitted)</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.turnkey">Turnkey / Furnished</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.flexible">Flexible</button>
         </div>
       </div>
-      <div class="fg"><label class="fl">Preferred Districts (optional)</label><input type="text" class="fi" id="sc-districts" placeholder="e.g. New Cairo, CBD — or leave blank for all"></div>
-      <div class="fg"><label class="fl">Power / Connectivity Requirements</label>
+      <div class="fg"><label class="fl" data-i18n="ms.districts">Preferred Districts (optional)</label><input type="text" class="fi" id="sc-districts" placeholder="e.g. New Cairo, CBD — or leave blank for all" data-i18n-placeholder="ms.districtsPh"></div>
+      <div class="fg"><label class="fl" data-i18n="ms.power">Power / Connectivity Requirements</label>
         <div class="chips" id="sc-power" style="margin-top:4px;">
-          <button class="chip" onclick="this.classList.toggle('on')">Backup Generator</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Fibre Connectivity</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Dual Power Feed</button>
-          <button class="chip" onclick="this.classList.toggle('on')">Data Centre Adjacent</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.generator">Backup Generator</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.fibre">Fibre Connectivity</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.dualFeed">Dual Power Feed</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.dataCentre">Data Centre Adjacent</button>
         </div>
       </div>
-      <div class="fg"><label class="fl">Additional Notes</label><textarea class="fi" id="sc-notes" placeholder="Any specific requirements, deal-breakers, or context about your company's needs in this market..."></textarea></div>
-      <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="sc-email" placeholder="you@company.com"><div class="fld-err" id="err-email">Enter a valid corporate email address.</div></div>
-      <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" id="sc-company" placeholder="Your company"><div class="fld-err" id="err-company">Enter your company name.</div></div>
+      <div class="fg"><label class="fl" data-i18n="ms.notes">Additional Notes</label><textarea class="fi" id="sc-notes" placeholder="Any specific requirements, deal-breakers, or context about your company's needs in this market..." data-i18n-placeholder="ms.notesPh"></textarea></div>
+      <div class="fg"><label class="fl" data-i18n="form.corpEmail">Corporate Email</label><input type="email" class="fi" id="sc-email" placeholder="you@company.com"><div class="fld-err" id="err-email" data-i18n="form.errEmail">Enter a valid corporate email address.</div></div>
+      <div class="fg"><label class="fl" data-i18n="form.company">Company Name</label><input type="text" class="fi" id="sc-company" placeholder="Your company" data-i18n-placeholder="ms.companyPh"><div class="fld-err" id="err-company" data-i18n="ms.errCompany">Enter your company name.</div></div>
       <!-- Honeypot: hidden from users, catches bots -->
       <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="sc-website" tabindex="-1" autocomplete="off"></label></div>
       <div style="margin-top:8px;padding-top:24px;border-top:1px solid var(--border);">
         <label class="consent">
           <input type="checkbox" id="sc-consent" required aria-required="true">
-          <span>I agree that URBN may use the details above to prepare and send a Market Scan shortlist, in line with the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
+          <span data-i18n-html="ms.consent">I agree that URBN may use the details above to prepare and send a Market Scan shortlist, in line with the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
-        <div class="fld-err" id="err-consent" style="margin-top:8px;">Please confirm you accept the Privacy Policy and Terms of Use.</div>
-        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitScan(this)">Submit Market Scan Request</button>
-        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">URBN will respond within 48 business hours with a curated shortlist.</p>
+        <div class="fld-err" id="err-consent" style="margin-top:8px;" data-i18n="ms.errConsent">Please confirm you accept the Privacy Policy and Terms of Use.</div>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitScan(this)" data-i18n="ms.submit">Submit Market Scan Request</button>
+        <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;" data-i18n="ms.helper">URBN will respond within 48 business hours with a curated shortlist.</p>
       </div>
     </div>
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
-<script src="/js/i18n.js"></script><script src="../js/urbn.js"></script>
+<script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../js/urbn.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   injectNav('../');

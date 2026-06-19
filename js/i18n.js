@@ -152,6 +152,13 @@
     'form.errName':    { en: 'Enter your name.', fr: 'Saisissez votre nom.', de: 'Geben Sie Ihren Namen ein.', es: 'Introduce tu nombre.', it: 'Inserisci il tuo nome.', nl: 'Voer uw naam in.' },
     'form.errEmailAny':{ en: 'Enter a valid email address.', fr: 'Saisissez une adresse e-mail valide.', de: 'Geben Sie eine gültige E-Mail-Adresse ein.', es: 'Introduce un correo electrónico válido.', it: "Inserisci un'e-mail valida.", nl: 'Voer een geldig e-mailadres in.' },
 
+    // Access / request-access modal (injected site-wide by urbn.js)
+    'access.heading':   { en: 'Create your URBN account', fr: 'Créez votre compte URBN', de: 'Erstellen Sie Ihr URBN-Konto', es: 'Crea tu cuenta de URBN', it: 'Crea il tuo account URBN', nl: 'Maak uw URBN-account aan' },
+    'access.createFree':{ en: 'Create a free account →', fr: 'Créer un compte gratuit →', de: 'Kostenloses Konto erstellen →', es: 'Crear una cuenta gratuita →', it: 'Crea un account gratuito →', nl: 'Maak een gratis account aan →' },
+    'access.haveAccount':{ en: 'I already have an account', fr: "J'ai déjà un compte", de: 'Ich habe bereits ein Konto', es: 'Ya tengo una cuenta', it: 'Ho già un account', nl: 'Ik heb al een account' },
+    'access.preferLead':{ en: 'Prefer URBN to set you up?', fr: 'Vous préférez que URBN s’en charge ?', de: 'Möchten Sie, dass URBN das übernimmt?', es: '¿Prefieres que URBN lo gestione?', it: 'Preferisci che sia URBN a occuparsene?', nl: 'Liever dat URBN het regelt?' },
+    'access.callback':  { en: 'Request a callback', fr: 'Demander un rappel', de: 'Rückruf anfordern', es: 'Solicitar una llamada', it: 'Richiedi di essere ricontattato', nl: 'Vraag om teruggebeld te worden' },
+
     // Language switcher
     'lang.label': { en: 'Language', fr: 'Langue', de: 'Sprache', es: 'Idioma', it: 'Lingua', nl: 'Taal' }
   };
