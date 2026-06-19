@@ -1357,6 +1357,54 @@ function handleAdmin(req, res, urlPath) {
         await writeAudit(req, user, 'user.invite', { targetType: 'user', targetIds: newUserId ? [String(newUserId)] : null, metadata: { email, tier, assignedMarket, emailSent } });
         return sendJson(res, 200, { ok: true, userId: newUserId, companyId, tier, emailSent, emailError });
       }
+      if (urlPath === '/api/admin/import-units') {
+        // Bulk-attach units to EXISTING buildings. This NEVER inserts or updates a
+        // building row — it cannot create duplicates or overwrite building details.
+        // Match by building_id, else by name|market|submarket (case-insensitive).
+        // dryRun (default true) previews matches/errors without writing.
+        const rows = Array.isArray(body.rows) ? body.rows.slice(0, 5000) : [];
+        if (!rows.length) return sendJson(res, 400, { ok: false, error: 'no_rows' });
+        const dryRun = body.dryRun !== false;
+        const buildings = await sbGet('buildings?select=id,name,market,submarket');
+        const byId = {}, byKey = {};
+        buildings.forEach((b) => {
+          byId[String(b.id)] = b;
+          const k = [b.name, b.market, b.submarket].map((x) => String(x || '').trim().toLowerCase()).join('|');
+          (byKey[k] = byKey[k] || []).push(b);
+        });
+        const hash = (s) => { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = (((h * 33) ^ s.charCodeAt(i)) >>> 0); return h.toString(36); };
+        const results = [], toInsert = [];
+        let matched = 0, unmatched = 0, ambiguous = 0, invalid = 0;
+        rows.forEach((r, i) => {
+          const idx = (r._row != null) ? r._row : (i + 1);
+          let b = null, reason = '';
+          const bid = r.building_id && String(r.building_id).trim();
+          if (bid && byId[bid]) b = byId[bid];
+          else if (bid && !byId[bid]) reason = 'building_id not found';
+          else {
+            const k = [r.building_name, normalizeMarket(r.market) || r.market, r.submarket].map((x) => String(x || '').trim().toLowerCase()).join('|');
+            const m = byKey[k] || [];
+            if (m.length === 1) b = m[0];
+            else if (m.length === 0) reason = 'no matching building (name + market + submarket)';
+            else reason = 'multiple matching buildings — add building_id';
+          }
+          if (!b) { if (reason.indexOf('multiple') === 0) { ambiguous++; results.push({ row: idx, status: 'ambiguous', building: r.building_name || bid || '', reason }); } else { unmatched++; results.push({ row: idx, status: 'unmatched', building: r.building_name || bid || '', reason }); } return; }
+          if (!rowHasUnit(r)) { invalid++; results.push({ row: idx, status: 'invalid', building: b.name, reason: 'no unit data (size / rent / floor / offering)' }); return; }
+          matched++;
+          const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_imp_' + hash(b.id + '|' + (r.unit_floor || '') + '|' + (r.size_sqm || '') + '|' + (r.offering_type || '')));
+          toInsert.push({ id: uId, building_id: b.id, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null, fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent), currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge), service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved' });
+          results.push({ row: idx, status: 'ok', building: b.name, reason: '' });
+        });
+        let inserted = 0;
+        if (!dryRun && toInsert.length) {
+          for (let i = 0; i < toInsert.length; i += 200) {
+            const chunk = toInsert.slice(i, i + 200);
+            try { await sbUpsert('units', chunk); inserted += chunk.length; } catch (e) { console.error('[import-units]', e.message); }
+          }
+          await writeAudit(req, user, 'units.import', { targetType: 'unit', count: inserted, metadata: { matched, unmatched, ambiguous, invalid } });
+        }
+        return sendJson(res, 200, { ok: true, dryRun, summary: { total: rows.length, matched, unmatched, ambiguous, invalid, inserted }, results: results.slice(0, 2000) });
+      }
       if (urlPath === '/api/admin/unpublish-building') {
         if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
         await sbPatch('buildings', `id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });

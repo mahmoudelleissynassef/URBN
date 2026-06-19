@@ -653,7 +653,7 @@ function renderCard(b, base='', opts={}) {
     </div>
     <div class="lc-body">
       <div class="lc-name">${nm}</div>
-      <div class="lc-district">${escHtml(b.submarket)} · ${escHtml(mkt?.country||'')}</div>
+      <div class="lc-district">${[escHtml(b.submarket), escHtml(mkt?.name||''), escHtml(mkt?.country||'')].filter(Boolean).join(' · ')}</div>
       <div class="lc-data">
         <div class="lc-datum">
           <div class="lc-d-val">${b.gla ? fmt(b.gla)+' sqm' : (b.unitLocked ? '•••' : (b.availMin ? fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm' : '—'))}</div>
