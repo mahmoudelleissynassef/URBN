@@ -21,30 +21,30 @@
     <div class="mb48">
       <span class="overline label-navy">Your Data Rights</span>
       <h1 style="font-size:44px;">Data &amp; privacy requests</h1>
-      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;">Use this form to exercise your data protection rights. Subject to applicable law, you can ask us to give you a copy of your data, correct it, delete it, stop using it, or withdraw consent. We aim to respond within 30 days.</p>
+      <p style="font-size:15px;color:var(--text-2);margin-top:16px;max-width:520px;line-height:1.8;" data-i18n="dr.lead">Use this form to exercise your data protection rights. Subject to applicable law, you can ask us to give you a copy of your data, correct it, delete it, stop using it, or withdraw consent. We aim to respond within 30 days.</p>
     </div>
 
     <div class="form-note" style="margin-bottom:24px;"><p style="font-size:12.5px;">To protect your data, we may need to verify your identity before acting on a request. We will only use the details you provide here to handle your request. See our <a href="/privacy" class="text-navy">Privacy Policy</a> for how we process this information.</p></div>
 
     <div id="dr-form" style="background:var(--bg-white);border:1px solid var(--border);padding:40px;">
-      <div class="fg"><label class="fl">What would you like to do?</label>
+      <div class="fg"><label class="fl" data-i18n="dr.kindLabel">What would you like to do?</label>
         <select class="fi fi-sel" id="dr-kind">
-          <option value="access">Request a copy of my data (access)</option>
-          <option value="correction">Correct my data</option>
-          <option value="deletion">Delete my data / close my account</option>
-          <option value="withdraw-consent">Withdraw my consent</option>
-          <option value="object-restrict">Object to or restrict processing</option>
-          <option value="question">Ask a general privacy question</option>
+          <option value="access" data-i18n="dr.k.access">Request a copy of my data (access)</option>
+          <option value="correction" data-i18n="dr.k.correction">Correct my data</option>
+          <option value="deletion" data-i18n="dr.k.deletion">Delete my data / close my account</option>
+          <option value="withdraw-consent" data-i18n="dr.k.withdraw">Withdraw my consent</option>
+          <option value="object-restrict" data-i18n="dr.k.object">Object to or restrict processing</option>
+          <option value="question" data-i18n="dr.k.question">Ask a general privacy question</option>
         </select>
-        <div class="fld-err" id="err-kind">Please choose a request type.</div>
+        <div class="fld-err" id="err-kind" data-i18n="dr.errKind">Please choose a request type.</div>
       </div>
 
       <div class="fr2">
-        <div class="fg"><label class="fl">Your Name</label><input type="text" class="fi" id="dr-name" placeholder="Full name"><div class="fld-err" id="err-name">Enter your name.</div></div>
-        <div class="fg"><label class="fl">Email Address</label><input type="email" class="fi" id="dr-email" placeholder="you@example.com"><div class="fld-err" id="err-email">Enter a valid email address.</div></div>
+        <div class="fg"><label class="fl" data-i18n="form.name">Your Name</label><input type="text" class="fi" id="dr-name" placeholder="Full name"><div class="fld-err" id="err-name" data-i18n="form.errName">Enter your name.</div></div>
+        <div class="fg"><label class="fl" data-i18n="form.email">Email Address</label><input type="email" class="fi" id="dr-email" placeholder="you@example.com"><div class="fld-err" id="err-email" data-i18n="form.errEmailAny">Enter a valid email address.</div></div>
       </div>
-      <div class="fg"><label class="fl">Company (optional)</label><input type="text" class="fi" id="dr-company" placeholder="If your data relates to a company account"></div>
-      <div class="fg"><label class="fl">Details of your request</label><textarea class="fi" id="dr-message" placeholder="Tell us what you need. For corrections, describe what should change. For deletions, confirm which account or data. The more detail you give, the faster we can help."></textarea></div>
+      <div class="fg"><label class="fl" data-i18n="dr.companyOpt">Company (optional)</label><input type="text" class="fi" id="dr-company" placeholder="If your data relates to a company account"></div>
+      <div class="fg"><label class="fl" data-i18n="dr.details">Details of your request</label><textarea class="fi" id="dr-message" placeholder="Tell us what you need. For corrections, describe what should change. For deletions, confirm which account or data. The more detail you give, the faster we can help."></textarea></div>
 
       <!-- Honeypot: hidden from users, catches bots -->
       <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="dr-website" tabindex="-1" autocomplete="off"></label></div>
@@ -55,7 +55,7 @@
           <span>I confirm the details above are accurate and I agree that URBN may use them to verify my identity and handle this request, in line with the <a href="/privacy">Privacy Policy</a>.</span>
         </label>
         <div class="fld-err" id="err-consent" style="margin-top:8px;">Please confirm before submitting.</div>
-        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitDataRequest(this)">Submit Request</button>
+        <button class="btn btn-navy btn-lg" style="margin-top:18px;" onclick="submitDataRequest(this)" data-i18n="dr.submit">Submit Request</button>
         <p style="font-size:11px;color:var(--text-2);margin-top:12px;line-height:1.65;">Prefer email? Write to <a href="mailto:privacy@urbnoffices.com">privacy@urbnoffices.com</a>. You also have the right to complain to your local data protection authority.</p>
       </div>
     </div>
