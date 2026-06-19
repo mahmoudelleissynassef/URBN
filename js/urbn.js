@@ -597,6 +597,25 @@ function cardImg(b) { return imgFor(b); }
 function escHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Display-only city/market casing. Maps a stored market slug ('cairo',
+// 'addis', 'capetown') to its proper market name via URBN_DATA; otherwise
+// title-cases the value and keeps known acronyms uppercase. Filters/queries keep
+// using the underlying stored value — this is purely for display.
+function titleCaseCity(s) {
+  var ACR = { uae: 'UAE', ksa: 'KSA', mena: 'MENA', difc: 'DIFC', cbd: 'CBD', kafd: 'KAFD', leed: 'LEED', breeam: 'BREEAM', well: 'WELL', 'f&b': 'F&B' };
+  return String(s == null ? '' : s).trim().split(/([\s_/-]+)/).map(function (w) {
+    var lw = w.toLowerCase();
+    if (ACR[lw]) return ACR[lw];
+    if (/^[\s_/-]+$/.test(w)) return w === '_' || w === '-' ? ' ' : w;
+    return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }).join('');
+}
+function niceMarket(s) {
+  if (s == null || s === '') return '';
+  var key = String(s).toLowerCase();
+  var m = (typeof URBN_DATA !== 'undefined' && URBN_DATA.markets) ? URBN_DATA.markets.find(function (x) { return x.id === key; }) : null;
+  return m ? m.name : titleCaseCity(s);
+}
 // Card-label translator: resolve a dictionary key, falling back to English copy.
 // Used by the shared card renderers so listing cards localize like the rest of
 // the UI (i18n.js loads before urbn.js; this runs at render time).
@@ -637,20 +656,20 @@ function renderCard(b, base='', opts={}) {
       <div class="lc-district">${escHtml(b.submarket)} · ${escHtml(mkt?.country||'')}</div>
       <div class="lc-data">
         <div class="lc-datum">
-          <div class="lc-d-val">${b.unitLocked?'•••':fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm'}</div>
-          <div class="lc-d-key">${tc('card.availableArea','Available Area')}</div>
+          <div class="lc-d-val">${b.gla ? fmt(b.gla)+' sqm' : (b.unitLocked ? '•••' : (b.availMin ? fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm' : '—'))}</div>
+          <div class="lc-d-key">${b.gla ? tc('card.totalGla','Total GLA') : tc('card.availableArea','Available Area')}</div>
         </div>
         <div class="lc-datum">
-          <div class="lc-d-val">${fmt(b.floorplate)} sqm</div>
+          <div class="lc-d-val">${b.floorplate ? fmt(b.floorplate)+' sqm' : '—'}</div>
           <div class="lc-d-key">${tc('card.floorPlate','Floor Plate')}</div>
         </div>
         <div class="lc-datum">
-          <div class="lc-d-val">${b.floors}</div>
-          <div class="lc-d-key">${tc('card.floors','Floors')}</div>
+          <div class="lc-d-val">${b.unitCount != null ? b.unitCount : '—'}</div>
+          <div class="lc-d-key">${tc('card.availUnits','Available units')}</div>
         </div>
         <div class="lc-datum">
-          <div class="lc-d-val">${parkingDatum(b)}</div>
-          <div class="lc-d-key">${tc('card.parking','Parking')}</div>
+          <div class="lc-d-val">${b.floors || '—'}</div>
+          <div class="lc-d-key">${tc('card.floors','Floors')}</div>
         </div>
       </div>
       <div class="lc-foot">

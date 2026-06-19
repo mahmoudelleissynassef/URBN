@@ -160,7 +160,7 @@ async function loadDashboard(user) {
   const reqRows = requests.map(r => `<tr>
     <td style="color:var(--text-2);">${fmtDate(r.created_at)}</td>
     <td style="text-transform:capitalize;">${(r.request_type || '').replace('-', ' ')}</td>
-    <td>${r.market || '—'}</td>
+    <td>${niceMarket(r.market) || '—'}</td>
     <td><span class="badge badge-gated" style="text-transform:capitalize;">${r.status || 'new'}</span></td>
   </tr>`).join('');
   const reqTable = requests.length
@@ -174,7 +174,7 @@ async function loadDashboard(user) {
   // Listings (supply-side submissions)
   const listings = requests.filter(r => r.request_type === 'list-building');
   document.getElementById('listings-table').innerHTML = listings.length
-    ? `<table class="data-table"><thead><tr><th>Date</th><th>Building</th><th>Market</th><th>Status</th></tr></thead><tbody>${listings.map(r => `<tr><td style="color:var(--text-2);">${fmtDate(r.created_at)}</td><td>${(r.payload && r.payload.building) || '—'}</td><td>${r.market || '—'}</td><td><span class="badge badge-gated" style="text-transform:capitalize;">${r.status || 'pending'}</span></td></tr>`).join('')}</tbody></table>`
+    ? `<table class="data-table"><thead><tr><th>Date</th><th>Building</th><th>Market</th><th>Status</th></tr></thead><tbody>${listings.map(r => `<tr><td style="color:var(--text-2);">${fmtDate(r.created_at)}</td><td>${(r.payload && r.payload.building) || '—'}</td><td>${niceMarket(r.market) || '—'}</td><td><span class="badge badge-gated" style="text-transform:capitalize;">${r.status || 'pending'}</span></td></tr>`).join('')}</tbody></table>`
     : tableEmpty('No listing submissions yet. <a href="../list-building.html" class="text-navy" style="text-decoration:underline;">List your building</a>.');
 }
 

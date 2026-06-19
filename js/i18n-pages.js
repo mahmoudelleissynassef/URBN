@@ -315,6 +315,8 @@
   "off.viewBuildings": {"en":"Buildings","fr":"Immeubles","de":"Gebäude","es":"Edificios","it":"Edifici","nl":"Gebouwen"},
   "off.viewUnits": {"en":"Units","fr":"Lots","de":"Einheiten","es":"Unidades","it":"Unità","nl":"Units"},
   "card.availableArea": {"en":"Available Area","fr":"Surface disponible","de":"Verfügbare Fläche","es":"Superficie disponible","it":"Superficie disponibile","nl":"Beschikbare oppervlakte"},
+  "card.totalGla": {"en":"Total GLA","fr":"SLU totale","de":"Gesamt-MF","es":"SBA total","it":"SLL totale","nl":"Totale VVO"},
+  "card.availUnits": {"en":"Available units","fr":"Lots disponibles","de":"Verfügbare Einheiten","es":"Unidades disponibles","it":"Unità disponibili","nl":"Beschikbare units"},
   "card.availableRange": {"en":"Available Range","fr":"Plage disponible","de":"Verfügbarer Bereich","es":"Rango disponible","it":"Intervallo disponibile","nl":"Beschikbaar bereik"},
   "card.floorPlate": {"en":"Floor Plate","fr":"Plateau","de":"Geschossfläche","es":"Planta","it":"Piano tipo","nl":"Vloerplaat"},
   "card.floors": {"en":"Floors","fr":"Étages","de":"Etagen","es":"Plantas","it":"Piani","nl":"Verdiepingen"},
@@ -355,6 +357,8 @@
   "off.resetFilters": {"en":"Reset Filters","fr":"Réinitialiser les filtres","de":"Filter zurücksetzen","es":"Restablecer filtros","it":"Reimposta filtri","nl":"Filters resetten"},
   "off.reset": {"en":"Reset","fr":"Réinitialiser","de":"Zurücksetzen","es":"Restablecer","it":"Reimposta","nl":"Resetten"},
   "off.filtersTitle": {"en":"Filters","fr":"Filtres","de":"Filter","es":"Filtros","it":"Filtri","nl":"Filters"},
+  "off.filters": {"en":"Filters","fr":"Filtres","de":"Filter","es":"Filtros","it":"Filtri","nl":"Filters"},
+  "off.close": {"en":"Close","fr":"Fermer","de":"Schließen","es":"Cerrar","it":"Chiudi","nl":"Sluiten"},
   "off.viewLabel": {"en":"View","fr":"Affichage","de":"Ansicht","es":"Vista","it":"Vista","nl":"Weergave"},
   "off.mapNote": {"en":"Pins show <strong>approximate areas only</strong> — exact building locations are shared after a verified introduction.","fr":"Les repères indiquent <strong>des zones approximatives uniquement</strong> — l'emplacement exact des immeubles est communiqué après une mise en relation vérifiée.","de":"Die Markierungen zeigen <strong>nur ungefähre Gebiete</strong> — der genaue Gebäudestandort wird nach einer verifizierten Vermittlung mitgeteilt.","es":"Los marcadores muestran <strong>solo zonas aproximadas</strong> — la ubicación exacta del edificio se comparte tras una presentación verificada.","it":"I segnaposto mostrano <strong>solo aree approssimative</strong> — la posizione esatta dell'edificio viene comunicata dopo una presentazione verificata.","nl":"De pins tonen <strong>alleen bij benadering gebieden</strong> — de exacte locatie van het gebouw wordt gedeeld na een geverifieerde introductie."},
 
