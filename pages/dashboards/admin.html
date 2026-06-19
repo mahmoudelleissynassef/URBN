@@ -367,8 +367,51 @@ async function loadUsers() {
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   ADMIN_USERS = j.users || [];
   if (!ADMIN_USERS.length) { panel.innerHTML = emptyBox('No users yet.'); return; }
-  panel.innerHTML = `<div style="margin-bottom:14px;"><input id="user-search" class="fi" placeholder="Search by name, email or company…" oninput="renderUsers()" style="max-width:360px;"></div><div id="users-table"></div>`;
+  panel.innerHTML = `<div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><input id="user-search" class="fi" placeholder="Search by name, email or company…" oninput="renderUsers()" style="max-width:360px;"><button class="btn btn-navy btn-sm" onclick="openInvite()">+ Invite user</button></div><div id="users-table"></div>`;
   renderUsers();
+}
+function openInvite() {
+  const marketOpts = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  const ov = document.createElement('div'); ov.className = 'mbg'; ov.style.cssText = 'display:flex;'; ov.id = 'invite-modal';
+  ov.innerHTML = `<div class="modal" style="max-width:480px;">
+    <div class="mh"><div><div class="label mb12">Users</div><h3>Invite a user</h3></div><div class="mx" onclick="document.getElementById('invite-modal').remove()">X</div></div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">Creates a real account and emails a “set your password” link. The chosen tier is activated immediately (no payment is processed).</p>
+      <div class="fg"><label class="fl">Email *</label><input class="fi" id="iv-email" type="email" placeholder="person@company.com"></div>
+      <div class="fg"><label class="fl">Full name</label><input class="fi" id="iv-name" type="text" placeholder="Jane Doe"></div>
+      <div class="fg"><label class="fl">Company</label><input class="fi" id="iv-company" type="text" placeholder="Company name"></div>
+      <div class="fg"><label class="fl">Job title</label><input class="fi" id="iv-title" type="text" placeholder="Head of Real Estate"></div>
+      <div class="fg"><label class="fl">User type</label><select class="fi fi-sel" id="iv-utype">${['occupier','broker','developer','landlord','operator','advisor','other'].map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Tier</label><select class="fi fi-sel" id="iv-tier" onchange="document.getElementById('iv-market-row').style.display=this.value==='starter'?'block':'none'">${['free','starter','membership','enterprise'].map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+      <div class="fg" id="iv-market-row" style="display:none;"><label class="fl">Assigned market (Starter only)</label><select class="fi fi-sel" id="iv-market"><option value="">Select market…</option>${marketOpts}</select></div>
+      <div class="fg"><label class="fl">Internal notes (optional)</label><textarea class="fi" id="iv-notes" rows="2"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-ghost" onclick="document.getElementById('invite-modal').remove()">Cancel</button><button class="btn btn-navy" id="iv-send" onclick="submitInvite()">Send invite</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+async function submitInvite() {
+  const email = document.getElementById('iv-email').value.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast('Enter a valid email', 'info'); return; }
+  const tier = document.getElementById('iv-tier').value;
+  const assignedMarket = document.getElementById('iv-market') ? document.getElementById('iv-market').value : '';
+  if (tier === 'starter' && !assignedMarket) { showToast('Choose a market for Starter', 'info'); return; }
+  const payload = {
+    email, name: document.getElementById('iv-name').value, company: document.getElementById('iv-company').value,
+    jobTitle: document.getElementById('iv-title').value, userType: document.getElementById('iv-utype').value,
+    tier, assignedMarket, notes: document.getElementById('iv-notes').value,
+  };
+  const btn = document.getElementById('iv-send'); setBtnBusy(btn, true, 'Sending…');
+  const j = await adminFetch('/api/admin/invite-user', 'POST', payload);
+  setBtnBusy(btn, false);
+  if (j.ok) {
+    document.getElementById('invite-modal')?.remove();
+    showToast(j.emailSent ? 'Invite sent — user emailed a set-password link' : 'User created, but invite email failed — share a password-reset link manually', j.emailSent ? 'success' : 'info');
+    loadUsers();
+  } else {
+    showToast('Invite failed: ' + (j.error === 'user_exists' ? 'a user with that email already exists' : (j.error || 'error')), 'error');
+  }
 }
 function renderUsers() {
   const q = (document.getElementById('user-search')?.value || '').trim().toLowerCase();

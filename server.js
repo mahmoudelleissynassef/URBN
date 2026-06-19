@@ -762,6 +762,34 @@ async function listAuthUsers() {
     const j = JSON.parse(r.body); return j.users || (Array.isArray(j) ? j : []);
   } catch (e) { return []; }
 }
+// Admin-create a CONFIRMED auth user (no password). The DB trigger handle_new_user
+// builds the company/profile/membership/subscription from user_metadata. Returns
+// { ok, status, user, body }. Service-role key is used server-side only.
+async function createAuthUser(email, metadata) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) throw new Error('supabase_env_missing');
+  const body = JSON.stringify({ email, email_confirm: true, user_metadata: metadata || {} });
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}`, 'Content-Length': Buffer.byteLength(body) },
+  }, body);
+  let parsed = null; try { parsed = JSON.parse(r.body || '{}'); } catch (e) {}
+  return { ok: r.status >= 200 && r.status < 300, status: r.status, user: parsed && (parsed.id ? parsed : parsed.user) || null, body: r.body };
+}
+// Generate a password-set link (recovery) for an invited user, to be emailed via
+// our own Resend pipeline (keeps email routing consistent; no Supabase SMTP needed).
+async function generateRecoveryLink(email, redirectTo) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key) throw new Error('supabase_env_missing');
+  const body = JSON.stringify({ type: 'recovery', email, redirect_to: redirectTo });
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}`, 'Content-Length': Buffer.byteLength(body) },
+  }, body);
+  if (r.status < 200 || r.status >= 300) return null;
+  let j = null; try { j = JSON.parse(r.body || '{}'); } catch (e) {}
+  return (j && (j.action_link || (j.properties && j.properties.action_link))) || null;
+}
 function groupCount(arr, keyFn) {
   const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; }); return m;
 }
@@ -1266,6 +1294,64 @@ function handleAdmin(req, res, urlPath) {
         await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, notes, requested_by: user.id }]);
         await writeAudit(req, user, 'membership.set_tier', { targetType: 'company', targetIds: [String(body.companyId)], metadata: { tier: body.tier, assignedMarket, hasNotes: !!notes } });
         return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/invite-user') {
+        // Admin invites a real Supabase auth user. createAuthUser (service-role,
+        // server-only) makes a CONFIRMED user; the DB trigger builds the
+        // company/profile/membership/subscription from metadata. We then activate
+        // the chosen tier and email a password-set link via Resend.
+        const USER_TYPES = ['occupier', 'broker', 'developer', 'landlord', 'operator', 'advisor', 'other'];
+        const email = String(body.email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: 'invalid_email' });
+        const tier = MEMBERSHIP_TIERS.includes(body.tier) ? body.tier : 'free';
+        const userType = USER_TYPES.includes(body.userType) ? body.userType : 'occupier';
+        const assignedMarket = tier === 'starter' ? (normalizeMarket(body.assignedMarket) || null) : null;
+        if (tier === 'starter' && !assignedMarket) return sendJson(res, 400, { ok: false, error: 'market_required' });
+        const meta = {
+          full_name: String(body.name || '').slice(0, 200),
+          company: String(body.company || '').slice(0, 200) || 'My Company',
+          job_title: String(body.jobTitle || '').slice(0, 200),
+          user_type: userType,
+          requested_tier: tier,
+        };
+        let created;
+        try { created = await createAuthUser(email, meta); }
+        catch (e) { return sendJson(res, 502, { ok: false, error: 'create_failed' }); }
+        if (!created.ok) {
+          // 422 = already registered. Surface a clear, non-leaky error.
+          const code = (created.status === 422 || /already/i.test(created.body || '')) ? 'user_exists' : 'create_failed';
+          await writeAudit(req, user, 'user.invite', { targetType: 'user', success: false, metadata: { email, reason: code } });
+          return sendJson(res, created.status === 422 ? 409 : 502, { ok: false, error: code });
+        }
+        const newUserId = created.user && created.user.id;
+        // The trigger ran synchronously; read the company it created.
+        let companyId = null;
+        try { const prof = (await sbGet(`profiles?id=eq.${newUserId}&select=company_id`))[0]; companyId = prof && prof.company_id; } catch (e) {}
+        // Activate the chosen tier (trigger leaves paid tiers as 'requested').
+        if (companyId && tier !== 'free') {
+          try { await sbUpsert('company_subscriptions', [{ company_id: companyId, tier, status: 'active', assigned_market: assignedMarket, notes: String(body.notes || '').slice(0, 1000) || null, requested_by: user.id }]); } catch (e) {}
+        } else if (companyId && (body.notes)) {
+          try { await sbUpsert('company_subscriptions', [{ company_id: companyId, tier: 'free', status: 'active', notes: String(body.notes).slice(0, 1000), requested_by: user.id }]); } catch (e) {}
+        }
+        // Email a password-set link via Resend (our pipeline, not Supabase SMTP).
+        let emailSent = false, emailError = null;
+        try {
+          const link = await generateRecoveryLink(email, 'https://urbnoffices.com/sign-in');
+          if (link) {
+            const hi = meta.full_name ? escapeHtml(meta.full_name.split(' ')[0]) : 'there';
+            const inner = `<tr><td style="padding:22px 24px;color:#374151;font-size:14px;line-height:1.7;">` +
+              `<p style="margin:0 0 14px;">Hi ${hi},</p>` +
+              `<p style="margin:0 0 14px;">An account has been created for you on <strong>URBN Offices</strong>${tier !== 'free' ? ` with <strong>${escapeHtml(tier)}</strong> access` : ''}. Set your password to sign in:</p>` +
+              `<p style="margin:0 0 18px;"><a href="${escapeHtml(link)}" style="display:inline-block;background:#243A5E;color:#fff;padding:11px 20px;border-radius:6px;text-decoration:none;">Set your password &rarr;</a></p>` +
+              `<p style="margin:0;font-size:12px;color:#6B7280;">If you didn’t expect this, you can ignore this email. The link expires for security.</p>` +
+              `</td></tr>`;
+            const html = emailShell('You’ve been invited to URBN Offices', 'Invitation', inner, false);
+            await sendResendEmail({ subject: 'Your URBN Offices account — set your password', html, text: `Set your password to access URBN Offices: ${link}`, from: process.env.NO_REPLY_FROM || process.env.LEAD_FROM, to: email });
+            emailSent = true;
+          } else { emailError = 'link_failed'; }
+        } catch (e) { emailError = 'email_failed'; }
+        await writeAudit(req, user, 'user.invite', { targetType: 'user', targetIds: newUserId ? [String(newUserId)] : null, metadata: { email, tier, assignedMarket, emailSent } });
+        return sendJson(res, 200, { ok: true, userId: newUserId, companyId, tier, emailSent, emailError });
       }
       if (urlPath === '/api/admin/unpublish-building') {
         if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });

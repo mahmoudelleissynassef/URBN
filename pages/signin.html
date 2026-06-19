@@ -12,6 +12,22 @@
 <div id="nav-placeholder"></div>
 <div class="pt-nav" style="min-height:calc(100vh - var(--nav-h));display:flex;align-items:center;justify-content:center;padding:40px;">
   <div style="width:100%;max-width:400px;">
+    <!-- Set-password panel: shown when arriving from an invite / password-reset link -->
+    <div id="setpw-wrap" style="display:none;">
+      <div class="text-center mb32">
+        <div style="width:44px;height:44px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:20px;font-style:italic;color:#fff;margin:0 auto 18px;font-weight:500;border-radius:3px;">U</div>
+        <h2 style="font-size:32px;">Set your password</h2>
+        <p style="font-size:13px;color:var(--text-2);margin-top:8px;">Choose a password to finish setting up your URBN account.</p>
+      </div>
+      <div class="card" style="padding:32px;">
+        <div class="fg"><label class="fl">New password</label><input type="password" class="fi" id="sp-pw" placeholder="At least 8 characters"></div>
+        <div class="fg"><label class="fl">Confirm password</label><input type="password" class="fi" id="sp-pw2" placeholder="Re-enter password" onkeydown="if(event.key==='Enter')submitSetPassword(document.getElementById('sp-btn'))"></div>
+        <div class="fld-err" id="sp-err" style="margin-bottom:8px;"></div>
+        <button class="btn btn-navy w-full mt16" id="sp-btn" onclick="submitSetPassword(this)">Set password &amp; sign in</button>
+      </div>
+    </div>
+
+    <div id="signin-wrap">
     <div class="text-center mb32">
       <div style="width:44px;height:44px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:20px;font-style:italic;color:#fff;margin:0 auto 18px;font-weight:500;border-radius:3px;">U</div>
       <h2 style="font-size:32px;" data-i18n="auth.signinH1">Welcome back</h2>
@@ -27,13 +43,39 @@
       </div>
     </div>
     <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-3);" data-i18n="auth.signinHelper">Access to building details, pricing, and introductions requires a verified corporate account.</p>
+    </div>
   </div>
 </div>
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
 <script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../js/urbn.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => { injectNav('../'); injectFooter('../'); });
+// Capture the URL hash BEFORE anything inits the Supabase client (detectSessionInUrl
+// consumes/clears it). Invite & password-reset links land here with type=recovery.
+const URBN_RECOVERY = /type=recovery|type=invite|type=signup/.test(location.hash || '');
+document.addEventListener('DOMContentLoaded', async () => {
+  injectNav('../'); injectFooter('../');
+  await URBNAuth.init();
+  if (URBN_RECOVERY && URBNAuth.client) {
+    document.getElementById('signin-wrap').style.display = 'none';
+    document.getElementById('setpw-wrap').style.display = 'block';
+  }
+});
+
+async function submitSetPassword(btn) {
+  const pw = document.getElementById('sp-pw').value;
+  const pw2 = document.getElementById('sp-pw2').value;
+  const err = document.getElementById('sp-err'); err.classList.remove('show'); err.textContent = '';
+  if (pw.length < 8) { err.textContent = 'Use a password of at least 8 characters.'; err.classList.add('show'); return; }
+  if (pw !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
+  setBtnBusy(btn, true, 'Saving…');
+  await URBNAuth.init();
+  if (!URBNAuth.client) { setBtnBusy(btn, false); err.textContent = 'Authentication is not configured yet.'; err.classList.add('show'); return; }
+  const { error } = await URBNAuth.client.auth.updateUser({ password: pw });
+  setBtnBusy(btn, false);
+  if (error) { err.textContent = error.message || 'Could not set your password. The link may have expired — request a new invite.'; err.classList.add('show'); return; }
+  location.href = '/dashboard';
+}
 
 async function submitSignIn(btn) {
   const email = document.getElementById('si-email').value.trim();
