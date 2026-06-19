@@ -72,7 +72,7 @@
       <div class="fg">
         <label class="fl" data-i18n="lb.existingLabel">Use an existing building or add a new one</label>
         <select class="fi fi-sel" id="ll-existing" onchange="llExistingChanged()"><option value="">+ Add a new building</option></select>
-        <p style="font-size:11.5px;color:var(--text-2);margin-top:4px;" id="ll-existing-hint">Pick a building already in the URBN inventory to reuse its location and details, or add a new one.</p>
+        <p style="font-size:11.5px;color:var(--text-2);margin-top:4px;" id="ll-existing-hint" data-i18n="lb.pickerHint">Pick a building already in the URBN inventory to reuse its location and details, or add a new one.</p>
       </div>
       <div class="fr2">
         <div class="fg"><label class="fl" data-i18n="lb.buildingName">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name" data-i18n-placeholder="lb.buildingNamePh"><div class="fld-err" id="err-ll-building" data-i18n="lb.errBuilding">Enter the building name.</div></div>
@@ -306,7 +306,7 @@ function llExistingChanged() {
   const hint = document.getElementById('ll-existing-hint');
   if (!id) {
     llSetBuildingFieldsDisabled(false);
-    if (hint) hint.textContent = 'Pick a building already in the URBN inventory to reuse its location and details, or add a new one.';
+    if (hint) hint.textContent = (window.URBN_I18N && URBN_I18N.t('lb.pickerHint')) || 'Pick a building already in the URBN inventory to reuse its location and details, or add a new one.';
     return;
   }
   const b = LL_BUILDINGS[id]; if (!b) return;
@@ -333,7 +333,10 @@ function llExistingChanged() {
 function renderAmenities() {
   const box = document.getElementById('ll-amenities');
   if (!box) return;
-  box.innerHTML = LL_AMENITIES.map((a, i) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-amenity" value="${llEsc(a)}" id="ll-am-${i}">${llEsc(a)}</label>`).join('');
+  // Checkbox VALUE stays the English enum (backend stores it); only the visible
+  // label is localized so we never change the stored amenity set.
+  const llT = a => { const v = (window.URBN_I18N && URBN_I18N.t) ? URBN_I18N.t('amen.' + a) : null; return v != null ? v : a; };
+  box.innerHTML = LL_AMENITIES.map((a, i) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-amenity" value="${llEsc(a)}" id="ll-am-${i}">${llEsc(llT(a))}</label>`).join('');
 }
 function selectedAmenities() { return [...document.querySelectorAll('.ll-amenity:checked')].map(c => c.value); }
 
@@ -354,7 +357,7 @@ async function loadSubmitter(user) {
 
   const incomplete = !profile || !name || !companyName || !title || !stype || !isCorporateEmail(email || '');
   if (incomplete) {
-    card.innerHTML = `<div class="form-note"><p><strong>Please complete your account details before submitting a listing.</strong> We need your full name, company, job title and user type on file (with a verified corporate email). <a href="/account" style="text-decoration:underline;">Edit account details →</a></p></div>`;
+    card.innerHTML = `<div class="form-note"><p>${(window.URBN_I18N && URBN_I18N.t('lb.completeAccount')) || 'Please complete your account details before submitting a listing. We need your full name, company, job title and user type on file (with a verified corporate email). <a href="/account" style="text-decoration:underline;">Edit account details →</a>'}</p></div>`;
     return; // modes and panels stay hidden
   }
 
@@ -362,12 +365,12 @@ async function loadSubmitter(user) {
   card.innerHTML = `
     <div class="card" style="padding:20px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
       <div>
-        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Submitting as</div>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">${(window.URBN_I18N && URBN_I18N.t('lb.submittingAs')) || 'Submitting as'}</div>
         <div style="font-size:15px;font-weight:600;color:var(--text);">${llEsc(name)}</div>
         <div style="font-size:13px;color:var(--text-2);margin-top:2px;">${llEsc(title)} · ${llEsc(companyName)}</div>
         <div style="font-size:12px;color:var(--text-2);margin-top:4px;">${llEsc(email)} · <span style="text-transform:capitalize;">${llEsc(stypeLabel)}</span></div>
       </div>
-      <a class="btn btn-ghost btn-sm" href="/account">Edit account details</a>
+      <a class="btn btn-ghost btn-sm" href="/account">${(window.URBN_I18N && URBN_I18N.t('lb.editAccount')) || 'Edit account details'}</a>
     </div>`;
   document.getElementById('ll-modes').classList.remove('hidden');
   setMode('manual');
