@@ -539,6 +539,7 @@ async function loadBuildings() {
     <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}</div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="exportListings(this)">⬇ Export all (CSV)</button>
+      <button class="btn btn-ghost btn-sm" onclick="openImportUnits()">⬆ Import units (CSV)</button>
       <button class="btn btn-navy btn-sm" onclick="openCreateBuilding()">+ Add building</button>
     </div>
   </div>
@@ -622,6 +623,83 @@ async function exportListings(btn) {
   a.href = URL.createObjectURL(blob); a.download = 'urbn-inventory.csv';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
   showToast((j.count || 0) + ' rows exported');
+}
+
+// ── Bulk unit import (attaches units to EXISTING buildings; never creates/edits a
+//    building). Match by building_id (from the export) or building name+market+submarket.
+const UNIT_IMPORT_COLS = ['building_id', 'building_name', 'market', 'submarket', 'unit_floor', 'size_sqm', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'offering_type', 'fit_out', 'availability_date', 'minimum_term', 'notes', 'unit_id'];
+let IMPORT_ROWS = [];
+function parseCSV(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => String(x).trim() !== ''));
+}
+function csvToObjects(text) {
+  const rows = parseCSV(text); if (!rows.length) return [];
+  const hdr = rows[0].map(h => String(h).trim().toLowerCase());
+  return rows.slice(1).map((r, i) => { const o = { _row: i + 2 }; hdr.forEach((h, j) => { o[h] = (r[j] != null ? String(r[j]).trim() : ''); }); return o; });
+}
+function downloadUnitTemplate() {
+  const blob = new Blob([UNIT_IMPORT_COLS.join(',') + '\n'], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'urbn-unit-import-template.csv';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+}
+function openImportUnits() {
+  IMPORT_ROWS = [];
+  const ov = document.createElement('div'); ov.className = 'mbg'; ov.style.cssText = 'display:flex;'; ov.id = 'import-modal';
+  ov.innerHTML = `<div class="modal" style="max-width:680px;">
+    <div class="mh"><div><div class="label mb12">Buildings</div><h3>Import units (CSV)</h3></div><div class="mx" onclick="document.getElementById('import-modal').remove()">X</div></div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Attaches units to <strong>existing</strong> buildings only — it never creates or edits a building. Match each row by <strong>building_id</strong> (from <em>Export all</em>) or by <strong>building_name + market + submarket</strong>. Imported units are approved immediately.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="downloadUnitTemplate()">⬇ Unit template</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportListings(this)">⬇ Export buildings (for IDs)</button>
+      </div>
+      <div class="fg"><label class="fl">Paste CSV (with a header row)</label><textarea class="fi" id="iu-csv" rows="7" placeholder="building_id,unit_floor,size_sqm,asking_rent,currency,pricing_basis,offering_type,..." style="font-family:monospace;font-size:12px;"></textarea></div>
+      <div id="iu-preview"></div>
+    </div>
+    <div class="mf"><button class="btn btn-ghost" onclick="document.getElementById('import-modal').remove()">Cancel</button><button class="btn btn-outline" id="iu-preview-btn" onclick="previewImportUnits()">Preview</button><button class="btn btn-navy" id="iu-import-btn" style="display:none;" onclick="commitImportUnits()">Import valid units</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+async function previewImportUnits() {
+  const text = document.getElementById('iu-csv').value;
+  IMPORT_ROWS = csvToObjects(text);
+  if (!IMPORT_ROWS.length) { showToast('Paste CSV rows first', 'info'); return; }
+  const btn = document.getElementById('iu-preview-btn'); setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/import-units', 'POST', { rows: IMPORT_ROWS, dryRun: true });
+  setBtnBusy(btn, false);
+  if (!j.ok) { showToast('Preview failed: ' + (j.error || 'error'), 'error'); return; }
+  renderImportResults(j, false);
+  document.getElementById('iu-import-btn').style.display = j.summary.matched > 0 ? '' : 'none';
+}
+async function commitImportUnits() {
+  if (!IMPORT_ROWS.length) return;
+  const btn = document.getElementById('iu-import-btn'); setBtnBusy(btn, true, 'Importing…');
+  const j = await adminFetch('/api/admin/import-units', 'POST', { rows: IMPORT_ROWS, dryRun: false });
+  setBtnBusy(btn, false);
+  if (!j.ok) { showToast('Import failed: ' + (j.error || 'error'), 'error'); return; }
+  renderImportResults(j, true);
+  showToast(j.summary.inserted + ' unit(s) imported');
+  document.getElementById('iu-import-btn').style.display = 'none';
+  loadBuildings();
+}
+function renderImportResults(j, committed) {
+  const s = j.summary;
+  const badge = (st) => st === 'ok' ? 'badge-available' : 'badge-gated';
+  const rows = (j.results || []).slice(0, 300).map(r => `<tr><td>${r.row}</td><td>${esc(r.building || '')}</td><td><span class="badge ${badge(r.status)}">${esc(r.status)}</span></td><td style="font-size:11px;color:var(--text-2);">${esc(r.reason || '')}</td></tr>`).join('');
+  document.getElementById('iu-preview').innerHTML =
+    `<div style="margin:14px 0 8px;font-size:13px;"><strong>${committed ? 'Imported' : 'Preview'}:</strong> ${s.matched} ready${s.inserted ? ' · ' + s.inserted + ' imported' : ''} · ${s.unmatched} unmatched · ${s.ambiguous} ambiguous · ${s.invalid} invalid (of ${s.total})</div>
+     <div class="card" style="padding:0;max-height:260px;overflow:auto;"><table class="data-table"><thead><tr><th>Row</th><th>Building</th><th>Status</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function fieldInput(label, id, val, type) { return `<div class="fg"><label class="fl">${esc(label)}</label><input type="${type || 'text'}" class="fi" id="${id}" value="${esc(val == null ? '' : val)}"></div>`; }
 // Open a building's editor (with its photo gallery) from any tab — activate the
