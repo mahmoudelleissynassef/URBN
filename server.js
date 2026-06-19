@@ -544,7 +544,7 @@ function handleLeadRequest(req, res) {
       if (Array.isArray(inserted) && inserted[0]) { requestId = inserted[0].id || null; createdAt = inserted[0].created_at || null; }
     } catch (e) {
       console.error('[api/request] supabase insert failed:', e.message);
-      return sendJson(res, 502, { ok: false, error: 'storage_failed', detail: String(e.message || '').slice(0, 300) });
+      return sendJson(res, 502, { ok: false, error: 'storage_failed' }); // full error in server logs only
     }
 
     // 2) Notify via Resend. The request is already saved, so an email failure is
@@ -598,7 +598,7 @@ function handleLeadRequest(req, res) {
     return sendJson(res, 200, { ok: true, stored: true, emailDelivered });
     } catch (e) {
       console.error('[api/request] handler error:', (e && e.stack) || e);
-      if (!res.headersSent) sendJson(res, 500, { ok: false, error: 'server_error', detail: String((e && e.message) || e).slice(0, 200) });
+      if (!res.headersSent) sendJson(res, 500, { ok: false, error: 'server_error' });
     }
   });
 }
@@ -713,6 +713,28 @@ async function deleteStorageObjects(bucket, paths) {
     const body = JSON.stringify({ prefixes: paths });
     await httpsRequest(`${base.replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}`, { method: 'DELETE', headers: { ...sbHeaders(), 'Content-Length': Buffer.byteLength(body) } }, body);
   } catch (e) { console.error('[storage delete]', e.message); }
+}
+// Append-only audit trail for admin destructive/sensitive actions. Best-effort —
+// a logging failure must NEVER block or fail the underlying action. Stores no
+// secrets; the client IP is salted-hashed (not stored raw).
+async function writeAudit(req, user, action, opts = {}) {
+  try {
+    const ip = clientIp(req);
+    const ipHash = (ip && ip !== 'unknown') ? crypto.createHash('sha256').update((process.env.IP_HASH_SALT || '') + ip).digest('hex') : null;
+    const ids = Array.isArray(opts.targetIds) ? opts.targetIds.filter(Boolean).slice(0, 1000).map(String) : null;
+    await insertSupabaseTable('admin_audit_logs', {
+      action,
+      actor_id: (user && user.id) || null,
+      actor_email: (user && user.email) || null,
+      target_type: opts.targetType || null,
+      target_ids: ids,
+      count: (opts.count != null) ? opts.count : (ids ? ids.length : null),
+      success: opts.success !== false,
+      ip_hash: ipHash,
+      user_agent: String(req.headers['user-agent'] || '').slice(0, 300) || null,
+      metadata: opts.metadata || null,
+    });
+  } catch (e) { console.error('[audit] write failed:', e.message); }
 }
 async function isAdmin(userId) {
   if (!userId) return false;
@@ -1081,6 +1103,7 @@ function handleAdmin(req, res, urlPath) {
         // Optional: attach to an existing inventory building chosen by the admin.
         await approveRequestRow(row, user.id, body.buildingId || null);
         await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, true);
+        await writeAudit(req, user, 'listing.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { buildingId: body.buildingId || null } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/create-building') {
@@ -1123,7 +1146,7 @@ function handleAdmin(req, res, urlPath) {
           try { await sbPatch('buildings', `id=in.(${chunk.map((x) => encodeURIComponent(x)).join(',')})`, { admin_hidden: hidden }); n += chunk.length; }
           catch (e) { console.error('[admin/set-building-hidden]', e.message); }
         }
-        console.log(`[audit] admin ${user.email} ${hidden ? 'hid' : 'unhid'} ${n} building(s)`);
+        await writeAudit(req, user, hidden ? 'building.hide' : 'building.unhide', { targetType: 'building', targetIds: ids, count: n });
         return sendJson(res, 200, { ok: true, updated: n, hidden });
       }
       if (urlPath === '/api/admin/delete-buildings') {
@@ -1151,9 +1174,10 @@ function handleAdmin(req, res, urlPath) {
           deleted = Array.isArray(rows) ? rows.length : 0;
         } catch (e) {
           console.error('[delete-buildings]', e.message);
-          return sendJson(res, 502, { ok: false, error: 'delete_failed', detail: String(e.message || '').slice(0, 200) });
+          await writeAudit(req, user, 'building.delete', { targetType: 'building', targetIds: ids, success: false, metadata: { bulk: ids.length > 1 } });
+          return sendJson(res, 502, { ok: false, error: 'delete_failed' });
         }
-        console.log(`[audit] admin ${user.email} HARD-DELETED ${deleted} building(s): ${ids.join(',')}`);
+        await writeAudit(req, user, 'building.delete', { targetType: 'building', targetIds: ids, count: deleted, metadata: { bulk: ids.length > 1 } });
         return sendJson(res, 200, { ok: true, deleted });
       }
       if (urlPath === '/api/admin/reject-listing') {
@@ -1164,12 +1188,14 @@ function handleAdmin(req, res, urlPath) {
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_reason: reasonCode, review_note: note });
         const reasonText = [reasonCode, note].filter(Boolean).join(reasonCode && note ? ' — ' : '');
         await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, false, reasonText);
+        await writeAudit(req, user, 'listing.reject', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { reason: reasonCode } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-batch-row') {
         const row = (await sbGet(`listing_batch_rows?id=eq.${body.rowId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         await approveBatchRowRec(row, user.id);
+        await writeAudit(req, user, 'batch.approve_row', { targetType: 'batch_row', targetIds: [String(body.rowId)] });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-batch-row') {
@@ -1177,11 +1203,13 @@ function handleAdmin(req, res, urlPath) {
         const note = String(body.reason || body.note || '').slice(0, 500);
         const errText = [reasonCode, note].filter(Boolean).join(' — ') || 'rejected by admin';
         await sbPatch('listing_batch_rows', `id=eq.${body.rowId}`, { status: 'rejected', review_reason: reasonCode, review_note: note, reviewed_by: user.id, reviewed_at: new Date().toISOString(), errors: [errText] });
+        await writeAudit(req, user, 'batch.reject_row', { targetType: 'batch_row', targetIds: [String(body.rowId)], metadata: { reason: reasonCode } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-valid-batch') {
         const rows = await sbGet(`listing_batch_rows?batch_id=eq.${body.batchId}&status=eq.pending_review&select=*`);
         let n = 0; for (const row of rows) { await approveBatchRowRec(row, user.id); n++; }
+        await writeAudit(req, user, 'batch.approve_all', { targetType: 'batch', targetIds: [String(body.batchId)], count: n });
         return sendJson(res, 200, { ok: true, approved: n });
       }
       if (urlPath === '/api/admin/approve-membership') {
@@ -1191,6 +1219,7 @@ function handleAdmin(req, res, urlPath) {
         if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', requested_by: user.id }]);
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         await sendMembershipDecisionEmail(row.email, row.name, tier, true);
+        await writeAudit(req, user, 'membership.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { companyId: p.companyId || null, tier } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-membership') {
@@ -1198,6 +1227,7 @@ function handleAdmin(req, res, urlPath) {
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
         await sendMembershipDecisionEmail(row.email, row.name, (row.payload || {}).requestedTier, false);
+        await writeAudit(req, user, 'membership.reject', { targetType: 'request', targetIds: [String(body.requestId)] });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/set-tier') {
@@ -1205,6 +1235,7 @@ function handleAdmin(req, res, urlPath) {
         // Starter is scoped to one market; admin can set which. Cleared for other tiers.
         const assignedMarket = body.tier === 'starter' ? (normalizeMarket(body.assignedMarket) || null) : null;
         await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
+        await writeAudit(req, user, 'membership.set_tier', { targetType: 'company', targetIds: [String(body.companyId)], metadata: { tier: body.tier, assignedMarket } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/unpublish-building') {
@@ -1226,6 +1257,7 @@ function handleAdmin(req, res, urlPath) {
         await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'approved', granted_by: user.id, granted_at: new Date().toISOString(), expires_at: body.expiresAt || null, notes: String(body.notes || '').slice(0, 500) || null });
         if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, true); } catch (e) {}
+        await writeAudit(req, user, 'reveal.approve', { targetType: 'grant', targetIds: [String(body.grantId)], metadata: { buildingId: g.building_id, grantedTo: g.user_id } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-reveal') {
@@ -1235,6 +1267,7 @@ function handleAdmin(req, res, urlPath) {
         await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'rejected', granted_by: user.id, notes: String(body.reason || '').slice(0, 500) || null });
         if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
         try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, false); } catch (e) {}
+        await writeAudit(req, user, 'reveal.reject', { targetType: 'grant', targetIds: [String(body.grantId)], metadata: { buildingId: g.building_id, grantedTo: g.user_id } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/revoke-grant') {
@@ -1282,7 +1315,7 @@ function handleAdmin(req, res, urlPath) {
       return sendJson(res, 404, { ok: false, error: 'unknown_admin_endpoint' });
     } catch (e) {
       console.error('[admin] error:', (e && e.stack) || e);
-      return sendJson(res, 500, { ok: false, error: 'admin_error', detail: String((e && e.message) || e).slice(0, 200) });
+      return sendJson(res, 500, { ok: false, error: 'admin_error' });
     }
   })();
 }
@@ -1744,7 +1777,7 @@ function handleListingRequest(req, res) {
       try { await sendListingRequestEmails(type, { name: prof.full_name, email: user.email, company: companyName, market: b.market, buildingName: b.name }, payload, requestId, createdAt); }
       catch (e) { console.error('[listing-request] email:', e.message); }
       return sendJson(res, 200, { ok: true, requestId });
-    } catch (e) { console.error('[listing-request]', e.message); return sendJson(res, 500, { ok: false, error: 'server_error', detail: String(e.message || '').slice(0, 200) }); }
+    } catch (e) { console.error('[listing-request]', e.message); return sendJson(res, 500, { ok: false, error: 'server_error' }); }
   })();
 }
 
@@ -1801,16 +1834,35 @@ function clientIp(req) {
 }
 
 const server = http.createServer((req, res) => {
-  // Baseline security headers (safe for the current static + inline-JS architecture).
-  // A strict Content-Security-Policy is intentionally NOT set yet: the site relies on
-  // inline <script> blocks and inline event handlers throughout, so a strict CSP would
-  // require 'unsafe-inline' (weak) or a full refactor to external handlers + nonces.
-  // TODO(security): refactor inline handlers, then add a strict CSP.
+  // Baseline security headers.
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  // Content-Security-Policy. This is a real, enforced policy that locks third-party
+  // origins to a tight allowlist (defends against injected EXTERNAL scripts/frames,
+  // clickjacking, base-tag hijack). script-src/style-src still allow 'unsafe-inline'
+  // because the site uses inline <script> blocks + on* handlers throughout — removing
+  // that needs the nonce refactor documented in SECURITY.md. Stored-XSS is mitigated
+  // separately by output-encoding all user content (escHtml) at render time.
+  //   third parties: jsDelivr (Supabase client) + unpkg (Leaflet) = scripts;
+  //   Google Fonts (style) + gstatic (font); CARTO tiles + Unsplash + Supabase = img;
+  //   Supabase (REST/auth/realtime) + ExchangeRate-API = connect.
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "frame-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+    "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://images.unsplash.com https://*.supabase.co",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://open.er-api.com",
+  ].join('; '));
 
   const urlPath = req.url.split('?')[0];
 
@@ -1818,6 +1870,16 @@ const server = http.createServer((req, res) => {
   // per-tier monthly caps are enforced separately inside the handlers.
   if (req.method === 'POST' && /^\/api\/(request|listing-request|batch)$/.test(urlPath)) {
     if (rateLimited('post:' + clientIp(req) + ':' + urlPath, 30, 60000)) {
+      return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+    }
+  }
+  // Defense-in-depth on admin writes: even with a valid admin token, cap mutation
+  // rate per IP (100/min general; 12/min on the irreversible delete endpoint) so a
+  // compromised/leaked admin token can't mass-mutate or mass-delete in a burst.
+  if (req.method === 'POST' && /^\/api\/admin\//.test(urlPath)) {
+    const ip = clientIp(req);
+    if (rateLimited('admin:' + ip, 100, 60000)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+    if (urlPath === '/api/admin/delete-buildings' && rateLimited('admindel:' + ip, 12, 60000)) {
       return sendJson(res, 429, { ok: false, error: 'rate_limited' });
     }
   }
