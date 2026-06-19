@@ -74,6 +74,10 @@
         <select class="fi fi-sel" id="ll-existing" onchange="llExistingChanged()"><option value="">+ Add a new building</option></select>
         <p style="font-size:11.5px;color:var(--text-2);margin-top:4px;" id="ll-existing-hint" data-i18n="lb.pickerHint">Pick a building already in the URBN inventory to reuse its location and details, or add a new one.</p>
       </div>
+      <!-- Read-only summary shown ONLY when an existing building is selected -->
+      <div id="ll-existing-summary" class="hidden" style="background:var(--bg-off);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:8px;"></div>
+      <!-- New-building input fields — hidden when an existing building is chosen -->
+      <div id="ll-newbuilding">
       <div class="fr2">
         <div class="fg"><label class="fl" data-i18n="lb.buildingName">Building Name</label><input type="text" class="fi" id="ll-building" placeholder="Building or development name" data-i18n-placeholder="lb.buildingNamePh"><div class="fld-err" id="err-ll-building" data-i18n="lb.errBuilding">Enter the building name.</div></div>
         <div class="fg"><label class="fl" data-i18n="lb.market">Market</label>
@@ -112,6 +116,8 @@
         <div class="fg"><label class="fl" data-i18n="lb.pkMembershipPrice">Monthly membership price (if available)</label><input type="number" class="fi" id="ll-pk-membership-price" placeholder="e.g. 1,200"><div class="fld-err" id="err-ll-pk-membership-price" data-i18n="lb.errNumeric">Must be numeric.</div></div>
         <div class="fg"><label class="fl" data-i18n="lb.pkNotes">Parking notes (optional)</label><input type="text" class="fi" id="ll-pk-notes" placeholder="e.g. 2 levels of basement parking"></div>
       </div>
+
+      </div><!-- /#ll-newbuilding -->
 
       <div style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border);">
         <button type="button" class="btn btn-navy btn-lg" onclick="llContinue()"><span data-i18n="lb.continueBtn">Continue to space details</span> →</button>
@@ -305,6 +311,9 @@ function llExistingChanged() {
   LL_EXISTING_ID = id;
   const hint = document.getElementById('ll-existing-hint');
   if (!id) {
+    // "Add a new building" — show the full input set, hide the summary.
+    document.getElementById('ll-newbuilding').classList.remove('hidden');
+    document.getElementById('ll-existing-summary').classList.add('hidden');
     llSetBuildingFieldsDisabled(false);
     if (hint) hint.textContent = (window.URBN_I18N && URBN_I18N.t('lb.pickerHint')) || 'Pick a building already in the URBN inventory to reuse its location and details, or add a new one.';
     return;
@@ -327,7 +336,21 @@ function llExistingChanged() {
   setv('ll-pk-membership-price', b.parking_monthly_membership_price);
   setv('ll-pk-notes', b.parking_notes);
   llSetBuildingFieldsDisabled(true);
-  if (hint) hint.textContent = 'Using an existing building from inventory — location and building details are pre-filled. Just add the available unit/space below.';
+  // Existing building chosen: hide the new-building inputs, show a compact
+  // read-only summary instead (no re-entry of building name/market/etc.).
+  document.getElementById('ll-newbuilding').classList.add('hidden');
+  const summary = document.getElementById('ll-existing-summary');
+  const mkt = (typeof URBN_DATA !== 'undefined' ? (URBN_DATA.markets.find(m => m.id === b.market) || {}).name : '') || b.market || '—';
+  const amenN = Array.isArray(b.amenities) ? b.amenities.length : 0;
+  const pk = b.parking_spaces_available ? (b.parking_spaces_available + ' spaces') : (b.parking_arrangement || '');
+  const row = (k, val) => val ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;"><span style="color:var(--text-2);font-size:12px;">${llEsc(k)}</span><span style="font-size:12.5px;font-weight:500;text-align:right;">${llEsc(val)}</span></div>` : '';
+  summary.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;">`
+      + `<div><div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:3px;">Existing building</div><div style="font-size:16px;font-weight:600;">${llEsc(b.name || '')}</div></div>`
+      + (b.grade ? `<span class="badge badge-grade" style="font-size:10px;">${llEsc(b.grade)}</span>` : '') + `</div>`
+      + row('Market', mkt) + row('District', b.submarket) + (amenN ? row('Amenities', amenN + ' listed') : '') + (pk ? row('Parking', pk) : '')
+      + `<p style="font-size:11.5px;color:var(--text-2);margin:10px 0 0;line-height:1.5;">${(window.URBN_I18N && URBN_I18N.t('lb.existingSummaryNote')) || 'These details are already on file — just add the available space below.'}</p>`;
+  summary.classList.remove('hidden');
+  if (hint) hint.textContent = (window.URBN_I18N && URBN_I18N.t('lb.existingHintFilled')) || 'Using an existing building — just add the available unit/space below.';
 }
 
 function renderAmenities() {

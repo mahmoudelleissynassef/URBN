@@ -40,18 +40,24 @@
 <div id="nav-placeholder"></div>
 <div class="pt-nav off-shell">
 
+  <!-- Mobile backdrop for the filter drawer -->
+  <div class="fp-backdrop" id="fp-backdrop" onclick="closeFilters()"></div>
+
   <!-- Filter Panel -->
-  <div class="fp">
+  <div class="fp" id="fp">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <span style="font-family:var(--fm);font-size:10px;letter-spacing:.14em;color:var(--text-2);text-transform:uppercase;" data-i18n="off.filtersTitle">Filters</span>
-      <button onclick="resetFilters()" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:10px;" data-i18n="off.reset">Reset</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="resetFilters()" class="btn btn-ghost btn-sm" style="padding:4px 10px;font-size:10px;" data-i18n="off.reset">Reset</button>
+        <button onclick="closeFilters()" class="fp-close btn btn-ghost btn-sm" style="padding:4px 10px;font-size:10px;" aria-label="Close filters" data-i18n="off.close">Close</button>
+      </div>
     </div>
 
     <div class="fg-section">
       <div class="fg-title" data-i18n="off.viewLabel">View</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        <button class="btn btn-dark btn-sm" id="vb" onclick="setView('buildings',this)" data-i18n="off.viewBuildings">Buildings</button>
-        <button class="btn btn-ghost btn-sm" id="vu" onclick="setView('units',this)" data-i18n="off.viewUnits">Units</button>
+        <button class="btn btn-ghost btn-sm" id="vb" onclick="setView('buildings',this)" data-i18n="off.viewBuildings">Buildings</button>
+        <button class="btn btn-dark btn-sm" id="vu" onclick="setView('units',this)" data-i18n="off.viewUnits">Units</button>
       </div>
     </div>
 
@@ -121,11 +127,16 @@
       </div>
     </div>
 
-    <button onclick="applyFilters()" class="btn btn-navy w-full" style="margin-top:8px;" data-i18n="off.apply">Apply Filters</button>
+    <button onclick="applyFilters();if(window.innerWidth<=768)closeFilters();" class="btn btn-navy w-full" style="margin-top:8px;" data-i18n="off.apply">Apply Filters</button>
   </div>
 
   <!-- Main -->
   <div class="off-main">
+    <!-- Mobile-only: open the filter drawer (desktop shows the sidebar) -->
+    <button type="button" class="off-filterbtn" onclick="openFilters()" aria-haspopup="dialog" aria-controls="fp">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+      <span data-i18n="off.filters">Filters</span>
+    </button>
     <div class="flex-b mb32">
       <div>
         <h1 style="font-size:28px;" id="search-title" data-i18n="off.h1">Browse Offices</h1>
@@ -169,7 +180,9 @@
 <script src="../js/listings.js"></script>
 <script>
 let F = { market: [], grade: [], cert: [], cond: [] };
-let view = 'buildings';
+// Default view is Units (the per-space, favoritable entity). An explicit
+// ?view=buildings|units overrides it; Buildings stays available as a toggle.
+let view = 'units';
 let DISPLAY = 'cards', LAST_RES = [], MAP = null, MARKERS = [], CLUSTER = null, MAP_ITEMS = [];
 
 // Approximate city centroids. Markers are jittered around these so the map never
@@ -220,6 +233,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btn) { btn.classList.add('on'); toggleMarket(mp, btn); }
   }
 
+  // Explicit view override (?view=buildings|units); default stays Units.
+  const vp = p('view');
+  if (vp === 'buildings' || vp === 'units') setView(vp, document.getElementById(vp === 'buildings' ? 'vb' : 'vu'));
+
   applyFilters();
 });
 
@@ -247,6 +264,21 @@ function toggleMarket(id, btn) {
   applyFilters();
 }
 
+// Mobile filter drawer (desktop is unaffected — the panel is a static sidebar there).
+function openFilters() {
+  const fp = document.getElementById('fp'); if (!fp) return;
+  fp.classList.add('open');
+  document.getElementById('fp-backdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeFilters() {
+  const fp = document.getElementById('fp'); if (!fp) return;
+  fp.classList.remove('open');
+  document.getElementById('fp-backdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFilters(); });
+
 function setView(v, btn) {
   view = v;
   document.getElementById('vb').className = v==='buildings' ? 'btn btn-dark btn-sm' : 'btn btn-ghost btn-sm';
@@ -271,7 +303,12 @@ function applyFilters() {
   if (F.market.length) res = res.filter(x => F.market.includes(x.market));
   if (F.grade.length) res = res.filter(x => F.grade.includes(x.grade));
   if (F.cert.length) res = res.filter(x => (x.sustainability || []).some(s => F.cert.some(c => s.includes(c))));
-  const sizeOf = x => buildingsView ? (x.availMax || x.gla || 0) : (x.size || 0);
+  // "Largest first" metric. Buildings: GLA → typical floor plate → available area
+  // (all public building-level fields, so this never reveals protected unit sizes;
+  // availMax is null for locked viewers and simply falls through). Units: the unit
+  // size, which is itself null/0 for locked viewers, so they can't be reordered by a
+  // hidden value. (No BUA column exists in the schema.)
+  const sizeOf = x => buildingsView ? (x.gla || x.floorplate || x.availMax || 0) : (x.size || 0);
   const minA = +document.getElementById('minArea')?.value;
   const maxA = +document.getElementById('maxArea')?.value;
   if (minA) res = res.filter(x => sizeOf(x) >= minA);

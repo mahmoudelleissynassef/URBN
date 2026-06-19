@@ -151,7 +151,7 @@ async function loadOverview() {
   const tiles = cards.map(([label, n, tab]) => `<button class="card" onclick="showTab('${tab}')" style="padding:20px;text-align:left;cursor:pointer;border:none;background:var(--surface,#fff);">
       <div style="font-family:var(--fd);font-size:34px;line-height:1;">${Number(n || 0)}</div>
       <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${esc(label)}</div></button>`).join('');
-  const latest = (j.latest || []).map(r => `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.request_type || '')}</td><td>${esc(r.market || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status || '')}</span></td></tr>`).join('');
+  const latest = (j.latest || []).map(r => `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.request_type || '')}</td><td>${esc(niceMarket(r.market) || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status || '')}</span></td></tr>`).join('');
   panel.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:26px;">${tiles}</div>
     <h3 style="font-size:16px;margin:0 0 12px;">Latest submissions</h3>
@@ -182,7 +182,7 @@ async function loadPending() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 30px;">
         ${row('Submitted', fmtDate(L.created_at))}${row('Job title', p.title)}
-        ${row('Submitter type', p.submitterType)}${row('Market', L.market)}
+        ${row('Submitter type', p.submitterType)}${row('Market', niceMarket(L.market))}
         ${row('District', p.district)}${row('Address', p.address)}
         ${row('Google Maps', p.mapsUrl)}${row('Floor', p.floor)}
         ${row('Fit-out', p.fitOut)}${row('Offering', p.offeringType)}
@@ -489,7 +489,7 @@ async function loadAnalytics() {
     ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Market</th><th>Avg rent</th><th>Range</th></tr></thead><tbody>${avgRent.map(([k, v]) => { const rg = (s.rentRangeByMarket || {})[k] || []; return `<tr><td>${esc(k)}</td><td>${v}</td><td>${rg.length ? esc(rg[0] + ' – ' + rg[1]) : '—'}</td></tr>`; }).join('')}</tbody></table></div>`
     : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
   const mostSaved = (e.mostSaved || []).length
-    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(x.market)}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
     : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
   panel.innerHTML =
     sec('Supply', statTiles([['Approved buildings', s.approvedBuildings], ['Approved units', s.approvedUnits], ['Total sqm', s.totalSqm], ['Total desks', s.totalDesks]])
@@ -522,7 +522,7 @@ async function loadReveal() {
     const actions = g.status === 'requested'
       ? `<button class="btn btn-navy btn-sm" onclick="approveReveal('${g.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectReveal('${g.id}',this)">Reject</button>`
       : (g.status === 'approved' ? `<button class="btn btn-ghost btn-sm" onclick="revokeGrant('${g.id}',this)">Revoke</button>` : '');
-    return `<tr><td>${fmtDate(g.created_at)}</td><td>${esc(g.userEmail || g.user_id || '')}</td><td>${esc(g.buildingName || '')}</td><td>${esc(g.market || '')}</td><td><span class="badge ${g.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(g.status)}</span></td><td>${actions}</td></tr>`;
+    return `<tr><td>${fmtDate(g.created_at)}</td><td>${esc(g.userEmail || g.user_id || '')}</td><td>${esc(g.buildingName || '')}</td><td>${esc(niceMarket(g.market) || '')}</td><td><span class="badge ${g.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(g.status)}</span></td><td>${actions}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 async function approveReveal(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-reveal', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal approved — user notified'); loadReveal(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }

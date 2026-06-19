@@ -33,7 +33,7 @@ const ROUTES = {
   '/batch-upload': '/pages/operator/batch-upload.html',
   '/pricing': '/pages/subscription.html',
   '/market-scan': '/pages/market-scan.html',
-  '/contact': '/pages/market-scan.html',
+  '/contact': '/pages/contact.html',
   '/sign-in': '/pages/signin.html',
   '/sign-up': '/pages/signup.html',
   '/account': '/pages/account.html',
@@ -304,7 +304,10 @@ function buildListingEmail(data, payload, requestId, createdAt) {
   const mkt = marketName(data.market) || (data.market || '');
   const building = data.building || '(no name)';
   const uploader = data.name || data.email || 'A user';
-  const subject = `${uploader} uploaded a new building — ${building} (${mkt || 'no market'})`;
+  const toExisting = !!(data.existingBuildingId || payload && payload.existingBuildingId);
+  const subject = toExisting
+    ? `${uploader} added a new space to an existing building — ${building} (${mkt || 'no market'})`
+    : `${uploader} uploaded a new building — ${building} (${mkt || 'no market'})`;
   const photoPaths = Array.isArray(data.photoPaths) ? data.photoPaths : [];
   const floorplanYN = data.floorplanPath ? 'Yes' : 'No';
   const bucket = data.mediaBucket || 'listing-media';
@@ -317,6 +320,7 @@ function buildListingEmail(data, payload, requestId, createdAt) {
       emailRow('Name', data.name) + emailRow('Email', emailCell, true) + emailRow('Company', data.company) +
       emailRow('Job Title', data.title) + emailRow('Submitter Type', data.submitterType)) +
     emailSection('Building & Location',
+      (toExisting ? emailRow('Submission type', '<strong>New space for an existing building</strong> — building details unchanged; only the unit/space below is new.', true) : emailRow('Submission type', 'New building')) +
       emailRow('Building', data.building) + emailRow('Market', mkt) + emailRow('District', data.district) +
       emailRow('Google Maps', mapsCell, true) + emailRow('Floor / Range', data.floor)) +
     emailSection('Space & Offering',
@@ -1535,6 +1539,7 @@ function shapeListingServer(b, units, mediaByB, granted) {
     name: granted ? b.name : label, label,
     market: b.market, submarket: b.submarket || '', grade: b.grade || 'A',
     gla: Number(b.total_gla_sqm) || 0, floorplate: Number(b.typical_floorplate_sqm) || 0,
+    unitCount: Array.isArray(units) ? units.length : 0,
     floors: Number(b.floors) || 0, yearBuilt: Number(b.year_built) || null,
     buildingHeight: b.building_height_m != null ? Number(b.building_height_m) : null,
     availMin: sizes.length ? Math.min(...sizes) : 0, availMax: sizes.length ? Math.max(...sizes) : 0,

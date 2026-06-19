@@ -473,6 +473,10 @@ textarea.fi { resize: vertical; min-height: 100px; }
    On mobile this stacks (see the 768px media query) so results aren't squeezed. */
 .off-shell { display: flex; min-height: calc(100vh - var(--nav-h)); }
 .off-main { flex: 1; min-width: 0; padding: 32px 36px; overflow-y: auto; }
+/* Mobile filter-drawer controls — hidden on desktop (sidebar is always visible). */
+.off-filterbtn { display: none; align-items: center; gap: 7px; background: var(--bg-white); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; margin-bottom: 16px; }
+.fp-close { display: none; }
+.fp-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 1100; }
 .fg-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
 .fg-section:last-child { border-bottom: none; margin-bottom: 0; }
 .fg-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); margin-bottom: 14px; }
@@ -721,12 +725,20 @@ textarea.fi { resize: vertical; min-height: 100px; }
   .fr2 { grid-template-columns: 1fr; }
   .da { display: none; }
   .dm { padding: 24px; }
-  .fp { position: static; height: auto; width: 100%; }
-  /* Offices: stack filters above results so the results column isn't squeezed to
-     zero width, and use natural page scroll instead of a nested scroller (fixes
-     "only filters show" + runaway blank scroll on mobile). */
+  /* Offices mobile: the filter panel becomes an off-canvas drawer so results are
+     visible immediately (opened via the Filters button). Natural page scroll, no
+     nested scroller (fixes "only filters show" + runaway blank scroll). */
   .off-shell { flex-direction: column; min-height: 0; }
   .off-main { overflow: visible; height: auto; padding: 20px 16px; }
+  .off-filterbtn { display: inline-flex; }
+  .fp {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 86%; max-width: 340px; height: auto;
+    z-index: 1200; transform: translateX(-100%); transition: transform .25s ease;
+    overflow-y: auto; box-shadow: 0 0 40px rgba(0,0,0,.18); border-right: 1px solid var(--border);
+  }
+  .fp.open { transform: translateX(0); }
+  .fp-backdrop.show { display: block; }
+  .fp-close { display: inline-flex; }
   #results { grid-template-columns: 1fr !important; }
   #map { height: 60vh !important; min-height: 320px !important; }
   .hero-actions { flex-direction: column; align-items: flex-start; }
