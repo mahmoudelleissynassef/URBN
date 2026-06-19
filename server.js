@@ -227,13 +227,33 @@ async function insertSupabase(row) {
   return JSON.parse(r.body || '[]');
 }
 
+// ── Notification recipient resolution ────────────────────────────────────────
+// Single source of truth for where internal notifications go. Each chain ends in
+// generic SUPPORT_EMAIL / CONTACT_EMAIL tiers so notifications still have a valid
+// recipient even when the dedicated vars are not configured.
+//   Admin / upload : ADMIN_NOTIFICATION_EMAIL → LEAD_TO → SUPPORT_EMAIL → CONTACT_EMAIL
+//   Privacy / data : PRIVACY_CONTACT_EMAIL → (admin chain above)
+const envVal = (v) => { const x = process.env[v]; return (x && String(x).trim()) ? String(x).trim() : ''; };
+function adminRecipient() {
+  return envVal('ADMIN_NOTIFICATION_EMAIL') || envVal('LEAD_TO') || envVal('SUPPORT_EMAIL') || envVal('CONTACT_EMAIL');
+}
+function privacyRecipient() {
+  return envVal('PRIVACY_CONTACT_EMAIL') || adminRecipient();
+}
+
 async function sendResendEmail({ subject, text, html, replyTo, from, to }) {
   const key = process.env.RESEND_API_KEY;
   const fromAddr = from || process.env.LEAD_FROM;
-  // Admin notifications (no explicit `to`) go to ADMIN_NOTIFICATION_EMAIL when set,
-  // falling back to LEAD_TO for back-compat. User-facing mail passes `to` explicitly.
-  const toAddr = to || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.LEAD_TO;
-  if (!key || !fromAddr || !toAddr) throw new Error('resend_env_missing');
+  // Admin/internal notifications (no explicit `to`) resolve through the admin chain.
+  // User-facing mail (confirmations) passes `to` explicitly.
+  const toAddr = to || adminRecipient();
+  if (!key || !fromAddr) throw new Error('resend_env_missing:credentials');
+  if (!toAddr) {
+    // No recipient anywhere in the chain — never crash the request; warn loudly so
+    // it surfaces in logs and the admin dashboard diagnostic.
+    console.warn('[email] WARNING: no notification recipient configured (set ADMIN_NOTIFICATION_EMAIL or LEAD_TO). Email NOT sent — subject:', subject);
+    throw new Error('resend_env_missing:recipient');
+  }
   const body = JSON.stringify({
     from: fromAddr, to: [toAddr], subject, text, html,
     ...(replyTo ? { reply_to: replyTo } : {}),
@@ -526,8 +546,9 @@ function handleLeadRequest(req, res) {
         const g = buildGenericEmail(label, fields, payload);
         adminMail = { subject: `Data / Privacy request (${kind}) — ${name || email}`, html: g.html, text: g.text };
         adminFrom = requestsFrom;
-        // Route data-subject requests to the privacy mailbox when configured.
-        adminTo = process.env.PRIVACY_CONTACT_EMAIL || undefined;
+        // Route data-subject requests through the privacy chain (PRIVACY_CONTACT_EMAIL
+        // → admin chain). undefined only if nothing is configured anywhere.
+        adminTo = privacyRecipient() || undefined;
       } else {
         const fields = { Name: name, Email: email, Company: company, Phone: phone, Market: marketName(market) || market, Area: area, Building: building, Message: message };
         const g = buildGenericEmail(label, fields, payload);
@@ -833,6 +854,24 @@ function handleAdmin(req, res, urlPath) {
     if (!(await isAdmin(user.id))) return sendJson(res, 403, { ok: false, error: 'not_admin' });
     try {
       if (req.method === 'GET' && urlPath === '/api/admin/me') return sendJson(res, 200, { ok: true, admin: true, email: user.email });
+      if (req.method === 'GET' && urlPath === '/api/admin/email-config') {
+        // Diagnostic: report which email env vars EXIST (boolean only — never values).
+        const has = (v) => !!envVal(v);
+        return sendJson(res, 200, { ok: true,
+          present: {
+            RESEND_API_KEY: has('RESEND_API_KEY'),
+            LEAD_FROM: has('LEAD_FROM'), LEAD_TO: has('LEAD_TO'),
+            ADMIN_NOTIFICATION_EMAIL: has('ADMIN_NOTIFICATION_EMAIL'),
+            PRIVACY_CONTACT_EMAIL: has('PRIVACY_CONTACT_EMAIL'),
+            SUPPORT_EMAIL: has('SUPPORT_EMAIL'), CONTACT_EMAIL: has('CONTACT_EMAIL'),
+            LISTINGS_FROM: has('LISTINGS_FROM'), REQUESTS_FROM: has('REQUESTS_FROM'), NO_REPLY_FROM: has('NO_REPLY_FROM'),
+          },
+          // Effective routing readiness (no addresses revealed).
+          canSendEmail: has('RESEND_API_KEY') && has('LEAD_FROM'),
+          adminRecipientConfigured: !!adminRecipient(),
+          privacyRecipientConfigured: !!privacyRecipient(),
+        });
+      }
       if (req.method === 'GET' && urlPath === '/api/admin/pending-listings') {
         const listings = await sbGet(`client_requests?request_type=eq.list-building&status=in.(pending,new)&order=created_at.desc`);
         // Sign the uploaded photos/floorplan so the reviewer can SEE them (they
