@@ -429,6 +429,10 @@ h4 { font-size: 18px; }
 .uc-copy { font-size: 12.5px; color: var(--text-2); line-height: 1.6; max-width: 760px; }
 .uc-copy strong { color: var(--text); }
 .uc-tog { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-2); margin-top: 6px; }
+/* Language switcher (restrained select; lives in footer-bot) */
+.lang-switch { appearance: none; -webkit-appearance: none; background: transparent; border: 1px solid var(--border-2); border-radius: 5px; color: inherit; font-size: 12px; font-family: inherit; padding: 4px 26px 4px 10px; cursor: pointer; line-height: 1.4; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
+.lang-switch:hover { border-color: var(--text-3); }
+.lang-switch option { color: #111418; }
 .uc-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
 @media (max-width: 640px) { .uc-actions { width: 100%; } .uc-actions .btn { flex: 1; } }
 .stat-l { font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-2); }

@@ -146,50 +146,51 @@ function injectNav(base='') {
         </div>
       </a>
       <div class="nav-links">
-        <a href="/offices">Offices</a>
-        <a href="/list-building">List Your Space</a>
+        <a href="/offices" data-i18n="nav.offices">Offices</a>
+        <a href="/list-building" data-i18n="nav.listSpace">List Your Space</a>
         <div class="nav-dd">
-          <a href="/stay-vs-go">Tools</a>
+          <a href="/stay-vs-go" data-i18n="nav.tools">Tools</a>
           <div class="nav-dd-panel">
             <a href="/stay-vs-go">Stay vs Go</a>
             <a href="/market-scan">Market Scan</a>
-            <a href="/insights">Insights</a>
-            <a href="/saved" data-auth="in" style="display:none;">Saved Properties</a>
+            <a href="/insights" data-i18n="nav.insights">Insights</a>
+            <a href="/saved" data-auth="in" style="display:none;" data-i18n="nav.saved">Saved Properties</a>
           </div>
         </div>
-        <a href="/pricing">Pricing</a>
+        <a href="/pricing" data-i18n="nav.pricing">Pricing</a>
         <div class="nav-sep"></div>
-        <a href="/contact">Contact</a>
+        <a href="/contact" data-i18n="nav.contact">Contact</a>
       </div>
       <div class="nav-right">
-        <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+        <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out" data-i18n="nav.signIn">Sign In</a>
         <a href="/admin" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
-        <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
-        <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
-        <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
-        <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out">Sign Up</a>
+        <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.dashboard">Dashboard</a>
+        <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.account">Account</a>
+        <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.signOut" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
+        <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out" data-i18n="nav.signUp">Sign Up</a>
       </div>
-      <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+      <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu" data-i18n-aria="nav.menu">
         <span></span><span></span><span></span>
       </button>
     </div>
   </nav>
   <div class="mobile-nav" id="mobile-nav">
-    <a href="/offices">Offices</a>
-    <a href="/list-building">List Your Space</a>
+    <a href="/offices" data-i18n="nav.offices">Offices</a>
+    <a href="/list-building" data-i18n="nav.listSpace">List Your Space</a>
     <a href="/stay-vs-go">Stay vs Go</a>
-    <a href="/insights">Insights</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/contact">Contact</a>
+    <a href="/insights" data-i18n="nav.insights">Insights</a>
+    <a href="/pricing" data-i18n="nav.pricing">Pricing</a>
+    <a href="/contact" data-i18n="nav.contact">Contact</a>
     <div class="mobile-nav-actions">
-      <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out">Sign In</a>
+      <a href="/sign-in" class="btn btn-ghost btn-sm" data-auth="out" data-i18n="nav.signIn">Sign In</a>
       <a href="/admin" class="btn btn-ghost btn-sm" data-admin style="display:none;">Admin</a>
-      <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Dashboard</a>
-      <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;">Account</a>
-      <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
-      <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out" onclick="toggleMobileNav()">Sign Up</a>
+      <a href="/dashboard" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.dashboard">Dashboard</a>
+      <a href="/account" class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.account">Account</a>
+      <button class="btn btn-ghost btn-sm" data-auth="in" style="display:none;" data-i18n="nav.signOut" onclick="URBNAuth.signOut().then(()=>location.href='/')">Sign Out</button>
+      <a href="/sign-up" class="btn btn-navy btn-sm" data-auth="out" data-i18n="nav.signUp" onclick="toggleMobileNav()">Sign Up</a>
     </div>
   </div>`;
+  if (window.URBN_I18N) URBN_I18N.apply(el);
   injectAccessModal(base);
   updateAuthNav();
   URBNAuth.init().then(updateAuthNav);
@@ -230,21 +231,21 @@ function injectFooter(base='') {
         <div>
           <div class="footer-brand-name">URBN</div>
           <div class="footer-brand-sub">a Heirstone Consulting company</div>
-          <p class="footer-brand-desc">Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings. Protected introductions.</p>
+          <p class="footer-brand-desc" data-i18n="footer.brandDesc">Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings. Protected introductions.</p>
         </div>
         <div class="fc">
-          <div class="fc-title">Platform</div>
+          <div class="fc-title" data-i18n="footer.platform">Platform</div>
           <ul>
-            <li><a href="/offices">Browse Offices</a></li>
-            <li><a href="/markets">Markets</a></li>
-            <li><a href="/buildings">Buildings</a></li>
-            <li><a href="/districts">Districts</a></li>
+            <li><a href="/offices" data-i18n="footer.browseOffices">Browse Offices</a></li>
+            <li><a href="/markets" data-i18n="footer.markets">Markets</a></li>
+            <li><a href="/buildings" data-i18n="footer.buildings">Buildings</a></li>
+            <li><a href="/districts" data-i18n="footer.districts">Districts</a></li>
             <li><a href="/stay-vs-go">Stay vs Go</a></li>
-            <li><a href="/insights">Insights</a></li>
+            <li><a href="/insights" data-i18n="nav.insights">Insights</a></li>
           </ul>
         </div>
         <div class="fc">
-          <div class="fc-title">Offices by city</div>
+          <div class="fc-title" data-i18n="footer.officesByCity">Offices by city</div>
           <ul>
             <li><a href="/offices-in-cairo">Offices in Cairo</a></li>
             <li><a href="/offices-in-nairobi">Offices in Nairobi</a></li>
@@ -258,32 +259,36 @@ function injectFooter(base='') {
           </ul>
         </div>
         <div class="fc">
-          <div class="fc-title">Company</div>
+          <div class="fc-title" data-i18n="footer.company">Company</div>
           <ul>
-            <li><a href="/list-building">List Your Building</a></li>
-            <li><a href="/pricing">Pricing</a></li>
-            <li><a href="/contact">Contact</a></li>
-            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/list-building" data-i18n="footer.listBuilding">List Your Building</a></li>
+            <li><a href="/pricing" data-i18n="nav.pricing">Pricing</a></li>
+            <li><a href="/contact" data-i18n="nav.contact">Contact</a></li>
+            <li><a href="/dashboard" data-i18n="nav.dashboard">Dashboard</a></li>
           </ul>
         </div>
         <div class="fc">
-          <div class="fc-title">Legal</div>
+          <div class="fc-title" data-i18n="footer.legal">Legal</div>
           <ul>
-            <li><a href="/terms">Terms of Use</a></li>
-            <li><a href="/privacy">Privacy Policy</a></li>
-            <li><a href="/cookies">Cookie Policy</a></li>
-            <li><a href="/data-request">Data &amp; privacy requests</a></li>
-            <li><a href="/documents">Commission Agreement</a></li>
+            <li><a href="/terms" data-i18n="footer.terms">Terms of Use</a></li>
+            <li><a href="/privacy" data-i18n="footer.privacy">Privacy Policy</a></li>
+            <li><a href="/cookies" data-i18n="footer.cookies">Cookie Policy</a></li>
+            <li><a href="/data-request" data-i18n="footer.dataRequests">Data &amp; privacy requests</a></li>
+            <li><a href="/documents" data-i18n="footer.commission">Commission Agreement</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-rule"></div>
       <div class="footer-bot">
-        <p>© 2026 URBN Platform · Corporate Office Intelligence</p>
-        <p>Dubai, UAE · <a href="#" onclick="URBNConsent.open();return false;" style="color:inherit;text-decoration:underline;">Cookie settings</a></p>
+        <p>© 2026 URBN Platform · <span data-i18n="footer.intel">Corporate Office Intelligence</span></p>
+        <p style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span>Dubai, UAE · <a href="#" onclick="URBNConsent.open();return false;" style="color:inherit;text-decoration:underline;" data-i18n="footer.cookieSettings">Cookie settings</a></span>
+          ${(window.URBN_I18N ? URBN_I18N.switcherHTML() : '')}
+        </p>
       </div>
     </div>
   </footer>`;
+  if (window.URBN_I18N) URBN_I18N.apply(el);
   injectConsentBanner(base);
 }
 
@@ -317,20 +322,21 @@ function injectConsentBanner() {
   el.innerHTML = `
     <div class="uc-inner">
       <div class="uc-copy">
-        <strong>Cookies &amp; privacy.</strong> URBN uses necessary cookies and local storage for sign-in, preferences and core service operation. We do not run analytics, marketing or tracking cookies. See our <a href="/cookies">Cookie Policy</a> and <a href="/privacy">Privacy Policy</a>.
+        <strong data-i18n="consent.title">Cookies &amp; privacy.</strong> <span data-i18n="consent.body">URBN uses necessary cookies and local storage for sign-in, preferences and core service operation. We do not run analytics, marketing or tracking cookies.</span> <span data-i18n="consent.see">See our</span> <a href="/cookies" data-i18n="footer.cookies">Cookie Policy</a> &amp; <a href="/privacy" data-i18n="footer.privacy">Privacy Policy</a>.
         <div id="uc-prefs" style="display:none;margin-top:12px;">
-          <label class="uc-tog"><input type="checkbox" checked disabled> <span><strong>Necessary</strong> — always on (sign-in, preferences, security)</span></label>
-          <label class="uc-tog"><input type="checkbox" id="uc-analytics"> <span><strong>Analytics</strong> — not currently in use</span></label>
-          <label class="uc-tog"><input type="checkbox" id="uc-marketing"> <span><strong>Marketing</strong> — not currently in use</span></label>
+          <label class="uc-tog"><input type="checkbox" checked disabled> <span><strong data-i18n="consent.necessary">Necessary</strong> — <span data-i18n="consent.necessaryD">always on (sign-in, preferences, security)</span></span></label>
+          <label class="uc-tog"><input type="checkbox" id="uc-analytics"> <span><strong data-i18n="consent.analytics">Analytics</strong> — <span data-i18n="consent.notInUse">not currently in use</span></span></label>
+          <label class="uc-tog"><input type="checkbox" id="uc-marketing"> <span><strong data-i18n="consent.marketing">Marketing</strong> — <span data-i18n="consent.notInUse">not currently in use</span></span></label>
         </div>
       </div>
       <div class="uc-actions">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uc-prefs').style.display='block'">Manage preferences</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="URBNConsent.save({analytics:(document.getElementById('uc-analytics')||{}).checked, marketing:(document.getElementById('uc-marketing')||{}).checked})">Save preferences</button>
-        <button type="button" class="btn btn-navy btn-sm" onclick="URBNConsent.save({})">Accept necessary</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-i18n="consent.manage" onclick="document.getElementById('uc-prefs').style.display='block'">Manage preferences</button>
+        <button type="button" class="btn btn-outline btn-sm" data-i18n="consent.save" onclick="URBNConsent.save({analytics:(document.getElementById('uc-analytics')||{}).checked, marketing:(document.getElementById('uc-marketing')||{}).checked})">Save preferences</button>
+        <button type="button" class="btn btn-navy btn-sm" data-i18n="consent.accept" onclick="URBNConsent.save({})">Accept necessary</button>
       </div>
     </div>`;
   document.body.appendChild(el);
+  if (window.URBN_I18N) URBN_I18N.apply(el);
   if (URBNConsent.get()) el.style.display = 'none';   // a choice was already stored
 }
 
