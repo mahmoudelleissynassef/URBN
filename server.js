@@ -899,6 +899,19 @@ function handleAdmin(req, res, urlPath) {
           privacyRecipientConfigured: !!privacyRecipient(),
         });
       }
+      if (req.method === 'GET' && urlPath === '/api/admin/email-preview') {
+        // TEMP diagnostic: render the privacy-request admin + user emails with sample
+        // data so the rendered output can be inspected. Admin-gated; no real send.
+        const sample = { requestKind: 'question', name: 'Jane Sample', email: 'jane.sample@acme.com', company: 'Acme Co', message: 'Please tell me what data you hold about me.', privacyConsent: true };
+        const kind = PRIVACY_REQUEST_KINDS[sample.requestKind];
+        const fields = { 'Request type': kind, Name: sample.name, Email: sample.email, Company: sample.company, Message: sample.message, 'Reference ID': 'sample-0000', 'Submitted': '2026-06-19T00:00:00Z' };
+        const admin = buildGenericEmail(REQUEST_TYPES['privacy-request'], fields, sample, { title: 'New Data / Privacy Request', heading: 'Data / Privacy Request', badge: 'Privacy' });
+        const userC = buildUserConfirmation('privacy-request', sample, sample.name, 'sample-0000', '2026-06-19T00:00:00Z');
+        return sendJson(res, 200, { ok: true,
+          adminSubject: `Data / Privacy request (${kind}) - ${sample.name}`,
+          adminHtml: admin.html, adminText: admin.text,
+          userSubject: userC.subject, userHtml: userC.html, userText: userC.text });
+      }
       if (req.method === 'GET' && urlPath === '/api/admin/pending-listings') {
         const listings = await sbGet(`client_requests?request_type=eq.list-building&status=in.(pending,new)&order=created_at.desc`);
         // Sign the uploaded photos/floorplan so the reviewer can SEE them (they
