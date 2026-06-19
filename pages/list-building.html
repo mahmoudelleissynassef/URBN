@@ -186,6 +186,15 @@
       </div>
       <div class="fg"><label class="fl" data-i18n="lb.term">Minimum Lease / Contract Term (optional)</label><input type="text" class="fi" id="ll-term" placeholder="e.g. 24 months"></div>
 
+      <!-- Unit-level facilities (specific to this space, separate from building amenities) -->
+      <div class="form-sec-title" data-i18n="lb.secUnitFacilities">Unit facilities (optional)</div>
+      <p style="font-size:11px;color:var(--text-2);margin:-6px 0 10px;" data-i18n="lb.unitFacilitiesHint">Facilities specific to this space — these are separate from the building amenities.</p>
+      <div id="ll-unit-facilities" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;margin-bottom:8px;"></div>
+      <div class="fr2">
+        <div class="fg" id="ll-bath-count-wrap" style="display:none;"><label class="fl" data-i18n="lb.bathroomsCount">Number of bathrooms</label><input type="number" min="0" class="fi" id="ll-bath-count" placeholder="e.g. 2"></div>
+        <div class="fg" id="ll-other-fac-wrap" style="display:none;"><label class="fl" data-i18n="lb.otherFacility">Other facility</label><input type="text" class="fi" id="ll-other-fac" placeholder="Describe"></div>
+      </div>
+
       <div class="form-sec-title" data-i18n="lb.secPhotos">Photos &amp; floorplans</div>
       <div class="form-note">
         <p data-i18n-html="lb.uploadNote">Listings require <strong>at least 3 photos</strong>. Accepted: JPG, PNG, WEBP (max 8&nbsp;MB each). Floorplan optional: PDF, JPG, PNG, WEBP (max 15&nbsp;MB). Files upload to URBN&#39;s private store and are reviewed before publication. <strong>You must be signed in to upload</strong> — <a href="/sign-in" class="text-navy" style="text-decoration:underline;">sign in</a> or <a href="/sign-up" class="text-navy" style="text-decoration:underline;">create an account</a>.</p>
@@ -264,6 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sel = document.getElementById('ll-market');
   URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
   renderAmenities();
+  renderUnitFacilities();
   // Members-only: show the gate (not a redirect) so the URL is preserved and the
   // form never flashes. The synchronous check above made the first decision; this
   // confirms it authoritatively.
@@ -362,6 +372,25 @@ function renderAmenities() {
   box.innerHTML = LL_AMENITIES.map((a, i) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-amenity" value="${llEsc(a)}" id="ll-am-${i}">${llEsc(llT(a))}</label>`).join('');
 }
 function selectedAmenities() { return [...document.querySelectorAll('.ll-amenity:checked')].map(c => c.value); }
+
+// Unit-level facilities (stored in units.unit_amenities, separate from building amenities).
+const LL_UNIT_FACILITIES = ['Bathrooms', 'Private pantry / kitchenette', 'Private meeting room', 'Private offices', 'Open-plan area', 'Reception area', 'Server / IT room', 'Storage room', 'Balcony / terrace', 'Furnished', 'Plug-and-play', 'Other'];
+function renderUnitFacilities() {
+  const box = document.getElementById('ll-unit-facilities'); if (!box) return;
+  box.innerHTML = LL_UNIT_FACILITIES.map((a, i) => {
+    const toggle = a === 'Bathrooms' ? ` onchange="document.getElementById('ll-bath-count-wrap').style.display=this.checked?'block':'none'"`
+      : (a === 'Other' ? ` onchange="document.getElementById('ll-other-fac-wrap').style.display=this.checked?'block':'none'"` : '');
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-ufac" value="${llEsc(a)}" id="ll-ufac-${i}"${toggle}>${llEsc(a)}</label>`;
+  }).join('');
+}
+// Returns a plain object {feature:true, ...} plus bathrooms_count / other_note, or null.
+function selectedUnitAmenities() {
+  const obj = {};
+  document.querySelectorAll('.ll-ufac:checked').forEach(c => { obj[c.value] = true; });
+  if (obj['Bathrooms']) { const n = parseInt(document.getElementById('ll-bath-count').value, 10); if (!isNaN(n) && n >= 0) obj.bathrooms_count = n; }
+  if (obj['Other']) { const t = document.getElementById('ll-other-fac').value.trim(); if (t) obj.other_note = t.slice(0, 300); }
+  return Object.keys(obj).length ? obj : null;
+}
 
 function llEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
@@ -547,7 +576,7 @@ async function submitListing(btn) {
     rent, currency, pricingBasis: basis,
     serviceCharge: svc, serviceChargeBasis: svcBasis,
     availabilityDate: avail, minTerm: term,
-    amenities,
+    amenities, unitAmenities: selectedUnitAmenities(),
     parkingSpaces: pkSpaces, parkingArrangement: pkArrangement, parkingIncludedInRent: pkIncluded,
     parkingPricePerSpot: pkPrice, visitorParkingHourly: pkVisitor, parkingMonthlyMembership: pkMembership,
     parkingMonthlyMembershipPrice: pkMembershipPrice, parkingNotes: pkNotes,

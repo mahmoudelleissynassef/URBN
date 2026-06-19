@@ -300,6 +300,17 @@ function rawPayloadRow(payload) {
   return `<tr><td style="padding:6px 24px 18px;"><div style="font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Raw payload (technical)</div><pre style="background:#F0F1F3;border:1px solid #E6E8EB;padding:10px;font-size:10px;color:#6B7280;white-space:pre-wrap;word-break:break-word;border-radius:4px;margin:0;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre></td></tr>`;
 }
 
+// Human-readable summary of a unit's facilities object {feature:true, bathrooms_count, other_note}.
+function formatUnitAmenities(ua) {
+  if (!ua || typeof ua !== 'object') return '';
+  const parts = [];
+  Object.keys(ua).forEach((k) => {
+    if (k === 'bathrooms_count' || k === 'other_note') return;
+    if (ua[k] === true) parts.push((k === 'Bathrooms' && ua.bathrooms_count != null) ? `Bathrooms (${ua.bathrooms_count})` : k);
+  });
+  if (ua.other_note) parts.push('Other: ' + ua.other_note);
+  return parts.join(', ');
+}
 function buildListingEmail(data, payload, requestId, createdAt) {
   const mkt = marketName(data.market) || (data.market || '');
   const building = data.building || '(no name)';
@@ -325,7 +336,8 @@ function buildListingEmail(data, payload, requestId, createdAt) {
       emailRow('Google Maps', mapsCell, true) + emailRow('Floor / Range', data.floor)) +
     emailSection('Space & Offering',
       emailRow('Fit-out Condition', data.fitOut) + emailRow('Offering Type', data.offeringType) +
-      emailRow('Area (sqm)', data.area) + emailRow('Desks / Seats', data.seats)) +
+      emailRow('Area (sqm)', data.area) + emailRow('Desks / Seats', data.seats) +
+      emailRow('Unit facilities', formatUnitAmenities(data.unitAmenities))) +
     emailSection('Commercials',
       emailRow('Asking Rent', data.rent) + emailRow('Currency', data.currency) + emailRow('Pricing Basis', data.pricingBasis) +
       emailRow('Service Charge', data.serviceCharge) + emailRow('Service Charge Basis', data.serviceChargeBasis) +
@@ -881,7 +893,9 @@ async function approveRequestRow(row, adminId, existingBuildingId) {
     id: 'u_' + row.id, building_id: bId, unit_floor: p.floor || null, size_sqm: numOrNull(p.area), offering_type: p.offeringType || null,
     fit_out: p.fitOut || null, desks: numOrNull(p.seats), meeting_rooms: null, asking_rent: numOrNull(p.rent), currency: p.currency || null,
     pricing_basis: p.pricingBasis || null, service_charge: numOrNull(p.serviceCharge), service_charge_basis: p.serviceChargeBasis || null,
-    availability_date: dateOrNull(p.availabilityDate), min_term: p.minTerm || null, notes: row.message || p.message || null, status: 'approved', request_id: row.id,
+    availability_date: dateOrNull(p.availabilityDate), min_term: p.minTerm || null, notes: row.message || p.message || null,
+    unit_amenities: (p.unitAmenities && typeof p.unitAmenities === 'object') ? p.unitAmenities : null,
+    status: 'approved', request_id: row.id,
   }]);
   const media = [];
   (Array.isArray(p.photoPaths) ? p.photoPaths : []).forEach((path, i) => media.push({ building_id: bId, bucket: p.mediaBucket || 'listing-media', path, kind: 'photo', uploaded_by: p.submittedBy || null, is_main: i === 0 }));
@@ -1042,7 +1056,7 @@ function handleAdmin(req, res, urlPath) {
         const users = profiles.map((p) => {
           const email = emailById[p.id] || '';
           const sub = activeSub[p.company_id] || anySub[p.company_id] || null;
-          return { id: p.id, email, full_name: p.full_name, company: compById[p.company_id] || '', company_id: p.company_id || null,
+          return { id: p.id, email, full_name: p.full_name, phone: p.phone || '', company: compById[p.company_id] || '', company_id: p.company_id || null,
             user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at,
             tier: sub ? sub.tier : 'free', tier_status: sub ? sub.status : null, assigned_market: (sub && sub.assigned_market) || null, notes: (sub && sub.notes) || '',
             requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 };
@@ -1064,6 +1078,26 @@ function handleAdmin(req, res, urlPath) {
       }
       if (req.method === 'GET' && urlPath === '/api/admin/membership-requests') {
         return sendJson(res, 200, { ok: true, requests: await sbGet('client_requests?request_type=in.(membership,membership-change)&order=created_at.desc') });
+      }
+      if (req.method === 'GET' && urlPath === '/api/admin/units') {
+        // Every unit, with its building context — admin-only (full identity is fine here).
+        const [units, buildings] = await Promise.all([
+          sbGet('units?select=*&order=created_at.desc'),
+          sbGet('buildings?select=id,name,market,submarket,grade'),
+        ]);
+        const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
+        const out = units.map((u) => {
+          const b = bById[u.building_id] || {};
+          const source = String(u.id || '').indexOf('u_imp_') === 0 ? 'import' : (u.request_id ? 'submission' : 'admin');
+          return {
+            id: u.id, building_id: u.building_id, building: b.name || '', market: b.market || '', submarket: b.submarket || '', grade: b.grade || '',
+            floor: u.unit_floor || '', size: u.size_sqm != null ? Number(u.size_sqm) : null, desks: u.desks != null ? Number(u.desks) : null,
+            meetingRooms: u.meeting_rooms != null ? Number(u.meeting_rooms) : null, rent: u.asking_rent != null ? Number(u.asking_rent) : null,
+            currency: u.currency || '', pricingBasis: u.pricing_basis || '', fitOut: u.fit_out || '', offeringType: u.offering_type || '',
+            status: u.status || '', amenities: u.unit_amenities || null, source, created_at: u.created_at,
+          };
+        });
+        return sendJson(res, 200, { ok: true, units: out });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/analytics') {
         const [buildings, units, reqs, subs, saved, profiles, companies, revealGrants, capexRows] = await Promise.all([
@@ -1225,6 +1259,25 @@ function handleAdmin(req, res, urlPath) {
           return sendJson(res, 502, { ok: false, error: 'delete_failed' });
         }
         await writeAudit(req, user, 'building.delete', { targetType: 'building', targetIds: ids, count: deleted, metadata: { bulk: ids.length > 1 } });
+        return sendJson(res, 200, { ok: true, deleted });
+      }
+      if (urlPath === '/api/admin/delete-units') {
+        // HARD delete of UNITS only — the building row is never touched. FK cascade
+        // removes saved_properties for the unit; grants.unit_id is SET NULL.
+        // listing_media is building-scoped, so building photos are unaffected.
+        const ids = Array.isArray(body.unitIds) ? [...new Set(body.unitIds.filter(Boolean).map(String))] : [];
+        if (!ids.length) return sendJson(res, 400, { ok: false, error: 'no_ids' });
+        if (ids.length > 1000) return sendJson(res, 400, { ok: false, error: 'too_many' });
+        if (ids.length > 1 && body.confirm !== 'DELETE') return sendJson(res, 400, { ok: false, error: 'confirm_required' });
+        const idList = ids.map(encodeURIComponent).join(',');
+        let deleted = 0;
+        try { const rows = await sbDelete('units', `id=in.(${idList})`); deleted = Array.isArray(rows) ? rows.length : 0; }
+        catch (e) {
+          console.error('[delete-units]', e.message);
+          await writeAudit(req, user, 'unit.delete', { targetType: 'unit', targetIds: ids, success: false, metadata: { bulk: ids.length > 1 } });
+          return sendJson(res, 502, { ok: false, error: 'delete_failed' });
+        }
+        await writeAudit(req, user, 'unit.delete', { targetType: 'unit', targetIds: ids, count: deleted, metadata: { bulk: ids.length > 1 } });
         return sendJson(res, 200, { ok: true, deleted });
       }
       if (urlPath === '/api/admin/reject-listing') {
@@ -1392,7 +1445,9 @@ function handleAdmin(req, res, urlPath) {
           if (!rowHasUnit(r)) { invalid++; results.push({ row: idx, status: 'invalid', building: b.name, reason: 'no unit data (size / rent / floor / offering)' }); return; }
           matched++;
           const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_imp_' + hash(b.id + '|' + (r.unit_floor || '') + '|' + (r.size_sqm || '') + '|' + (r.offering_type || '')));
-          toInsert.push({ id: uId, building_id: b.id, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null, fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent), currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge), service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, status: 'approved' });
+          let unitAmen = null;
+          if (r.unit_amenities && String(r.unit_amenities).trim()) { try { const parsed = JSON.parse(r.unit_amenities); if (parsed && typeof parsed === 'object') unitAmen = parsed; } catch (e) {} }
+          toInsert.push({ id: uId, building_id: b.id, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null, fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent), currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge), service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, unit_amenities: unitAmen, status: 'approved' });
           results.push({ row: idx, status: 'ok', building: b.name, reason: '' });
         });
         let inserted = 0;
@@ -1606,7 +1661,7 @@ function shapeListingServer(b, units, mediaByB, granted) {
     },
     hasPublicImage, image: hasPublicImage ? ('/api/listing-image?b=' + encodeURIComponent(b.id)) : null,
     address: granted ? (b.address || '') : '', mapsUrl: granted ? (b.google_maps_url || '') : '',
-    units: units.map((u) => ({ id: u.id, floor: u.unit_floor, size: Number(u.size_sqm) || 0, desks: Number(u.desks) || 0, meetingRooms: Number(u.meeting_rooms) || 0, rent: Number(u.asking_rent) || 0, type: u.offering_type, fitOut: u.fit_out || '' })),
+    units: units.map((u) => ({ id: u.id, floor: u.unit_floor, size: Number(u.size_sqm) || 0, desks: Number(u.desks) || 0, meetingRooms: Number(u.meeting_rooms) || 0, rent: Number(u.asking_rent) || 0, type: u.offering_type, fitOut: u.fit_out || '', amenities: u.unit_amenities || null })),
   };
 }
 async function approvedGrantsFor(userId) {
@@ -1776,7 +1831,7 @@ function handlePublicListings(req, res) {
             amenities: b.amenities, parking: b.parking, sustainability: b.sustainability,
             address: b.address, mapsUrl: b.mapsUrl, floors: b.floors, floorplate: b.floorplate,
             yearBuilt: b.yearBuilt, buildingHeight: b.buildingHeight, gla: b.gla,
-            floor: u.floor, size: u.size, desks: u.desks, meetingRooms: u.meetingRooms, offeringType: u.type, fitOut: u.fitOut,
+            floor: u.floor, size: u.size, desks: u.desks, meetingRooms: u.meetingRooms, offeringType: u.type, fitOut: u.fitOut, unitAmenities: u.amenities,
             rent: u.rent, rentCurrency: b.rentCurrency, rentUnit: b.rentUnit, rentUsd: toUsd(u.rent, b.rentCurrency, fx.rates),
           }));
         });
