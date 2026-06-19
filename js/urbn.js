@@ -476,7 +476,9 @@ function setBtnBusy(btn, busy, busyLabel = 'Sending…') {
   else { btn.disabled = false; if (btn.dataset.prevLabel) btn.textContent = btn.dataset.prevLabel; }
 }
 function chipValues(containerId) {
-  return [...document.querySelectorAll('#' + containerId + ' .chip.on')].map(c => c.textContent.trim());
+  // Prefer a stable English data-val (set on i18n-translated chips) so the
+  // submitted payload value never changes with the display language.
+  return [...document.querySelectorAll('#' + containerId + ' .chip.on')].map(c => (c.dataset.val || c.textContent).trim());
 }
 
 // ── Allowed currencies per market ────────────────────────

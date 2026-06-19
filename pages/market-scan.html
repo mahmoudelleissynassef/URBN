@@ -38,14 +38,14 @@
         </div>
         <div class="fg"><label class="fl" data-i18n="ms.sector">Industry / Sector</label>
           <select class="fi fi-sel" id="sc-sector">
-            <option data-i18n="ms.sec.banking">Banking & Financial Services</option>
-            <option data-i18n="ms.sec.technology">Technology</option>
-            <option data-i18n="ms.sec.profServices">Professional Services</option>
-            <option data-i18n="ms.sec.fmcg">FMCG / Consumer Goods</option>
-            <option data-i18n="ms.sec.energy">Energy / Resources</option>
-            <option data-i18n="ms.sec.manufacturing">Manufacturing</option>
-            <option data-i18n="ms.sec.healthcare">Healthcare / Pharma</option>
-            <option data-i18n="ms.sec.other">Other</option>
+            <option value="Banking & Financial Services" data-i18n="ms.sec.banking">Banking & Financial Services</option>
+            <option value="Technology" data-i18n="ms.sec.technology">Technology</option>
+            <option value="Professional Services" data-i18n="ms.sec.profServices">Professional Services</option>
+            <option value="FMCG / Consumer Goods" data-i18n="ms.sec.fmcg">FMCG / Consumer Goods</option>
+            <option value="Energy / Resources" data-i18n="ms.sec.energy">Energy / Resources</option>
+            <option value="Manufacturing" data-i18n="ms.sec.manufacturing">Manufacturing</option>
+            <option value="Healthcare / Pharma" data-i18n="ms.sec.healthcare">Healthcare / Pharma</option>
+            <option value="Other" data-i18n="ms.sec.other">Other</option>
           </select>
         </div>
       </div>
@@ -53,10 +53,10 @@
         <div class="fg"><label class="fl" data-i18n="ms.area">Required Area (sqm)</label><input type="number" class="fi" id="sc-area" placeholder="e.g. 1,200"><div class="fld-err" id="err-area" data-i18n="ms.errArea">Enter an approximate area in sqm.</div></div>
         <div class="fg"><label class="fl" data-i18n="ms.commencement">Target Commencement</label>
           <select class="fi fi-sel" id="sc-timeline">
-            <option data-i18n="ms.tl.immediate">Immediately (0–3 months)</option>
-            <option data-i18n="ms.tl.3to6">3–6 months</option>
-            <option data-i18n="ms.tl.6to12">6–12 months</option>
-            <option data-i18n="ms.tl.12plus">12+ months</option>
+            <option value="Immediately (0–3 months)" data-i18n="ms.tl.immediate">Immediately (0–3 months)</option>
+            <option value="3–6 months" data-i18n="ms.tl.3to6">3–6 months</option>
+            <option value="6–12 months" data-i18n="ms.tl.6to12">6–12 months</option>
+            <option value="12+ months" data-i18n="ms.tl.12plus">12+ months</option>
           </select>
         </div>
       </div>
@@ -67,19 +67,19 @@
       </div>
       <div class="fg"><label class="fl" data-i18n="ms.fitout">Fit-Out Requirement</label>
         <div class="chips" id="sc-fitout" style="margin-top:4px;">
-          <button class="chip on" onclick="this.classList.toggle('on')" data-i18n="ms.fit.shellCore">Shell & Core</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.catA">Category A (Fitted)</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.turnkey">Turnkey / Furnished</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.fit.flexible">Flexible</button>
+          <button class="chip on" onclick="this.classList.toggle('on')" data-val="Shell & Core" data-i18n="ms.fit.shellCore">Shell & Core</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Category A (Fitted)" data-i18n="ms.fit.catA">Category A (Fitted)</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Turnkey / Furnished" data-i18n="ms.fit.turnkey">Turnkey / Furnished</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Flexible" data-i18n="ms.fit.flexible">Flexible</button>
         </div>
       </div>
       <div class="fg"><label class="fl" data-i18n="ms.districts">Preferred Districts (optional)</label><input type="text" class="fi" id="sc-districts" placeholder="e.g. New Cairo, CBD — or leave blank for all" data-i18n-placeholder="ms.districtsPh"></div>
       <div class="fg"><label class="fl" data-i18n="ms.power">Power / Connectivity Requirements</label>
         <div class="chips" id="sc-power" style="margin-top:4px;">
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.generator">Backup Generator</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.fibre">Fibre Connectivity</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.dualFeed">Dual Power Feed</button>
-          <button class="chip" onclick="this.classList.toggle('on')" data-i18n="ms.pw.dataCentre">Data Centre Adjacent</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Backup Generator" data-i18n="ms.pw.generator">Backup Generator</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Fibre Connectivity" data-i18n="ms.pw.fibre">Fibre Connectivity</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Dual Power Feed" data-i18n="ms.pw.dualFeed">Dual Power Feed</button>
+          <button class="chip" onclick="this.classList.toggle('on')" data-val="Data Centre Adjacent" data-i18n="ms.pw.dataCentre">Data Centre Adjacent</button>
         </div>
       </div>
       <div class="fg"><label class="fl" data-i18n="ms.notes">Additional Notes</label><textarea class="fi" id="sc-notes" placeholder="Any specific requirements, deal-breakers, or context about your company's needs in this market..." data-i18n-placeholder="ms.notesPh"></textarea></div>
