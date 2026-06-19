@@ -56,17 +56,17 @@
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Market</div>
+      <div class="fg-title" data-i18n="off.filtersMarket">Market</div>
       <div class="chips" id="market-chips"></div>
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">District</div>
-      <div class="chips" id="district-chips"><span style="font-size:11px;color:var(--text-2);">Select market first</span></div>
+      <div class="fg-title" data-i18n="off.fDistrict">District</div>
+      <div class="chips" id="district-chips"><span style="font-size:11px;color:var(--text-2);" data-i18n="off.districtHint">Select market first</span></div>
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Grade</div>
+      <div class="fg-title" data-i18n="off.filtersGrade">Grade</div>
       <div class="chips">
         <button class="chip" data-f="grade" data-v="A+">Grade A+</button>
         <button class="chip" data-f="grade" data-v="A">Grade A</button>
@@ -74,7 +74,7 @@
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Available Area (sqm)</div>
+      <div class="fg-title" data-i18n="off.fArea">Available Area (sqm)</div>
       <div class="rr">
         <input type="number" class="fi" id="minArea" aria-label="Minimum area in square metres" placeholder="Min" style="font-size:12px;">
         <input type="number" class="fi" id="maxArea" aria-label="Maximum area in square metres" placeholder="Max" style="font-size:12px;">
@@ -82,7 +82,7 @@
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Desk Capacity</div>
+      <div class="fg-title" data-i18n="off.fDesks">Desk Capacity</div>
       <div class="rr">
         <input type="number" class="fi" id="minDesks" aria-label="Minimum desk capacity" placeholder="Min" style="font-size:12px;">
         <input type="number" class="fi" id="maxDesks" aria-label="Maximum desk capacity" placeholder="Max" style="font-size:12px;">
@@ -90,12 +90,12 @@
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Min Meeting Rooms</div>
+      <div class="fg-title" data-i18n="off.fMR">Min Meeting Rooms</div>
       <input type="number" class="fi" id="minMR" aria-label="Minimum number of meeting rooms" placeholder="e.g. 3" style="font-size:12px;">
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Certification</div>
+      <div class="fg-title" data-i18n="off.fCert">Certification</div>
       <div class="chips">
         <button class="chip" data-f="cert" data-v="LEED">LEED</button>
         <button class="chip" data-f="cert" data-v="BREEAM">BREEAM</button>
@@ -105,35 +105,35 @@
     </div>
 
     <div class="fg-section">
-      <div class="fg-title">Condition</div>
+      <div class="fg-title" data-i18n="off.fCond">Condition</div>
       <div class="chips">
-        <button class="chip" data-f="cond" data-v="fitted">Fitted</button>
-        <button class="chip" data-f="cond" data-v="shell">Shell & Core</button>
-        <button class="chip" data-f="cond" data-v="furnished">Furnished</button>
+        <button class="chip" data-f="cond" data-v="fitted" data-i18n="off.condFitted">Fitted</button>
+        <button class="chip" data-f="cond" data-v="shell" data-i18n="off.condShell">Shell & Core</button>
+        <button class="chip" data-f="cond" data-v="furnished" data-i18n="off.condFurnished">Furnished</button>
       </div>
     </div>
 
-    <button onclick="applyFilters()" class="btn btn-navy w-full" style="margin-top:8px;">Apply Filters</button>
+    <button onclick="applyFilters()" class="btn btn-navy w-full" style="margin-top:8px;" data-i18n="off.apply">Apply Filters</button>
   </div>
 
   <!-- Main -->
   <div style="flex:1;padding:32px 36px;overflow-y:auto;">
     <div class="flex-b mb32">
       <div>
-        <h1 style="font-size:28px;" id="search-title">Browse Offices</h1>
-        <p style="font-size:12px;color:var(--text-2);margin-top:4px;" id="search-count">Loading...</p>
+        <h1 style="font-size:28px;" id="search-title" data-i18n="off.h1">Browse Offices</h1>
+        <p style="font-size:12px;color:var(--text-2);margin-top:4px;" id="search-count" data-i18n="off.loading">Loading...</p>
       </div>
       <div style="display:flex;gap:10px;align-items:center;">
         <div class="seg" role="group" aria-label="Result display">
-          <button type="button" id="disp-cards" class="seg-btn on" aria-pressed="true" onclick="setDisplay('cards')">Cards</button>
-          <button type="button" id="disp-map" class="seg-btn" aria-pressed="false" onclick="setDisplay('map')">Map</button>
+          <button type="button" id="disp-cards" class="seg-btn on" aria-pressed="true" onclick="setDisplay('cards')" data-i18n="off.viewCards">Cards</button>
+          <button type="button" id="disp-map" class="seg-btn" aria-pressed="false" onclick="setDisplay('map')" data-i18n="off.viewMap">Map</button>
         </div>
         <select class="fi fi-sel" id="sort-sel" aria-label="Sort offices" onchange="applyFilters()" style="width:170px;font-size:12px;">
-          <option value="">Sort: Default</option>
-          <option value="rent-asc">Rent: Low to High</option>
-          <option value="rent-desc">Rent: High to Low</option>
-          <option value="size-desc">Size: Largest First</option>
-          <option value="grade">Grade A+ First</option>
+          <option value="" data-i18n="off.sortDefault">Sort: Default</option>
+          <option value="rent-asc" data-i18n="off.sortRentAsc">Rent: Low to High</option>
+          <option value="rent-desc" data-i18n="off.sortRentDesc">Rent: High to Low</option>
+          <option value="size-desc" data-i18n="off.sortSizeDesc">Size: Largest First</option>
+          <option value="grade" data-i18n="off.sortGrade">Grade A+ First</option>
         </select>
       </div>
     </div>
@@ -157,7 +157,7 @@
 
 <div id="footer-placeholder"></div>
 <script src="../data/data.js"></script>
-<script src="/js/i18n.js"></script><script src="../js/urbn.js"></script>
+<script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../js/urbn.js"></script>
 <script src="../js/listings.js"></script>
 <script>
 let F = { market: [], grade: [], cert: [], cond: [] };

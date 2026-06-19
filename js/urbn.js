@@ -349,11 +349,11 @@ function injectAccessModal(base='') {
   modal.id = 'access-modal';
   modal.innerHTML = `
     <div class="modal">
-      <div class="mh"><div><div class="label mb12">Get started</div><h3>Create your URBN account</h3></div><div class="mx">X</div></div>
+      <div class="mh"><div><div class="label mb12" data-i18n="cta.getStarted">Get started</div><h3 data-i18n="access.heading">Create your URBN account</h3></div><div class="mx">X</div></div>
       <div class="mb" id="access-body">
         <p style="font-size:14px;color:var(--text-2);margin-bottom:18px;line-height:1.7;">A free account unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and protected introductions</strong> across all ${markets} markets. A verified corporate email is required.</p>
-        <a href="/sign-up" class="btn btn-navy w-full" style="margin-bottom:8px;">Create a free account →</a>
-        <a href="/sign-in" class="btn btn-ghost w-full" style="margin-bottom:18px;">I already have an account</a>
+        <a href="/sign-up" class="btn btn-navy w-full" style="margin-bottom:8px;" data-i18n="access.createFree">Create a free account →</a>
+        <a href="/sign-in" class="btn btn-ghost w-full" style="margin-bottom:18px;" data-i18n="access.haveAccount">I already have an account</a>
         <div style="border-top:1px solid var(--border);padding-top:16px;">
         <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;"><strong style="color:var(--text);">Prefer URBN to set you up?</strong> Leave your details and our team will reach out to arrange access.</p>
         <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="reg-email" placeholder="you@company.com"><div class="fld-err" id="err-reg-email">Enter a valid corporate email address.</div></div>
@@ -370,7 +370,7 @@ function injectAccessModal(base='') {
       </div>
       <div class="mf" id="access-actions">
         <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
-        <button class="btn btn-outline" onclick="submitAccess(this)">Request a callback</button>
+        <button class="btn btn-outline" onclick="submitAccess(this)" data-i18n="access.callback">Request a callback</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
