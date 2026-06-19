@@ -697,6 +697,23 @@ async function sbUpsert(table, rows) {
   if (r.status < 200 || r.status >= 300) throw new Error(`sb_upsert_${r.status}:${r.body.slice(0, 200)}`);
   return JSON.parse(r.body || '[]');
 }
+// Hard DELETE rows. Returns the deleted rows (Prefer: return=representation).
+async function sbDelete(table, query) {
+  const base = process.env.SUPABASE_URL;
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: { ...sbHeaders(), Prefer: 'return=representation' } });
+  if (r.status < 200 || r.status >= 300) throw new Error(`sb_delete_${r.status}:${r.body.slice(0, 200)}`);
+  return JSON.parse(r.body || '[]');
+}
+// Best-effort removal of storage objects (so deleting a building doesn't orphan
+// its photos/floorplans). Non-fatal — a storage failure never blocks the DB delete.
+async function deleteStorageObjects(bucket, paths) {
+  const base = process.env.SUPABASE_URL;
+  if (!base || !bucket || bucket === 'external' || !Array.isArray(paths) || !paths.length) return;
+  try {
+    const body = JSON.stringify({ prefixes: paths });
+    await httpsRequest(`${base.replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}`, { method: 'DELETE', headers: { ...sbHeaders(), 'Content-Length': Buffer.byteLength(body) } }, body);
+  } catch (e) { console.error('[storage delete]', e.message); }
+}
 async function isAdmin(userId) {
   if (!userId) return false;
   try { const rows = await sbGet(`admin_users?user_id=eq.${userId}&select=user_id`); return Array.isArray(rows) && rows.length > 0; }
@@ -1109,6 +1126,36 @@ function handleAdmin(req, res, urlPath) {
         console.log(`[audit] admin ${user.email} ${hidden ? 'hid' : 'unhid'} ${n} building(s)`);
         return sendJson(res, 200, { ok: true, updated: n, hidden });
       }
+      if (urlPath === '/api/admin/delete-buildings') {
+        // HARD delete (irreversible). FK ON DELETE CASCADE removes the buildings'
+        // units, listing_media rows and reveal grants; unit cascade removes
+        // saved_properties; grants.unit_id is SET NULL — so no orphaned rows.
+        // The server only ever deletes the EXPLICIT ids sent (no blanket wildcard).
+        const ids = Array.isArray(body.buildingIds) ? [...new Set(body.buildingIds.filter(Boolean).map(String))] : [];
+        if (!ids.length) return sendJson(res, 400, { ok: false, error: 'no_ids' });
+        if (ids.length > 1000) return sendJson(res, 400, { ok: false, error: 'too_many' });
+        // Defense-in-depth: deleting more than one building requires the typed token.
+        if (ids.length > 1 && body.confirm !== 'DELETE') return sendJson(res, 400, { ok: false, error: 'confirm_required' });
+        const idList = ids.map(encodeURIComponent).join(',');
+        // Remove storage files first (best-effort) so they don't orphan after the
+        // listing_media rows cascade away.
+        try {
+          const mediaRows = await sbGet(`listing_media?building_id=in.(${idList})&select=bucket,path`).catch(() => []);
+          const byBucket = {};
+          mediaRows.forEach((m) => { if (m.bucket && m.path && m.bucket !== 'external') (byBucket[m.bucket] = byBucket[m.bucket] || []).push(m.path); });
+          for (const bk of Object.keys(byBucket)) await deleteStorageObjects(bk, byBucket[bk]);
+        } catch (e) { console.error('[delete-buildings] storage cleanup:', e.message); }
+        let deleted = 0;
+        try {
+          const rows = await sbDelete('buildings', `id=in.(${idList})`);
+          deleted = Array.isArray(rows) ? rows.length : 0;
+        } catch (e) {
+          console.error('[delete-buildings]', e.message);
+          return sendJson(res, 502, { ok: false, error: 'delete_failed', detail: String(e.message || '').slice(0, 200) });
+        }
+        console.log(`[audit] admin ${user.email} HARD-DELETED ${deleted} building(s): ${ids.join(',')}`);
+        return sendJson(res, 200, { ok: true, deleted });
+      }
       if (urlPath === '/api/admin/reject-listing') {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
@@ -1480,6 +1527,11 @@ function handlePublicListings(req, res) {
       const mediaByB = {}; media.forEach((m) => { (mediaByB[m.building_id] = mediaByB[m.building_id] || []).push(m); });
       const out = [];
       for (const b of buildings) {
+        // Admin-hidden buildings are excluded from ALL public responses (list, map,
+        // clusters, visible-area list, building detail, counts) for every viewer —
+        // server-side, NULL-safe. Admins recover/unhide them in the admin console
+        // (/api/admin/buildings) which intentionally still returns hidden rows.
+        if (b.admin_hidden) continue;
         const granted = admin || grantedIds.has(b.id);   // admins see full identity everywhere
         const shaped = shapeListingServer(b, unitsByB[b.id] || [], mediaByB, granted);
         if (granted) {
