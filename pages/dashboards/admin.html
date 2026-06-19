@@ -319,20 +319,34 @@ async function loadMembership() {
   const j = await adminFetch('/api/admin/membership-requests', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   if (!j.requests || !j.requests.length) { panel.innerHTML = emptyBox('No membership requests yet.'); return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Email</th><th>Requested tier</th><th>Status</th><th></th></tr></thead><tbody>${j.requests.map(r => {
-    const tier = (r.payload && r.payload.requestedTier) || '';
-    const actions = (r.status === 'pending' || r.status === 'new')
-      ? `<button class="btn btn-navy btn-sm" onclick="approveMembership('${r.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectMembership('${r.id}',this)">Reject</button>`
+  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Email</th><th>Requested tier</th><th>Market</th><th>Status</th><th></th></tr></thead><tbody>${j.requests.map(r => {
+    const p = r.payload || {};
+    const tier = p.requestedTier || '';
+    const market = (tier === 'starter') ? (p.assignedMarket || '—') : 'all';
+    const terminal = (r.status === 'approved' || r.status === 'rejected');
+    const open = !terminal;
+    const actions = open
+      ? `<button class="btn btn-navy btn-sm" onclick="approveMembership('${r.id}',this)">Approve</button> `
+        + (r.status !== 'contacted' ? `<button class="btn btn-ghost btn-sm" onclick="setMembershipStatus('${r.id}','contacted',this)">Mark contacted</button> ` : '')
+        + (r.status !== 'paid' ? `<button class="btn btn-ghost btn-sm" onclick="setMembershipStatus('${r.id}','paid',this)">Mark paid</button> ` : '')
+        + `<button class="btn btn-ghost btn-sm" onclick="rejectMembership('${r.id}',this)">Reject</button>`
       : '';
-    return `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.name || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td>${esc(tier)}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status)}</span></td><td>${actions}</td></tr>`;
+    const badge = r.status === 'approved' ? 'badge-available' : (r.status === 'paid' ? 'badge-available' : 'badge-gated');
+    return `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.name || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td>${esc(tier)}</td><td>${esc(market)}</td><td><span class="badge ${badge}">${esc(r.status)}</span></td><td>${actions}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 async function approveMembership(id, btn) {
-  if (!confirm('Approve this membership request and activate the tier for the company?')) return;
+  if (!confirm('Approve this membership request and activate the tier for the company?\n\nThis takes effect immediately (no payment is processed here).')) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/approve-membership', 'POST', { requestId: id });
   setBtnBusy(btn, false);
-  if (j.ok) { showToast('Membership approved'); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+  if (j.ok) { showToast('Membership approved — tier activated'); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+async function setMembershipStatus(id, status, btn) {
+  setBtnBusy(btn, true, '…');
+  const j = await adminFetch('/api/admin/set-membership-status', 'POST', { requestId: id, status });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Marked ' + status); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function rejectMembership(id, btn) {
   const reason = prompt('Reason (emailed to requester):'); if (reason === null) return;
@@ -342,14 +356,62 @@ async function rejectMembership(id, btn) {
   if (j.ok) { showToast('Membership request rejected'); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 
-// ── Users ────────────────────────────────────────────────────────────────────
+// ── Users + subscription management ──────────────────────────────────────────
+let ADMIN_USERS = [];
+const TIER_BADGE = { free: 'badge-gated', starter: 'badge-available', membership: 'badge-available', enterprise: 'badge-available' };
+function marketName(id) { const m = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).find(x => x.id === id); return m ? m.name : (id || '—'); }
 async function loadUsers() {
   const panel = document.getElementById('panel-users');
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/users', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
-  if (!j.users || !j.users.length) { panel.innerHTML = emptyBox('No users yet.'); return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Requests</th><th>Saves</th><th>Joined</th></tr></thead><tbody>${j.users.map(u => `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td>${Number(u.requests || 0)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
+  ADMIN_USERS = j.users || [];
+  if (!ADMIN_USERS.length) { panel.innerHTML = emptyBox('No users yet.'); return; }
+  panel.innerHTML = `<div style="margin-bottom:14px;"><input id="user-search" class="fi" placeholder="Search by name, email or company…" oninput="renderUsers()" style="max-width:360px;"></div><div id="users-table"></div>`;
+  renderUsers();
+}
+function renderUsers() {
+  const q = (document.getElementById('user-search')?.value || '').trim().toLowerCase();
+  const rows = ADMIN_USERS.filter(u => !q || [u.full_name, u.email, u.company].some(v => String(v || '').toLowerCase().includes(q)));
+  const box = document.getElementById('users-table');
+  if (!rows.length) { box.innerHTML = emptyBox('No matching users.'); return; }
+  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Tier</th><th>Market</th><th>Saves</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
+    const tier = u.tier || 'free';
+    const mkt = tier === 'starter' ? marketName(u.assigned_market) : (tier === 'free' ? '—' : 'all');
+    const manage = u.company_id ? `<button class="btn btn-ghost btn-sm" onclick="manageTier('${u.id}')">Manage tier</button>` : '';
+    return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${esc(mkt)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td><td>${manage}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function manageTier(userId) {
+  const u = ADMIN_USERS.find(x => x.id === userId); if (!u) return;
+  const marketOpts = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).map(m => `<option value="${m.id}"${u.assigned_market === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
+  const tier = u.tier || 'free';
+  const ov = document.createElement('div'); ov.className = 'mbg'; ov.style.cssText = 'display:flex;'; ov.id = 'tier-modal';
+  ov.innerHTML = `<div class="modal" style="max-width:460px;">
+    <div class="mh"><div><div class="label mb12">Subscription</div><h3>Manage tier — ${esc(u.full_name || u.email || '')}</h3></div><div class="mx" onclick="document.getElementById('tier-modal').remove()">X</div></div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">${esc(u.company || '')} · current: <strong>${esc(tier)}</strong>. Changing tier here activates it immediately (no payment is processed).</p>
+      <div class="fg"><label class="fl">Tier</label><select class="fi fi-sel" id="tm-tier" onchange="document.getElementById('tm-market-row').style.display=this.value==='starter'?'block':'none'">
+        ${['free', 'starter', 'membership', 'enterprise'].map(t => `<option value="${t}"${t === tier ? ' selected' : ''}>${t}</option>`).join('')}
+      </select></div>
+      <div class="fg" id="tm-market-row" style="display:${tier === 'starter' ? 'block' : 'none'};"><label class="fl">Assigned market (Starter only)</label><select class="fi fi-sel" id="tm-market"><option value="">Select market…</option>${marketOpts}</select></div>
+      <div class="fg"><label class="fl">Internal notes (optional)</label><textarea class="fi" id="tm-notes" rows="3" placeholder="e.g. paid via invoice #123 on 2026-06-19">${esc(u.notes || '')}</textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-ghost" onclick="document.getElementById('tier-modal').remove()">Cancel</button><button class="btn btn-navy" id="tm-save" onclick="saveTier('${u.company_id}')">Save tier</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+async function saveTier(companyId) {
+  const tier = document.getElementById('tm-tier').value;
+  const assignedMarket = document.getElementById('tm-market') ? document.getElementById('tm-market').value : '';
+  const notes = document.getElementById('tm-notes').value;
+  if (tier === 'starter' && !assignedMarket) { showToast('Choose a market for Starter', 'info'); return; }
+  const btn = document.getElementById('tm-save'); setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/set-tier', 'POST', { companyId, tier, assignedMarket, notes });
+  setBtnBusy(btn, false);
+  if (j.ok) { document.getElementById('tier-modal')?.remove(); showToast('Tier updated — ' + tier); loadUsers(); }
+  else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 
 // ── Companies ────────────────────────────────────────────────────────────────

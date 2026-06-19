@@ -991,15 +991,30 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, latest });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/users') {
-        const [profiles, companies, saved, reqs, authUsers] = await Promise.all([
+        const [profiles, companies, saved, reqs, authUsers, subs] = await Promise.all([
           sbGet('profiles?select=*&order=created_at.desc'), sbGet('companies?select=id,name'),
           sbGet('saved_properties?select=user_id'), sbGet('client_requests?select=email'), listAuthUsers(),
+          sbGet('company_subscriptions?select=company_id,tier,status,assigned_market,notes&order=created_at.desc'),
         ]);
         const emailById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; });
         const compById = {}; companies.forEach((c) => { compById[c.id] = c.name; });
+        // Newest ACTIVE subscription per company = the effective tier (matches
+        // getUserEntitlements). Falls back to newest row if none active yet.
+        const activeSub = {}, anySub = {};
+        subs.forEach((s) => {
+          if (!anySub[s.company_id]) anySub[s.company_id] = s;
+          if (s.status === 'active' && !activeSub[s.company_id]) activeSub[s.company_id] = s;
+        });
         const savedByUser = groupCount(saved, (s) => s.user_id);
         const reqByEmail = groupCount(reqs, (r) => (r.email || '').toLowerCase());
-        const users = profiles.map((p) => { const email = emailById[p.id] || ''; return { id: p.id, email, full_name: p.full_name, company: compById[p.company_id] || '', user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at, requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 }; });
+        const users = profiles.map((p) => {
+          const email = emailById[p.id] || '';
+          const sub = activeSub[p.company_id] || anySub[p.company_id] || null;
+          return { id: p.id, email, full_name: p.full_name, company: compById[p.company_id] || '', company_id: p.company_id || null,
+            user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at,
+            tier: sub ? sub.tier : 'free', tier_status: sub ? sub.status : null, assigned_market: (sub && sub.assigned_market) || null, notes: (sub && sub.notes) || '',
+            requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 };
+        });
         return sendJson(res, 200, { ok: true, users });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/companies') {
@@ -1216,10 +1231,13 @@ function handleAdmin(req, res, urlPath) {
         const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         const p = row.payload || {}, tier = p.requestedTier || body.tier;
-        if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', requested_by: user.id }]);
+        // Starter is single-market — carry the requested (or admin-overridden) market
+        // onto the activated subscription so entitlements scope correctly.
+        const assignedMarket = tier === 'starter' ? (normalizeMarket(body.assignedMarket || p.assignedMarket) || null) : null;
+        if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         await sendMembershipDecisionEmail(row.email, row.name, tier, true);
-        await writeAudit(req, user, 'membership.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { companyId: p.companyId || null, tier } });
+        await writeAudit(req, user, 'membership.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { companyId: p.companyId || null, tier, assignedMarket } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-membership') {
@@ -1230,12 +1248,23 @@ function handleAdmin(req, res, urlPath) {
         await writeAudit(req, user, 'membership.reject', { targetType: 'request', targetIds: [String(body.requestId)] });
         return sendJson(res, 200, { ok: true });
       }
+      if (urlPath === '/api/admin/set-membership-status') {
+        // Non-terminal workflow markers (contacted / paid / back-to-pending). Does NOT
+        // change the subscription — approve-membership is the only thing that activates
+        // a tier. Used while an admin chases payment outside the platform.
+        const ALLOWED = ['pending', 'contacted', 'paid'];
+        if (!body.requestId || !ALLOWED.includes(body.status)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: body.status, reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        await writeAudit(req, user, 'membership.status', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { status: body.status } });
+        return sendJson(res, 200, { ok: true });
+      }
       if (urlPath === '/api/admin/set-tier') {
         if (!body.companyId || !MEMBERSHIP_TIERS.includes(body.tier)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
         // Starter is scoped to one market; admin can set which. Cleared for other tiers.
         const assignedMarket = body.tier === 'starter' ? (normalizeMarket(body.assignedMarket) || null) : null;
-        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
-        await writeAudit(req, user, 'membership.set_tier', { targetType: 'company', targetIds: [String(body.companyId)], metadata: { tier: body.tier, assignedMarket } });
+        const notes = String(body.notes || '').slice(0, 1000) || null;
+        await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, notes, requested_by: user.id }]);
+        await writeAudit(req, user, 'membership.set_tier', { targetType: 'company', targetIds: [String(body.companyId)], metadata: { tier: body.tier, assignedMarket, hasNotes: !!notes } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/unpublish-building') {
