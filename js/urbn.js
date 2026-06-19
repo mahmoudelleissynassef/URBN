@@ -603,6 +603,17 @@ function tc(key, fallback) {
   var v = (window.URBN_I18N && URBN_I18N.t) ? URBN_I18N.t(key) : null;
   return v != null ? v : fallback;
 }
+// Localize a rent-basis unit string (e.g. "sqm / month") token-by-token so the
+// per-card rent line reads natively. Unknown tokens pass through unchanged.
+function tcUnit(unit) {
+  return String(unit == null ? '' : unit).replace(/sqm|sq\s?m|m²|month|year|mo|yr/gi, function (m) {
+    var l = m.toLowerCase();
+    if (l === 'sqm' || l === 'sq m' || l === 'm²') return tc('unit.sqm', 'sqm');
+    if (l === 'month' || l === 'mo') return tc('unit.month', m);
+    if (l === 'year' || l === 'yr') return tc('unit.year', m);
+    return m;
+  });
+}
 // Listings are anonymized by default — `b.name` is the verified label unless the
 // viewer has an approved reveal grant (server-enforced; see /api/listings).
 function renderCard(b, base='', opts={}) {
@@ -647,7 +658,7 @@ function renderCard(b, base='', opts={}) {
         <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">${tc('card.upgrade','Upgrade')} →</a>` : `
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-sub">${b.anonymized ? tc('card.indicative','indicative /')+' ' : tc('card.per','per')+' '}${b.rentUnit}</div>
+          <div class="lc-rent-sub">${b.anonymized ? tc('card.indicative','indicative /')+' ' : tc('card.per','per')+' '}${tcUnit(b.rentUnit)}</div>
         </div>
         <span class="btn btn-ghost btn-sm">${b.anonymized ? tc('card.detailsOnRequest','Details on request')+' →' : tc('card.view','View')+' →'}</span>`}
       </div>
@@ -696,7 +707,7 @@ function renderListingCard(L, base='') {
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${L.rentCurrency||''} ${fmt(L.rent)}${usd}</div>
-          <div class="lc-rent-sub">${L.anonymized?tc('card.indicative','indicative /')+' ':tc('card.per','per')+' '}${L.rentUnit||'sqm'}</div>
+          <div class="lc-rent-sub">${L.anonymized?tc('card.indicative','indicative /')+' ':tc('card.per','per')+' '}${tcUnit(L.rentUnit||'sqm')}</div>
         </div>
         <span class="btn btn-ghost btn-sm">${L.anonymized?tc('card.detailsOnRequest','Details on request')+' →':tc('card.view','View')+' →'}</span>
       </div>`}
@@ -765,7 +776,7 @@ function renderAnonCard(b, base='') {
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-sub">${tc('card.indicative','indicative /')} ${b.rentUnit}</div>
+          <div class="lc-rent-sub">${tc('card.indicative','indicative /')} ${tcUnit(b.rentUnit)}</div>
         </div>
         <span class="btn btn-outline btn-sm">${tc('cta.requestAccess','Request Access')} →</span>
       </div>
