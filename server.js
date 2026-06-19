@@ -1565,6 +1565,10 @@ function handlePublicListings(req, res) {
             id: u.id, buildingId: b.id, name: b.name, label: b.label, revealed: b.revealed, anonymized: b.anonymized,
             market: b.market, submarket: b.submarket, grade: b.grade, image: b.image, imageClear: b.imageClear,
             hasPublicImage: b.hasPublicImage, unitLocked: !!b.unitLocked,
+            // floorplate is building-level PUBLIC data (shown on anonymized cards), so it
+            // is included even for locked listings — lets the floor-plate filter work for
+            // everyone without exposing protected unit sizes.
+            floorplate: b.floorplate,
           };
           if (b.unitLocked) { listings.push(base); return; }
           listings.push(Object.assign(base, {
