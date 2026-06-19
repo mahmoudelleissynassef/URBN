@@ -590,6 +590,12 @@ function parkingDatum(b) {
 function cardImg(b) { return imgFor(b); }
 
 // ── Listing card ─────────────────────────────────────────
+// HTML-escape for user-controlled values rendered into markup (defends against
+// stored XSS: a malicious building name/submarket from an uploader must never
+// execute when an admin or reveal-granted viewer sees it).
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 // Listings are anonymized by default — `b.name` is the verified label unless the
 // viewer has an approved reveal grant (server-enforced; see /api/listings).
 function renderCard(b, base='', opts={}) {
@@ -597,18 +603,19 @@ function renderCard(b, base='', opts={}) {
   const mkt=URBN_DATA.markets.find(m=>m.id===b.market);
   const fallback = getImg(b.market);
   const blur = b.imageClear === false;   // free/anonymous viewers see a blurred tease
+  const nm = escHtml(b.name);
   return `
-  <div class="lc" onclick="window.location.href='/building?id=${b.id}'">
+  <div class="lc" onclick="window.location.href='/building?id=${encodeURIComponent(b.id)}'">
     <div class="lc-img">
-      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${b.name} — verified office space in ${mkt?.name||b.market||''}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
+      <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${nm} — verified office space in ${escHtml(mkt?.name||b.market||'')}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
       ${opts.noSave?'':`<button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${b.id}',this);">${heartSVG(saved)}</button>`}
     </div>
     <div class="lc-body">
-      <div class="lc-name">${b.name}</div>
-      <div class="lc-district">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-name">${nm}</div>
+      <div class="lc-district">${escHtml(b.submarket)} · ${escHtml(mkt?.country||'')}</div>
       <div class="lc-data">
         <div class="lc-datum">
           <div class="lc-d-val">${b.unitLocked?'•••':fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm'}</div>
@@ -649,18 +656,19 @@ function renderListingCard(L, base='') {
   const blur = L.imageClear === false;
   const img = L.image || fallback;
   const usd = (L.rentUsd && L.rentCurrency && L.rentCurrency !== 'USD') ? ` <span style="color:var(--text-2);font-weight:400;">(~USD ${fmt(L.rentUsd)})</span>` : '';
+  const nm = escHtml(L.name);
   return `
-  <div class="lc" onclick="window.location.href='/building?id=${L.buildingId}&u=${L.id}'">
+  <div class="lc" onclick="window.location.href='/building?id=${encodeURIComponent(L.buildingId)}&u=${encodeURIComponent(L.id)}'">
     <div class="lc-img">
-      <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${L.name} — verified office space in ${mkt?.name||L.market||''}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
+      <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${nm} — verified office space in ${escHtml(mkt?.name||L.market||'')}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(L.grade)}
       ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
       <button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${L.id}',this);">${heartSVG(saved)}</button>
     </div>
     <div class="lc-body">
-      <div class="lc-name">${L.name}</div>
-      <div class="lc-district">${L.submarket||''} · ${mkt?.country||''}${(!L.unitLocked && L.offeringType)?' · '+L.offeringType:''}</div>
+      <div class="lc-name">${nm}</div>
+      <div class="lc-district">${escHtml(L.submarket||'')} · ${escHtml(mkt?.country||'')}${(!L.unitLocked && L.offeringType)?' · '+escHtml(L.offeringType):''}</div>
       ${L.unitLocked ? `
       <div class="lc-data" style="filter:blur(3px);opacity:.55;pointer-events:none;user-select:none;">
         <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Size</div></div>
@@ -722,13 +730,13 @@ function renderAnonCard(b, base='') {
   return `
   <div class="lc" onclick="openModal('access-modal')">
     <div class="lc-img">
-      <img src="${imgFor(b)}" alt="${b.anonName}" loading="lazy">
+      <img src="${imgFor(b)}" alt="${escHtml(b.anonName)}" loading="lazy">
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
     </div>
     <div class="lc-body">
-      <div class="lc-name">${b.anonName}</div>
-      <div class="lc-district">${b.submarket} · ${mkt?.country||''}</div>
+      <div class="lc-name">${escHtml(b.anonName)}</div>
+      <div class="lc-district">${escHtml(b.submarket)} · ${escHtml(mkt?.country||'')}</div>
       <div class="lc-data">
         <div class="lc-datum">
           <div class="lc-d-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div>

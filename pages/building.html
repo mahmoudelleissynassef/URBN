@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bpage').innerHTML = `
   <!-- Image banner (no overlaid text — labels sit below for legibility) -->
   <div style="height:300px;position:relative;overflow:hidden;background:var(--bg-off);">
-    <img src="${img.replace('600','1200')}" onerror="this.onerror=null;this.src='${getImg(B.market)}'" alt="${B.name}" style="width:100%;height:100%;object-fit:cover;${B.imageClear===false?'filter:blur(22px);transform:scale(1.06);':''}">
+    <img src="${img.replace('600','1200')}" onerror="this.onerror=null;this.src='${getImg(B.market)}'" alt="${escHtml(B.name)}" style="width:100%;height:100%;object-fit:cover;${B.imageClear===false?'filter:blur(22px);transform:scale(1.06);':''}">
   </div>
   <!-- Title block: under the image, on the page background -->
   <div class="w" style="padding:24px 40px 0;">
@@ -119,10 +119,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div style="display:flex;align-items:center;gap:8px;margin:14px 0 10px;flex-wrap:wrap;">
       ${gradeB(B.grade)}
       <span class="badge badge-verified">Verified Listing</span>
-      ${(B.sustainability||[]).slice(0,1).map(s=>`<span class="badge badge-available">${s}</span>`).join('')}
+      ${(B.sustainability||[]).slice(0,1).map(s=>`<span class="badge badge-available">${escHtml(s)}</span>`).join('')}
     </div>
-    <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;color:var(--text);">${B.name}</h1>
-    <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${B.submarket} · ${mkt?.name||''} · ${mkt?.country||''}</div>
+    <h1 style="font-size:clamp(28px,4vw,46px);margin-bottom:6px;color:var(--text);">${escHtml(B.name)}</h1>
+    <div style="font-family:var(--fm);font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;">${escHtml(B.submarket)} · ${escHtml(mkt?.name||'')} · ${escHtml(mkt?.country||'')}</div>
   </div>
 
   <!-- Body -->
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="card card-lift" id="unit-${u.id}" style="padding:20px;cursor:pointer;" onclick="setUnit('${u.id}');openModal('sv-modal')">
               <div class="flex-b mb12">
                 <div>
-                  <div style="font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;color:var(--text-2);text-transform:uppercase;">Floor ${u.floor} · ${u.type}</div>
+                  <div style="font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;color:var(--text-2);text-transform:uppercase;">Floor ${escHtml(u.floor)} · ${escHtml(u.type)}</div>
                   <div style="font-family:var(--fd);font-size:18px;color:var(--text);margin-top:2px;">${u.size} sqm</div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <!-- Amenities -->
         <div class="mb32">
           <h3 style="font-size:22px;margin-bottom:16px;">Building Amenities</h3>
-          ${(B.amenities||[]).length ? `<div class="chips">${(B.amenities||[]).map(a=>`<span class="chip on" style="cursor:default;">${a}</span>`).join('')}</div>` : `<p style="font-size:13px;color:var(--text-2);">Amenities not specified.</p>`}
+          ${(B.amenities||[]).length ? `<div class="chips">${(B.amenities||[]).map(a=>`<span class="chip on" style="cursor:default;">${escHtml(a)}</span>`).join('')}</div>` : `<p style="font-size:13px;color:var(--text-2);">Amenities not specified.</p>`}
         </div>
 
         <!-- Parking -->
@@ -186,14 +186,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="stat-strip">
             ${[['Spaces', B.parking.spaces!=null?fmt(B.parking.spaces):'—'],['Arrangement', B.parking.arrangement||'—'],['Included in rent', B.parking.includedInRent||'—'],['Monthly membership', B.parking.monthlyMembership?'Yes':'No']].map(([l,v])=>`<div class="stat-c"><div class="stat-n" style="font-size:20px;text-transform:capitalize;">${v}</div><div class="stat-l">${l}</div></div>`).join('')}
           </div>
-          ${(B.parking.notes)?`<p style="font-size:12.5px;color:var(--text-2);margin-top:12px;">${B.parking.notes}</p>`:''}
+          ${(B.parking.notes)?`<p style="font-size:12.5px;color:var(--text-2);margin-top:12px;">${escHtml(B.parking.notes)}</p>`:''}
         </div>` : ''}
 
         <!-- Sustainability -->
         ${(B.sustainability||[]).length?`
         <div>
           <h3 style="font-size:22px;margin-bottom:16px;">Certifications</h3>
-          <div class="chips">${(B.sustainability||[]).map(s=>`<span class="badge badge-available" style="font-size:10px;">${s}</span>`).join('')}</div>
+          <div class="chips">${(B.sustainability||[]).map(s=>`<span class="badge badge-available" style="font-size:10px;">${escHtml(s)}</span>`).join('')}</div>
         </div>`:''} 
       </div>
 
@@ -229,8 +229,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         ${(!B.anonymized && (B.address || B.mapsUrl)) ? `<div class="card" style="padding:16px;margin-bottom:14px;">
           <div style="font-family:var(--fm);font-size:9px;letter-spacing:.14em;color:var(--navy);margin-bottom:8px;text-transform:uppercase;">Location</div>
-          ${B.address ? `<p style="font-size:12.5px;color:var(--text);line-height:1.6;">${B.address}</p>` : ''}
-          ${B.mapsUrl ? `<a href="${B.mapsUrl}" target="_blank" rel="noopener" class="text-navy" style="font-size:12px;text-decoration:underline;">Open map pin →</a>` : ''}
+          ${B.address ? `<p style="font-size:12.5px;color:var(--text);line-height:1.6;">${escHtml(B.address)}</p>` : ''}
+          ${(B.mapsUrl && /^https?:\/\//i.test(B.mapsUrl)) ? `<a href="${escHtml(B.mapsUrl)}" target="_blank" rel="noopener noreferrer" class="text-navy" style="font-size:12px;text-decoration:underline;">Open map pin →</a>` : ''}
         </div>` : ''}
 
         <div style="background:var(--bg-white);border:1px solid var(--border-2);padding:16px;">
@@ -255,7 +255,7 @@ function setUnit(uid) {
   if (currentUnit && B) {
     document.getElementById('sv-unit-display').innerHTML = `
     <div style="background:var(--bg-white);border:1px solid var(--border);padding:12px 14px;">
-      <div style="font-size:11px;color:var(--text-2);margin-bottom:3px;">${B.name}</div>
+      <div style="font-size:11px;color:var(--text-2);margin-bottom:3px;">${escHtml(B.name)}</div>
       <div style="font-size:13px;color:var(--text);">Floor ${currentUnit.floor} · ${currentUnit.size} sqm · ${currentUnit.desks} desks</div>
     </div>`;
   }
