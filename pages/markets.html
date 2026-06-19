@@ -42,19 +42,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   try { await URBNAuth.init(); } catch (e) {}
   const signedIn = !!(typeof URBNAuth !== 'undefined' && URBNAuth.user);
   const mg = document.getElementById('markets-grid');
+  // i18n helpers (i18n.js/i18n-pages.js load before this script). Region/country
+  // translate via dictionary maps; city names stay proper nouns.
+  const T = (k, f) => { const v = (window.URBN_I18N && URBN_I18N.t) ? URBN_I18N.t(k) : null; return v != null ? v : f; };
+  const tRegion = r => T('region.' + r, r);
+  const tCountry = c => T('country.' + c, c);
+  const comingSoon = T('home.comingSoon', 'Coming soon');
 
   // Logged-out: teaser only — market names + coverage, no supply counts or rent
   // bands. (Protected building/unit data is already gated server-side in /api/listings.)
   if (!signedIn) {
     mg.innerHTML = URBN_DATA.markets.map(m => `<div class="city-card">
-      <div class="city-card-region">${m.region}</div>
-      <div class="city-card-name">${m.name}, ${m.country}</div>
+      <div class="city-card-region">${tRegion(m.region)}</div>
+      <div class="city-card-name">${m.name}, ${tCountry(m.country)}</div>
       <div class="city-card-divider"></div>
-      <div style="font-size:12px;color:var(--text-2);line-height:1.6;">Verified supply, building counts and indicative rent bands are available to members.</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:1.6;">${T('mkt.teaserMember', 'Verified supply, building counts and indicative rent bands are available to members.')}</div>
     </div>`).join('');
     const cta = document.createElement('div');
     cta.setAttribute('style', 'grid-column:1/-1;margin-top:8px;background:var(--bg-white);border:1px solid var(--border);border-radius:var(--r);padding:24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;');
-    cta.innerHTML = `<div><div style="font-family:var(--fd);font-size:20px;margin-bottom:4px;">See verified market detail</div><p style="font-size:13px;color:var(--text-2);max-width:520px;">Sign in to view supply counts and indicative rent bands, or request a managed Market Scan for live pricing.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="/sign-up" class="btn btn-navy">Create account</a><a href="/market-scan" class="btn btn-outline">Request Market Scan</a></div>`;
+    cta.innerHTML = `<div><div style="font-family:var(--fd);font-size:20px;margin-bottom:4px;">${T('mkt.teaserTitle', 'See verified market detail')}</div><p style="font-size:13px;color:var(--text-2);max-width:520px;">${T('mkt.teaserBody', 'Sign in to view supply counts and indicative rent bands, or request a managed Market Scan for live pricing.')}</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;"><a href="/sign-up" class="btn btn-navy">${T('home.createAccount', 'Create account')}</a><a href="/market-scan" class="btn btn-outline">${T('home.ctaScan', 'Request Market Scan')}</a></div>`;
     mg.appendChild(cta);
     return;
   }
@@ -66,15 +72,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subs = m.submarkets.slice(0, 2).join(', ');
     const href = live ? `/offices?m=${m.id}` : '/market-scan';
     mg.innerHTML += `<a href="${href}" class="city-card"${live ? '' : ' style="opacity:.85;"'}>
-      <div class="city-card-region">${m.region}</div>
-      <div class="city-card-name">${m.name}, ${m.country} ${live ? '' : '<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">Coming soon</span>'}</div>
+      <div class="city-card-region">${tRegion(m.region)}</div>
+      <div class="city-card-name">${m.name}, ${tCountry(m.country)} ${live ? '' : `<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">${comingSoon}</span>`}</div>
       <div class="city-card-divider"></div>
       <div class="city-card-data">
-        <div class="city-card-row"><span class="city-card-label">Buildings</span><span class="city-card-value">${live ? bc + ' listed' : 'Coming soon'}</span></div>
-        <div class="city-card-row"><span class="city-card-label">Districts</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:120px;">${subs}</span></div>
-        ${s ? `<div class="city-card-row"><span class="city-card-label">Avg Rent</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>` : ''}
+        <div class="city-card-row"><span class="city-card-label">${T('footer.buildings', 'Buildings')}</span><span class="city-card-value">${live ? bc + ' ' + T('home.listed', 'listed') : comingSoon}</span></div>
+        <div class="city-card-row"><span class="city-card-label">${T('footer.districts', 'Districts')}</span><span class="city-card-value" style="font-size:11px;text-align:right;max-width:120px;">${subs}</span></div>
+        ${s ? `<div class="city-card-row"><span class="city-card-label">${T('home.avgRent', 'Avg Rent')}</span><span class="city-card-value">${s.avgRent.toLocaleString()} ${m.currency}</span></div>` : ''}
       </div>
-      <div class="city-card-footer">${live ? 'Browse offices &rarr;' : 'Request a Market Scan &rarr;'}</div>
+      <div class="city-card-footer">${live ? T('cta.browseOffices', 'Browse offices') + ' &rarr;' : T('home.ctaScan', 'Request a Market Scan') + ' &rarr;'}</div>
     </a>`;
   });
 });

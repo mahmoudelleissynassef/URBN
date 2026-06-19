@@ -596,6 +596,13 @@ function cardImg(b) { return imgFor(b); }
 function escHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Card-label translator: resolve a dictionary key, falling back to English copy.
+// Used by the shared card renderers so listing cards localize like the rest of
+// the UI (i18n.js loads before urbn.js; this runs at render time).
+function tc(key, fallback) {
+  var v = (window.URBN_I18N && URBN_I18N.t) ? URBN_I18N.t(key) : null;
+  return v != null ? v : fallback;
+}
 // Listings are anonymized by default — `b.name` is the verified label unless the
 // viewer has an approved reveal grant (server-enforced; see /api/listings).
 function renderCard(b, base='', opts={}) {
@@ -610,8 +617,8 @@ function renderCard(b, base='', opts={}) {
       <img src="${cardImg(b)}" onerror="this.onerror=null;this.src='${fallback}'" alt="${nm} — verified office space in ${escHtml(mkt?.name||b.market||'')}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(b.grade)}
-      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
-      ${opts.noSave?'':`<button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${escHtml(b.id)}',this);">${heartSVG(saved)}</button>`}
+      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 ${tc('card.upgradeToView','Upgrade to view')}</span></div>`:''}
+      ${opts.noSave?'':`<button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?tc('card.removeAria','Remove from shortlist'):tc('card.saveAria','Save to shortlist')}" title="${tc('card.saveAria','Save to shortlist')}" onclick="event.stopPropagation();toggleSave('${escHtml(b.id)}',this);">${heartSVG(saved)}</button>`}
     </div>
     <div class="lc-body">
       <div class="lc-name">${nm}</div>
@@ -619,30 +626,30 @@ function renderCard(b, base='', opts={}) {
       <div class="lc-data">
         <div class="lc-datum">
           <div class="lc-d-val">${b.unitLocked?'•••':fmt(b.availMin)+'–'+fmt(b.availMax)+' sqm'}</div>
-          <div class="lc-d-key">Available Area</div>
+          <div class="lc-d-key">${tc('card.availableArea','Available Area')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${fmt(b.floorplate)} sqm</div>
-          <div class="lc-d-key">Floor Plate</div>
+          <div class="lc-d-key">${tc('card.floorPlate','Floor Plate')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${b.floors}</div>
-          <div class="lc-d-key">Floors</div>
+          <div class="lc-d-key">${tc('card.floors','Floors')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${parkingDatum(b)}</div>
-          <div class="lc-d-key">Parking</div>
+          <div class="lc-d-key">${tc('card.parking','Parking')}</div>
         </div>
       </div>
       <div class="lc-foot">
         ${b.unitLocked ? `
-        <div style="font-size:11.5px;color:var(--text-2);">🔒 Pricing hidden on your plan</div>
-        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">Upgrade →</a>` : `
+        <div style="font-size:11.5px;color:var(--text-2);">🔒 ${tc('card.pricingHidden','Pricing hidden on your plan')}</div>
+        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">${tc('card.upgrade','Upgrade')} →</a>` : `
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-sub">${b.anonymized ? 'indicative / ' : 'per '}${b.rentUnit}</div>
+          <div class="lc-rent-sub">${b.anonymized ? tc('card.indicative','indicative /')+' ' : tc('card.per','per')+' '}${b.rentUnit}</div>
         </div>
-        <span class="btn btn-ghost btn-sm">${b.anonymized ? 'Details on request →' : 'View →'}</span>`}
+        <span class="btn btn-ghost btn-sm">${b.anonymized ? tc('card.detailsOnRequest','Details on request')+' →' : tc('card.view','View')+' →'}</span>`}
       </div>
     </div>
   </div>`;
@@ -663,35 +670,35 @@ function renderListingCard(L, base='') {
       <img src="${img}" onerror="this.onerror=null;this.src='${fallback}'" alt="${nm} — verified office space in ${escHtml(mkt?.name||L.market||'')}" loading="lazy"${blur?' style="filter:blur(18px);transform:scale(1.08);"':''}>
       <div class="lc-img-grad"></div>
       ${gradeTag(L.grade)}
-      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 Upgrade to view</span></div>`:''}
-      <button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?'Remove from shortlist':'Save to shortlist'}" title="Save to shortlist" onclick="event.stopPropagation();toggleSave('${escHtml(L.id)}',this);">${heartSVG(saved)}</button>
+      ${blur?`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;"><span style="background:rgba(28,46,74,.85);color:#fff;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:4px;">🔒 ${tc('card.upgradeToView','Upgrade to view')}</span></div>`:''}
+      <button type="button" class="lc-save ${saved?'on':''}" aria-pressed="${saved}" aria-label="${saved?tc('card.removeAria','Remove from shortlist'):tc('card.saveAria','Save to shortlist')}" title="${tc('card.saveAria','Save to shortlist')}" onclick="event.stopPropagation();toggleSave('${escHtml(L.id)}',this);">${heartSVG(saved)}</button>
     </div>
     <div class="lc-body">
       <div class="lc-name">${nm}</div>
       <div class="lc-district">${escHtml(L.submarket||'')} · ${escHtml(mkt?.country||'')}${(!L.unitLocked && L.offeringType)?' · '+escHtml(L.offeringType):''}</div>
       ${L.unitLocked ? `
       <div class="lc-data" style="filter:blur(3px);opacity:.55;pointer-events:none;user-select:none;">
-        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Size</div></div>
-        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Floor</div></div>
-        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Desks</div></div>
-        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">Rent</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">${tc('card.size','Size')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">${tc('card.floor','Floor')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">${tc('card.desks','Desks')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">•••</div><div class="lc-d-key">${tc('card.rent','Rent')}</div></div>
       </div>
       <div class="lc-foot">
-        <div style="font-size:11.5px;color:var(--text-2);line-height:1.4;">🔒 Unit size, floor &amp; pricing<br>hidden on your plan</div>
-        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">Upgrade to view →</a>
+        <div style="font-size:11.5px;color:var(--text-2);line-height:1.4;">🔒 ${tc('card.unitHidden','Unit size, floor & pricing hidden on your plan')}</div>
+        <a href="/pricing" class="btn btn-navy btn-sm" onclick="event.stopPropagation();">${tc('card.upgradeToViewCta','Upgrade to view')} →</a>
       </div>` : `
       <div class="lc-data">
-        <div class="lc-datum"><div class="lc-d-val">${fmt(L.size)} sqm</div><div class="lc-d-key">Size</div></div>
-        <div class="lc-datum"><div class="lc-d-val">${L.floor||'—'}</div><div class="lc-d-key">Floor</div></div>
-        <div class="lc-datum"><div class="lc-d-val">${L.desks?fmt(L.desks):'—'}</div><div class="lc-d-key">Desks</div></div>
-        <div class="lc-datum"><div class="lc-d-val">${parkingDatum(L)}</div><div class="lc-d-key">Parking</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${fmt(L.size)} sqm</div><div class="lc-d-key">${tc('card.size','Size')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${L.floor||'—'}</div><div class="lc-d-key">${tc('card.floor','Floor')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${L.desks?fmt(L.desks):'—'}</div><div class="lc-d-key">${tc('card.desks','Desks')}</div></div>
+        <div class="lc-datum"><div class="lc-d-val">${parkingDatum(L)}</div><div class="lc-d-key">${tc('card.parking','Parking')}</div></div>
       </div>
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${L.rentCurrency||''} ${fmt(L.rent)}${usd}</div>
-          <div class="lc-rent-sub">${L.anonymized?'indicative / ':'per '}${L.rentUnit||'sqm'}</div>
+          <div class="lc-rent-sub">${L.anonymized?tc('card.indicative','indicative /')+' ':tc('card.per','per')+' '}${L.rentUnit||'sqm'}</div>
         </div>
-        <span class="btn btn-ghost btn-sm">${L.anonymized?'Details on request →':'View →'}</span>
+        <span class="btn btn-ghost btn-sm">${L.anonymized?tc('card.detailsOnRequest','Details on request')+' →':tc('card.view','View')+' →'}</span>
       </div>`}
     </div>
   </div>`;
@@ -740,27 +747,27 @@ function renderAnonCard(b, base='') {
       <div class="lc-data">
         <div class="lc-datum">
           <div class="lc-d-val">${fmt(b.availMin)}–${fmt(b.availMax)} sqm</div>
-          <div class="lc-d-key">Available Range</div>
+          <div class="lc-d-key">${tc('card.availableRange','Available Range')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${fmt(b.floorplate)} sqm</div>
-          <div class="lc-d-key">Floor Plate</div>
+          <div class="lc-d-key">${tc('card.floorPlate','Floor Plate')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${b.floors}</div>
-          <div class="lc-d-key">Floors</div>
+          <div class="lc-d-key">${tc('card.floors','Floors')}</div>
         </div>
         <div class="lc-datum">
           <div class="lc-d-val">${b.parking}:1</div>
-          <div class="lc-d-key">Parking</div>
+          <div class="lc-d-key">${tc('card.parking','Parking')}</div>
         </div>
       </div>
       <div class="lc-foot">
         <div>
           <div class="lc-rent">${b.rentCurrency} ${fmt(b.rentMin)}–${fmt(b.rentMax)}</div>
-          <div class="lc-rent-sub">indicative / ${b.rentUnit}</div>
+          <div class="lc-rent-sub">${tc('card.indicative','indicative /')} ${b.rentUnit}</div>
         </div>
-        <span class="btn btn-outline btn-sm">Request Access →</span>
+        <span class="btn btn-outline btn-sm">${tc('cta.requestAccess','Request Access')} →</span>
       </div>
     </div>
   </div>`;
