@@ -23,6 +23,7 @@
     <div class="mb32"><span class="overline label-navy">Admin</span><h1 style="font-size:40px;">URBN Admin Console</h1></div>
     <div id="admin-gate"><div style="padding:60px 0;text-align:center;color:var(--text-2);font-family:var(--fm);font-size:11px;letter-spacing:.12em;">CHECKING ACCESS…</div></div>
     <div id="admin-app" class="hidden">
+      <div id="email-config-warn"></div>
       <div class="admin-layout">
         <aside class="admin-side">
           <button class="admin-navbtn on" id="tab-overview" onclick="showTab('overview')">Overview</button>
@@ -88,7 +89,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('admin-app').classList.remove('hidden');
   const tab = new URLSearchParams(location.search).get('tab');
   showTab(TABS.includes(tab) ? tab : 'overview');
+  checkEmailConfig();
 });
+
+// Admin-only: warn if notification email routing has no valid recipient/credentials.
+async function checkEmailConfig() {
+  const el = document.getElementById('email-config-warn');
+  if (!el) return;
+  const j = await adminFetch('/api/admin/email-config', 'GET');
+  if (!j || !j.ok) return;
+  const msgs = [];
+  if (!j.canSendEmail) msgs.push('Email sending is not configured (RESEND_API_KEY or LEAD_FROM missing).');
+  if (!j.adminRecipientConfigured) msgs.push('Admin notification email is not configured. Upload/privacy notifications may not be delivered.');
+  else if (!j.privacyRecipientConfigured) msgs.push('Privacy contact email is not configured (data requests fall back to the admin recipient).');
+  if (!msgs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="background:#FEF3F2;border:1px solid #FECDCA;border-radius:8px;padding:14px 18px;margin-bottom:20px;">
+    <div style="font-weight:700;color:#B42318;font-size:13px;margin-bottom:4px;">⚠ Email routing needs attention</div>
+    <ul style="margin:0 0 0 18px;color:#912018;font-size:12.5px;line-height:1.7;">${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
+  </div>`;
+}
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 function fmtDate(s) { try { return new Date(s).toISOString().split('T')[0]; } catch (e) { return s || ''; } }
