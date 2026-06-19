@@ -351,25 +351,25 @@ function injectAccessModal(base='') {
     <div class="modal">
       <div class="mh"><div><div class="label mb12" data-i18n="cta.getStarted">Get started</div><h3 data-i18n="access.heading">Create your URBN account</h3></div><div class="mx">X</div></div>
       <div class="mb" id="access-body">
-        <p style="font-size:14px;color:var(--text-2);margin-bottom:18px;line-height:1.7;">A free account unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and protected introductions</strong> across all ${markets} markets. A verified corporate email is required.</p>
+        <p style="font-size:14px;color:var(--text-2);margin-bottom:18px;line-height:1.7;" data-i18n-html="access.introBody">A free account unlocks <strong style="color:var(--text);">full floor-by-floor availability, asking rents, and protected introductions</strong> across every market we cover. A verified corporate email is required.</p>
         <a href="/sign-up" class="btn btn-navy w-full" style="margin-bottom:8px;" data-i18n="access.createFree">Create a free account →</a>
         <a href="/sign-in" class="btn btn-ghost w-full" style="margin-bottom:18px;" data-i18n="access.haveAccount">I already have an account</a>
         <div style="border-top:1px solid var(--border);padding-top:16px;">
-        <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;"><strong style="color:var(--text);">Prefer URBN to set you up?</strong> Leave your details and our team will reach out to arrange access.</p>
-        <div class="fg"><label class="fl">Corporate Email</label><input type="email" class="fi" id="reg-email" placeholder="you@company.com"><div class="fld-err" id="err-reg-email">Enter a valid corporate email address.</div></div>
-        <div class="fg"><label class="fl">Company Name</label><input type="text" class="fi" id="reg-company" placeholder="Your company"><div class="fld-err" id="err-reg-company">Enter your company name.</div></div>
-        <div class="fg"><label class="fl">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="">Select market...</option></select><div class="fld-err" id="err-reg-market">Please select a target market.</div></div>
-        <div class="fg"><label class="fl">Required Area (sqm)</label><input type="number" class="fi" id="reg-area" placeholder="e.g. 800"></div>
+        <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;" data-i18n-html="access.preferBody"><strong style="color:var(--text);">Prefer URBN to set you up?</strong> Leave your details and our team will reach out to arrange access.</p>
+        <div class="fg"><label class="fl" data-i18n="form.corpEmail">Corporate Email</label><input type="email" class="fi" id="reg-email" placeholder="you@company.com" data-i18n-placeholder="auth.emailPh"><div class="fld-err" id="err-reg-email" data-i18n="access.errEmail">Enter a valid corporate email address.</div></div>
+        <div class="fg"><label class="fl" data-i18n="form.company">Company Name</label><input type="text" class="fi" id="reg-company" placeholder="Your company" data-i18n-placeholder="auth.companyPh"><div class="fld-err" id="err-reg-company" data-i18n="access.errCompany">Enter your company name.</div></div>
+        <div class="fg"><label class="fl" data-i18n="access.targetMarket">Target Market</label><select class="fi fi-sel" id="reg-market"><option value="" data-i18n="access.selectMarket">Select market...</option></select><div class="fld-err" id="err-reg-market" data-i18n="access.errMarket">Please select a target market.</div></div>
+        <div class="fg"><label class="fl" data-i18n="ms.area">Required Area (sqm)</label><input type="number" class="fi" id="reg-area" placeholder="e.g. 800" data-i18n-placeholder="access.areaPh"></div>
         <div class="hp-field" aria-hidden="true"><label>Do not fill this in<input type="text" id="reg-website" tabindex="-1" autocomplete="off"></label></div>
         <label class="consent">
           <input type="checkbox" id="reg-consent" required aria-required="true">
-          <span>I agree to URBN processing these details to assess and grant access, per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
+          <span data-i18n-html="access.consent">I agree to URBN processing these details to assess and grant access, per the <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</span>
         </label>
-        <div class="fld-err" id="err-reg-consent" style="margin-top:8px;">Please confirm you accept the Privacy Policy and Terms of Use.</div>
+        <div class="fld-err" id="err-reg-consent" style="margin-top:8px;" data-i18n="access.errConsent">Please confirm you accept the Privacy Policy and Terms of Use.</div>
         </div>
       </div>
       <div class="mf" id="access-actions">
-        <button class="btn btn-ghost" onclick="closeModal('access-modal')">Cancel</button>
+        <button class="btn btn-ghost" onclick="closeModal('access-modal')" data-i18n="access.cancel">Cancel</button>
         <button class="btn btn-outline" onclick="submitAccess(this)" data-i18n="access.callback">Request a callback</button>
       </div>
     </div>`;
@@ -378,6 +378,7 @@ function injectAccessModal(base='') {
   if (sel && typeof URBN_DATA !== 'undefined') {
     URBN_DATA.markets.forEach(m => sel.innerHTML += `<option value="${m.id}">${m.name}, ${m.country}</option>`);
   }
+  if (window.URBN_I18N) URBN_I18N.apply(modal);
 }
 
 async function submitAccess(btn) {
