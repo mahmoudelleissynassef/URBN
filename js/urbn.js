@@ -247,15 +247,15 @@ function injectFooter(base='') {
         <div class="fc">
           <div class="fc-title" data-i18n="footer.officesByCity">Offices by city</div>
           <ul>
-            <li><a href="/offices-in-cairo">Offices in Cairo</a></li>
-            <li><a href="/offices-in-nairobi">Offices in Nairobi</a></li>
-            <li><a href="/offices-in-casablanca">Offices in Casablanca</a></li>
-            <li><a href="/offices-in-accra">Offices in Accra</a></li>
-            <li><a href="/offices-in-addis-ababa">Offices in Addis Ababa</a></li>
-            <li><a href="/offices-in-johannesburg">Offices in Johannesburg</a></li>
-            <li><a href="/offices-in-cape-town">Offices in Cape Town</a></li>
-            <li><a href="/offices-in-kigali">Offices in Kigali</a></li>
-            <li><a href="/offices-in-abidjan">Offices in Abidjan</a></li>
+            <li><a href="/offices-in-cairo"><span data-i18n="home.officesIn">Offices in</span> Cairo</a></li>
+            <li><a href="/offices-in-nairobi"><span data-i18n="home.officesIn">Offices in</span> Nairobi</a></li>
+            <li><a href="/offices-in-casablanca"><span data-i18n="home.officesIn">Offices in</span> Casablanca</a></li>
+            <li><a href="/offices-in-accra"><span data-i18n="home.officesIn">Offices in</span> Accra</a></li>
+            <li><a href="/offices-in-addis-ababa"><span data-i18n="home.officesIn">Offices in</span> Addis Ababa</a></li>
+            <li><a href="/offices-in-johannesburg"><span data-i18n="home.officesIn">Offices in</span> Johannesburg</a></li>
+            <li><a href="/offices-in-cape-town"><span data-i18n="home.officesIn">Offices in</span> Cape Town</a></li>
+            <li><a href="/offices-in-kigali"><span data-i18n="home.officesIn">Offices in</span> Kigali</a></li>
+            <li><a href="/offices-in-abidjan"><span data-i18n="home.officesIn">Offices in</span> Abidjan</a></li>
           </ul>
         </div>
         <div class="fc">
