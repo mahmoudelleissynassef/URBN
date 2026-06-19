@@ -469,6 +469,10 @@ textarea.fi { resize: vertical; min-height: 100px; }
   padding: 28px 20px; overflow-y: auto;
   position: sticky; top: var(--nav-h); height: calc(100vh - var(--nav-h));
 }
+/* Offices page shell: sticky filter sidebar + independently-scrolling results.
+   On mobile this stacks (see the 768px media query) so results aren't squeezed. */
+.off-shell { display: flex; min-height: calc(100vh - var(--nav-h)); }
+.off-main { flex: 1; min-width: 0; padding: 32px 36px; overflow-y: auto; }
 .fg-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
 .fg-section:last-child { border-bottom: none; margin-bottom: 0; }
 .fg-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); margin-bottom: 14px; }
@@ -718,6 +722,13 @@ textarea.fi { resize: vertical; min-height: 100px; }
   .da { display: none; }
   .dm { padding: 24px; }
   .fp { position: static; height: auto; width: 100%; }
+  /* Offices: stack filters above results so the results column isn't squeezed to
+     zero width, and use natural page scroll instead of a nested scroller (fixes
+     "only filters show" + runaway blank scroll on mobile). */
+  .off-shell { flex-direction: column; min-height: 0; }
+  .off-main { overflow: visible; height: auto; padding: 20px 16px; }
+  #results { grid-template-columns: 1fr !important; }
+  #map { height: 60vh !important; min-height: 320px !important; }
   .hero-actions { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 480px) {

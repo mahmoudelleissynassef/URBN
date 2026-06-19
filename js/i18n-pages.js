@@ -262,6 +262,7 @@
   "off.fDistrict": {"en":"District","fr":"Quartier","de":"Bezirk","es":"Distrito","it":"Distretto","nl":"Wijk"},
   "off.districtHint": {"en":"Select market first","fr":"Sélectionnez d'abord un marché","de":"Zuerst Markt auswählen","es":"Seleccione primero un mercado","it":"Seleziona prima un mercato","nl":"Selecteer eerst een markt"},
   "off.fArea": {"en":"Available Area (sqm)","fr":"Surface disponible (m²)","de":"Verfügbare Fläche (m²)","es":"Superficie disponible (m²)","it":"Superficie disponibile (m²)","nl":"Beschikbare oppervlakte (m²)"},
+  "off.fFloorplate": {"en":"Floor Plate (sqm)","fr":"Plateau (m²)","de":"Geschossfläche (m²)","es":"Planta (m²)","it":"Piano tipo (m²)","nl":"Vloerplaat (m²)"},
   "off.fDesks": {"en":"Desk Capacity","fr":"Capacité en postes","de":"Arbeitsplatzkapazität","es":"Capacidad de puestos","it":"Capacità di postazioni","nl":"Werkplekcapaciteit"},
   "off.fMR": {"en":"Min Meeting Rooms","fr":"Salles de réunion min.","de":"Min. Besprechungsräume","es":"Salas de reuniones mín.","it":"Sale riunioni minime","nl":"Min. vergaderruimten"},
   "off.fCert": {"en":"Certification","fr":"Certification","de":"Zertifizierung","es":"Certificación","it":"Certificazione","nl":"Certificering"},
