@@ -141,8 +141,8 @@
   </div>
 </section>
 
-<!-- DISTRICTS (signed-in only) -->
-<section class="section" data-auth="in" style="background:var(--bg-white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+<!-- DISTRICTS (signed-in only) — hidden by default so signed-out visitors never see gated rent bands, even before async auth resolves; updateAuthNav() reveals it for signed-in users -->
+<section class="section" data-auth="in" style="display:none;background:var(--bg-white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
   <div class="w">
     <div class="section-head-row">
       <div><div class="section-rule"></div><h2>Prime Office Districts</h2><p style="color:var(--text-2);margin-top:8px;font-size:15px;">Key office locations with indicative rent bands.</p></div>
