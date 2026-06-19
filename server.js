@@ -278,7 +278,13 @@ function emailRow(label, value, isHtml) {
 function emailSection(title, rowsHtml) {
   return `<tr><td style="padding:18px 24px 2px;"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#243A5E;border-bottom:1px solid #E6E8EB;padding-bottom:6px;margin-bottom:8px;">${escapeHtml(title)}</div><table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${rowsHtml}</table></td></tr>`;
 }
-function emailShell(headerTitle, badge, inner) {
+// internal=true → admin/internal notifications only (adds a "do not forward" footer).
+// Default (external) is used for all user-facing confirmations, which must NEVER
+// carry the internal footer. ASCII-only footer text to avoid any encoding issues.
+function emailShell(headerTitle, badge, inner, internal = false) {
+  const footer = internal
+    ? 'URBN internal notification - do not forward externally.'
+    : 'This is an automated message from URBN Offices.';
   return `<div style="background:#F7F8F9;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;">
     <table cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;width:100%;background:#ffffff;border:1px solid #E6E8EB;border-radius:6px;overflow:hidden;">
       <tr><td style="background:#243A5E;padding:20px 24px;">
@@ -286,7 +292,7 @@ function emailShell(headerTitle, badge, inner) {
         ${badge ? `<div style="margin-top:8px;"><span style="display:inline-block;background:#C2A36B;color:#1C2E4A;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:3px;">${escapeHtml(badge)}</span></div>` : ''}
       </td></tr>
       ${inner}
-      <tr><td style="padding:14px 24px;background:#F7F8F9;color:#9CA3AF;font-size:11px;border-top:1px solid #E6E8EB;">URBN internal notification · do not forward externally.</td></tr>
+      <tr><td style="padding:14px 24px;background:#F7F8F9;color:#9CA3AF;font-size:11px;border-top:1px solid #E6E8EB;">${footer}</td></tr>
     </table>
   </div>`;
 }
@@ -337,7 +343,7 @@ function buildListingEmail(data, payload, requestId, createdAt) {
       emailRow('Supabase Request ID', requestId) + emailRow('Source Page', data.sourcePage) + emailRow('Submitted', ts)) +
     rawPayloadRow(payload);
 
-  const html = emailShell('New List Your Building Request', 'Pending Review', inner);
+  const html = emailShell('New List Your Building Request', 'Pending Review', inner, true);
   const line = (k, v) => `${k}: ${(v == null || v === '') ? '—' : v}`;
   const text = [
     'NEW LIST YOUR BUILDING REQUEST — PENDING REVIEW', '',
@@ -354,11 +360,16 @@ function buildListingEmail(data, payload, requestId, createdAt) {
   return { subject, html, text };
 }
 
-function buildGenericEmail(label, fields, payload) {
-  const entries = Object.entries(fields).filter(([, v]) => v);
-  const inner = emailSection(label + ' Details', entries.map(([k, v]) => emailRow(k, v)).join('')) + rawPayloadRow(payload);
-  const html = emailShell('New ' + label + ' Request', null, inner);
-  const text = `NEW ${label.toUpperCase()} REQUEST\n\n` + entries.map(([k, v]) => `${k}: ${v}`).join('\n');
+// opts.title overrides the header (use when label already ends in a noun like
+// "Request" to avoid "... Request Request"); opts.heading overrides the section
+// label; opts.badge sets the header badge. Always an internal/admin email.
+function buildGenericEmail(label, fields, payload, opts = {}) {
+  const title = opts.title || ('New ' + label + ' Request');
+  const heading = opts.heading || (label + ' Details');
+  const entries = Object.entries(fields).filter(([, v]) => v != null && v !== '');
+  const inner = emailSection(heading, entries.map(([k, v]) => emailRow(k, v)).join('')) + (payload ? rawPayloadRow(payload) : '');
+  const html = emailShell(title, opts.badge || null, inner, true);
+  const text = `${title.toUpperCase()}\n\n` + entries.map(([k, v]) => `${k}: ${v}`).join('\n');
   return { html, text };
 }
 
@@ -368,7 +379,7 @@ function buildMembershipAdminEmail(data, payload) {
     emailRow('Current Tier', data.currentTier) + emailRow('Requested Tier', data.requestedTier)) + rawPayloadRow(payload);
   return {
     subject: `Membership request: ${data.requestedTier || '?'} — ${data.company || data.email || ''}`,
-    html: emailShell('New Membership Request', 'Membership Requested', inner),
+    html: emailShell('New Membership Request', 'Membership Requested', inner, true),
     text: `NEW MEMBERSHIP REQUEST\n\nName: ${data.name || '—'}\nEmail: ${data.email || '—'}\nCompany: ${data.company || '—'}\nCurrent Tier: ${data.currentTier || '—'}\nRequested Tier: ${data.requestedTier || '—'}`,
   };
 }
@@ -387,6 +398,12 @@ function userDetailRows(type, data) {
   if (type === 'membership' || type === 'membership-change') {
     return emailRow('Current Tier', data.currentTier) + emailRow('Requested Tier', data.requestedTier);
   }
+  if (type === 'privacy-request') {
+    const kind = (PRIVACY_REQUEST_KINDS && PRIVACY_REQUEST_KINDS[data.requestKind]) || data.requestKind || '';
+    return emailRow('Request type', kind) + emailRow('Name', data.name) + emailRow('Email', data.email) +
+      (data.company ? emailRow('Company', data.company) : '') +
+      (data.message ? emailRow('Message', data.message) : '');
+  }
   return emailRow('Company', data.company) + emailRow('Market', mkt) + emailRow('Required Area (sqm)', data.area);
 }
 
@@ -403,15 +420,22 @@ function buildUserConfirmation(type, data, name, requestId, createdAt) {
   };
   const m = map[type] || map['access'];
   const hi = name || (data && data.name) || 'there';
+  // ASCII-safe body copy (HTML uses &#39; for the apostrophe; plain text uses ').
+  const bodyHtml = type === 'privacy-request'
+    ? 'Thanks, we&#39;ve received your data / privacy request. Our team will review it and follow up if needed.'
+    : `You&#39;ve recently submitted ${escapeHtml(m.thing)} through URBN Offices. Below are the details of your request. Our team will review it and follow up shortly.`;
+  const bodyText = type === 'privacy-request'
+    ? "Thanks, we've received your data / privacy request. Our team will review it and follow up if needed."
+    : `You've recently submitted ${m.thing} through URBN Offices. Our team will review it and follow up shortly.`;
   const intro = `<tr><td style="padding:20px 24px 4px;">
     <p style="font-size:14px;color:#111418;line-height:1.7;margin:0 0 12px;">Hi ${escapeHtml(hi)},</p>
-    <p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">You&#39;ve recently submitted ${escapeHtml(m.thing)} through URBN Offices. Below are the details of your request. Our team will review it and follow up shortly.</p>
+    <p style="font-size:14px;color:#6B7280;line-height:1.7;margin:0;">${bodyHtml}</p>
   </td></tr>`;
   const inner = intro + emailSection('Your Request', userDetailRows(type, data)) +
     emailSection('Reference', emailRow('Reference', requestId) + emailRow('Submitted', createdAt || new Date().toISOString()));
   const html = emailShell(m.title, m.badge, inner);
-  const text = `Hi ${hi},\n\nYou've recently submitted ${m.thing} through URBN Offices. Our team will review it and follow up shortly.\n\nReference: ${requestId || '—'}\nSubmitted: ${createdAt || new Date().toISOString()}\n\n— URBN Offices`;
-  return { subject: `URBN Offices — ${m.title}`, html, text };
+  const text = `Hi ${hi},\n\n${bodyText}\n\nReference: ${requestId || '-'}\nSubmitted: ${createdAt || new Date().toISOString()}\n\n- URBN Offices`;
+  return { subject: `URBN Offices - ${m.title}`, html, text };
 }
 
 function handleLeadRequest(req, res) {
@@ -542,9 +566,12 @@ function handleLeadRequest(req, res) {
         adminFrom = requestsFrom;
       } else if (type === 'privacy-request') {
         const kind = PRIVACY_REQUEST_KINDS[s(data.requestKind)] || s(data.requestKind);
-        const fields = { 'Request type': kind, Name: name, Email: email, Company: company, Phone: phone, Message: message };
-        const g = buildGenericEmail(label, fields, payload);
-        adminMail = { subject: `Data / Privacy request (${kind}) — ${name || email}`, html: g.html, text: g.text };
+        const fields = {
+          'Request type': kind, Name: name, Email: email, Company: company, Message: message,
+          'Reference ID': requestId, 'Submitted': createdAt,
+        };
+        const g = buildGenericEmail(label, fields, payload, { title: 'New Data / Privacy Request', heading: 'Data / Privacy Request', badge: 'Privacy' });
+        adminMail = { subject: `Data / Privacy request (${kind}) - ${name || email}`, html: g.html, text: g.text };
         adminFrom = requestsFrom;
         // Route data-subject requests through the privacy chain (PRIVACY_CONTACT_EMAIL
         // → admin chain). undefined only if nothing is configured anywhere.
@@ -1268,7 +1295,7 @@ function handleBatch(req, res) {
           rejected.slice(0, 20).map((e) => emailRow('Row ' + (e.i + 1), e.errs.join(', '))).join('')) : '';
         await sendResendEmail({
           subject: `${user.email} uploaded ${accepted.length} listing${accepted.length === 1 ? '' : 's'} (bulk) — pending review`,
-          html: emailShell('New Batch Upload', 'Pending Review', sum + errSec),
+          html: emailShell('New Batch Upload', 'Pending Review', sum + errSec, true),
           text: `BATCH UPLOAD — PENDING REVIEW\nFile: ${data.filename}\nUploaded by: ${user.email}\nProcessed: ${rows.length} · Accepted: ${accepted.length} · Rejected: ${rejected.length}`,
           from: process.env.LISTINGS_FROM || process.env.LEAD_FROM, replyTo: user.email,
         });
@@ -1588,7 +1615,7 @@ async function sendListingRequestEmails(type, info, payload, requestId, createdA
   try {
     await sendResendEmail({
       subject: `${label}: ${info.buildingName || ''} — ${info.company || info.email || ''}`,
-      html: emailShell('New ' + label, type === 'offer' ? 'Offer' : 'Request', adminInner),
+      html: emailShell('New ' + label, type === 'offer' ? 'Offer' : 'Request', adminInner, true),
       text: `${label}\nUser: ${info.name || '—'} (${info.email || '—'})\nCompany: ${info.company || '—'}\nBuilding: ${info.buildingName || '—'}\nMarket: ${mkt}`,
       from: requestsFrom, replyTo: info.email || undefined,
     });
