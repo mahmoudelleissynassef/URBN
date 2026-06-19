@@ -438,11 +438,14 @@ async function loadBuildings() {
     </div>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-    <div class="chips" style="font-size:11px;">Admin view: ${['visible', 'hidden', 'all'].map(v => `<button class="chip ${BLD_VIS === v ? 'on' : ''}" onclick="BLD_VIS='${v}';loadBuildings()">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div>
+    <div class="chips" style="font-size:11px;">Public visibility: ${['visible', 'hidden', 'all'].map(v => `<button class="chip ${BLD_VIS === v ? 'on' : ''}" onclick="BLD_VIS='${v}';loadBuildings()">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')} <span style="color:var(--text-2);">— hidden buildings are removed from the public site; recover them under Hidden.</span></div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="hideSelected(true)">Hide selected</button>
       <button class="btn btn-ghost btn-sm" onclick="hideSelected(false)">Unhide selected</button>
       <button class="btn btn-ghost btn-sm" onclick="hideAllVisible()">Hide all shown</button>
+      <span style="width:1px;background:var(--border);align-self:stretch;"></span>
+      <button class="btn btn-sm" style="color:#B42318;border:1px solid #FECDCA;background:#FEF3F2;" onclick="deleteSelected()">Delete selected</button>
+      <button class="btn btn-sm" style="color:#fff;background:#B42318;" onclick="deleteAllShown()">Delete all shown</button>
     </div>
   </div><div id="bld-list">${loadingBox()}</div>`;
   const q = BLD_STATUS ? '/api/admin/buildings?status=' + encodeURIComponent(BLD_STATUS) : '/api/admin/buildings';
@@ -454,7 +457,7 @@ async function loadBuildings() {
   else if (BLD_VIS === 'hidden') rows = rows.filter(b => !!b.admin_hidden);
   BLD_SHOWN = rows.map(b => b.id);
   if (!rows.length) { list.innerHTML = emptyBox(`No ${BLD_VIS === 'all' ? '' : BLD_VIS + ' '}buildings for this status.`); return; }
-  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button></td></tr>`).join('')}</tbody></table></div>`;
+  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button> <button class="btn btn-ghost btn-sm" style="color:#B42318;" onclick="deleteBuildings(['${esc(b.id)}'],false)">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 async function setBuildingHidden(ids, hidden, btn) {
   if (!ids || !ids.length) { showToast('Select at least one building', 'info'); return; }
@@ -471,8 +474,35 @@ function hideSelected(hidden) {
 }
 function hideAllVisible() {
   if (!BLD_SHOWN.length) { showToast('Nothing to hide', 'info'); return; }
-  if (!confirm(`Hide all ${BLD_SHOWN.length} building(s) currently shown? This only affects the admin view — public listings are unaffected, and you can unhide from the Hidden filter.`)) return;
+  if (!confirm(`Hide all ${BLD_SHOWN.length} building(s) currently shown?\n\nHidden buildings are removed from the public site (offices list, map, building pages). This is reversible — unhide them any time from the Hidden filter.`)) return;
   setBuildingHidden(BLD_SHOWN.slice(), true);
+}
+// ── Permanent delete (irreversible; cascades to units, photos, reveal grants) ──
+async function deleteBuildings(ids, allShown) {
+  ids = (ids || []).filter(Boolean);
+  if (!ids.length) { showToast('Select buildings first', 'info'); return; }
+  let confirmToken = null;
+  if (ids.length === 1 && !allShown) {
+    if (!confirm('Permanently DELETE this building and all of its units, photos and reveal grants?\n\nThis cannot be undone.')) return;
+  } else {
+    const scope = allShown ? `all ${ids.length} building(s) currently shown` : `${ids.length} selected building(s)`;
+    const typed = prompt(`This will PERMANENTLY DELETE ${scope}, including every unit, photo and reveal grant. This cannot be undone.\n\nType DELETE to confirm:`);
+    if (typed === null) return;
+    if (typed !== 'DELETE') { showToast('Deletion cancelled — confirmation text did not match.', 'info'); return; }
+    confirmToken = 'DELETE';
+  }
+  const j = await adminFetch('/api/admin/delete-buildings', 'POST', { buildingIds: ids, confirm: confirmToken });
+  if (j.ok) { showToast(`${j.deleted} building(s) permanently deleted`); loadBuildings(); }
+  else showToast('Delete failed: ' + (j.error === 'confirm_required' ? 'confirmation required' : (j.error || 'error')), 'error');
+}
+function deleteSelected() {
+  const ids = [...document.querySelectorAll('.bld-chk:checked')].map(c => c.value);
+  if (!ids.length) { showToast('Select buildings first', 'info'); return; }
+  deleteBuildings(ids, false);
+}
+function deleteAllShown() {
+  if (!BLD_SHOWN.length) { showToast('Nothing to delete', 'info'); return; }
+  deleteBuildings(BLD_SHOWN.slice(), true);
 }
 // Download the full inventory as a round-trippable CSV (edit in Excel, then
 // re-upload via List Your Space → Bulk upload; building_id/unit_id make it update
