@@ -27,6 +27,7 @@
         <div class="fg"><label class="fl" data-i18n="form.company">Company Name</label><input type="text" class="fi" id="su-company" placeholder="Your company" data-i18n-placeholder="auth.companyPh"><div class="fld-err" id="err-su-company" data-i18n="auth.errCompany">Enter your company name.</div></div>
         <div class="fg"><label class="fl" data-i18n="auth.jobTitle">Job Title</label><input type="text" class="fi" id="su-title" placeholder="e.g. Head of Real Estate" data-i18n-placeholder="auth.jobTitlePh"><div class="fld-err" id="err-su-title" data-i18n="auth.errJobTitle">Enter your job title.</div></div>
       </div>
+      <div class="fg"><label class="fl" data-i18n="auth.phone">Phone Number</label><input type="tel" class="fi" id="su-phone" placeholder="+20 100 123 4567" data-i18n-placeholder="auth.phonePh"><div class="fld-err" id="err-su-phone" data-i18n="auth.errPhone">Enter a valid phone number.</div></div>
       <div class="fr2">
         <div class="fg"><label class="fl" data-i18n="auth.youAreA">You Are A</label>
           <select class="fi fi-sel" id="su-type">
@@ -69,7 +70,10 @@ async function submitSignUp(btn) {
   if (botFilled('su-website')) return; // honeypot
   const v = id => document.getElementById(id).value.trim();
   const name = v('su-name'), email = v('su-email'), company = v('su-company'), title = v('su-title');
+  const phone = v('su-phone');
   const userType = v('su-type'), tier = v('su-tier'), pw = document.getElementById('su-pw').value;
+  // Lenient international phone check: 7–15 digits after stripping formatting.
+  const phoneDigits = phone.replace(/\D/g, '');
   const topErr = document.getElementById('su-err'); topErr.classList.remove('show'); topErr.textContent = '';
 
   let ok = true;
@@ -78,6 +82,7 @@ async function submitSignUp(btn) {
   set('su-email', 'err-su-email', !isCorporateEmail(email));
   set('su-company', 'err-su-company', !company);
   set('su-title', 'err-su-title', !title);
+  set('su-phone', 'err-su-phone', phoneDigits.length < 7 || phoneDigits.length > 15);
   set('su-type', 'err-su-type', !userType);
   set('su-pw', 'err-su-pw', pw.length < 8);
   if (!ok) { return; }
@@ -88,7 +93,7 @@ async function submitSignUp(btn) {
 
   const { data, error } = await URBNAuth.client.auth.signUp({
     email, password: pw,
-    options: { data: { full_name: name, company, job_title: title, user_type: userType, requested_tier: tier } },
+    options: { data: { full_name: name, company, job_title: title, phone, user_type: userType, requested_tier: tier } },
   });
   setBtnBusy(btn, false);
   if (error) { topErr.textContent = error.message || 'Sign up failed.'; topErr.classList.add('show'); return; }

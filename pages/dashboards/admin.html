@@ -33,6 +33,7 @@
           <button class="admin-navbtn" id="tab-rejected" onclick="showTab('rejected')">Rejected</button>
           <button class="admin-navbtn" id="tab-reveal" onclick="showTab('reveal')">Reveal requests</button>
           <button class="admin-navbtn" id="tab-buildings" onclick="showTab('buildings')">Buildings</button>
+          <button class="admin-navbtn" id="tab-units" onclick="showTab('units')">Units</button>
           <button class="admin-navbtn" id="tab-membership" onclick="showTab('membership')">Membership</button>
           <button class="admin-navbtn" id="tab-users" onclick="showTab('users')">Users</button>
           <button class="admin-navbtn" id="tab-companies" onclick="showTab('companies')">Companies</button>
@@ -47,6 +48,7 @@
           <div id="panel-rejected" class="hidden"></div>
           <div id="panel-reveal" class="hidden"></div>
           <div id="panel-buildings" class="hidden"></div>
+          <div id="panel-units" class="hidden"></div>
           <div id="panel-membership" class="hidden"></div>
           <div id="panel-users" class="hidden"></div>
           <div id="panel-companies" class="hidden"></div>
@@ -71,8 +73,8 @@
 <script src="../../data/data.js"></script>
 <script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../../js/urbn.js"></script>
 <script>
-const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'reveal', 'buildings', 'membership', 'users', 'companies', 'capex', 'analytics'];
-const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, reveal: loadReveal, buildings: loadBuildings, membership: loadMembership, users: loadUsers, companies: loadCompanies, capex: loadCapex, analytics: loadAnalytics };
+const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'reveal', 'buildings', 'units', 'membership', 'users', 'companies', 'capex', 'analytics'];
+const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, reveal: loadReveal, buildings: loadBuildings, units: loadUnits, membership: loadMembership, users: loadUsers, companies: loadCompanies, capex: loadCapex, analytics: loadAnalytics };
 let REJECTION_REASONS = ['Duplicate listing', 'Insufficient building information', 'Missing or unclear photos', 'Floorplan required', 'Rent or service charge missing', 'Unable to verify ownership/operator authority', 'Building does not meet URBN quality criteria', 'Location or map pin unclear', 'Suspicious or inconsistent information', 'Outside current market coverage', 'Other'];
 fetch('/api/config').then(r => r.json()).then(c => { if (c && Array.isArray(c.rejectionReasons) && c.rejectionReasons.length) REJECTION_REASONS = c.rejectionReasons; }).catch(() => {});
 
@@ -418,11 +420,11 @@ function renderUsers() {
   const rows = ADMIN_USERS.filter(u => !q || [u.full_name, u.email, u.company].some(v => String(v || '').toLowerCase().includes(q)));
   const box = document.getElementById('users-table');
   if (!rows.length) { box.innerHTML = emptyBox('No matching users.'); return; }
-  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Tier</th><th>Market</th><th>Saves</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
+  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Type</th><th>Tier</th><th>Market</th><th>Saves</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
     const tier = u.tier || 'free';
     const mkt = tier === 'starter' ? marketName(u.assigned_market) : (tier === 'free' ? '—' : 'all');
     const manage = u.company_id ? `<button class="btn btn-ghost btn-sm" onclick="manageTier('${u.id}')">Manage tier</button>` : '';
-    return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${esc(mkt)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td><td>${manage}</td></tr>`;
+    return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.phone || '—')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${esc(mkt)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td><td>${manage}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 function manageTier(userId) {
@@ -533,6 +535,104 @@ async function revokeGrant(id, btn) { if (!confirm('Revoke this access grant? Th
 let BLD_STATUS = 'approved';
 let BLD_VIS = 'visible';   // admin-only visibility filter: visible | hidden | all
 let BLD_SHOWN = [];        // ids currently displayed (for "hide all")
+let BLD_ROWS = [], BLD_SORT = { key: 'name', dir: 'asc' };
+const BLD_COLS = [
+  { key: 'name', label: 'Name', type: 'text' }, { key: 'market', label: 'Market', type: 'text', fmt: v => niceMarket(v) },
+  { key: 'submarket', label: 'District', type: 'text' }, { key: 'grade', label: 'Grade', type: 'text' },
+  { key: 'unitCount', label: 'Units', type: 'num' }, { key: 'status', label: 'Status', type: 'text' },
+];
+function sortBuildings(key) {
+  if (BLD_SORT.key === key) BLD_SORT.dir = BLD_SORT.dir === 'asc' ? 'desc' : 'asc';
+  else { BLD_SORT.key = key; BLD_SORT.dir = 'asc'; }
+  renderBuildingsList();
+}
+function renderBuildingsList() {
+  const list = document.getElementById('bld-list'); if (!list) return;
+  if (!BLD_ROWS.length) { list.innerHTML = emptyBox(`No ${BLD_VIS === 'all' ? '' : BLD_VIS + ' '}buildings for this status.`); return; }
+  const col = BLD_COLS.find(c => c.key === BLD_SORT.key) || { type: 'text' };
+  const rows = BLD_ROWS.slice().sort((a, b) => cmpRows(a, b, BLD_SORT.key, col.type, BLD_SORT.dir));
+  const arrow = k => BLD_SORT.key === k ? (BLD_SORT.dir === 'asc' ? ' ↑' : ' ↓') : '';
+  const ths = `<th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th>`
+    + BLD_COLS.map(c => `<th style="cursor:pointer;white-space:nowrap;" onclick="sortBuildings('${c.key}')">${esc(c.label)}${arrow(c.key)}</th>`).join('') + `<th></th>`;
+  const trs = rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(niceMarket(b.market) || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button> <button class="btn btn-ghost btn-sm" style="color:#B42318;" onclick="deleteBuildings(['${esc(b.id)}'],false)">Delete</button></td></tr>`).join('');
+  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+// ── Units ────────────────────────────────────────────────────────────────────
+let ADMIN_UNITS = [], UNIT_SORT = { key: 'created_at', dir: 'desc' }, UNIT_Q = '';
+const UNIT_COLS = [
+  { key: 'building', label: 'Building', type: 'text' }, { key: 'market', label: 'Market', type: 'text', fmt: v => niceMarket(v) },
+  { key: 'submarket', label: 'District', type: 'text' }, { key: 'floor', label: 'Floor', type: 'text' },
+  { key: 'size', label: 'Area', type: 'num' }, { key: 'desks', label: 'Desks', type: 'num' }, { key: 'rent', label: 'Rent', type: 'num' },
+  { key: 'currency', label: 'Cur', type: 'text' }, { key: 'fitOut', label: 'Fit-out', type: 'text' }, { key: 'offeringType', label: 'Offering', type: 'text' },
+  { key: 'status', label: 'Status', type: 'text' }, { key: 'source', label: 'Source', type: 'text' }, { key: 'created_at', label: 'Created', type: 'date' },
+];
+// Generic client-side row comparator used by Units + Buildings sortable tables.
+function cmpRows(a, b, key, type, dir) {
+  let va = a[key], vb = b[key];
+  if (type === 'num') { va = Number(va) || 0; vb = Number(vb) || 0; }
+  else if (type === 'date') { va = va ? Date.parse(va) : 0; vb = vb ? Date.parse(vb) : 0; }
+  else { va = String(va == null ? '' : va).toLowerCase(); vb = String(vb == null ? '' : vb).toLowerCase(); }
+  const r = va < vb ? -1 : (va > vb ? 1 : 0);
+  return dir === 'asc' ? r : -r;
+}
+async function loadUnits() {
+  const panel = document.getElementById('panel-units');
+  panel.innerHTML = loadingBox();
+  const j = await adminFetch('/api/admin/units', 'GET');
+  if (!j.ok) { panel.innerHTML = errBox(j); return; }
+  ADMIN_UNITS = j.units || [];
+  if (!ADMIN_UNITS.length) { panel.innerHTML = emptyBox('No units yet. Import units from the Buildings tab (⬆ Import units), or wait for submissions.'); return; }
+  panel.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+    <input id="unit-search" class="fi" placeholder="Search building, market, district, status…" oninput="UNIT_Q=this.value;renderUnitsTable()" style="max-width:360px;">
+    <div style="display:flex;gap:8px;align-items:center;"><span style="font-size:12px;color:var(--text-2);" id="unit-count"></span><button class="btn btn-sm" id="unit-delsel" onclick="deleteSelectedUnits()" style="display:none;color:#fff;background:#B42318;">Delete selected</button></div></div>
+  <div id="units-table"></div>`;
+  renderUnitsTable();
+}
+function sortUnits(key) {
+  if (UNIT_SORT.key === key) UNIT_SORT.dir = UNIT_SORT.dir === 'asc' ? 'desc' : 'asc';
+  else { UNIT_SORT.key = key; UNIT_SORT.dir = 'asc'; }
+  renderUnitsTable();
+}
+function renderUnitsTable() {
+  const q = UNIT_Q.trim().toLowerCase();
+  let rows = ADMIN_UNITS.filter(u => !q || [u.building, u.market, u.submarket, u.status, u.offeringType, u.fitOut].some(v => String(v || '').toLowerCase().includes(q)));
+  const col = UNIT_COLS.find(c => c.key === UNIT_SORT.key) || { type: 'text' };
+  rows = rows.slice().sort((a, b) => cmpRows(a, b, UNIT_SORT.key, col.type, UNIT_SORT.dir));
+  const arrow = k => UNIT_SORT.key === k ? (UNIT_SORT.dir === 'asc' ? ' ↑' : ' ↓') : '';
+  const ths = `<th><input type="checkbox" onclick="toggleAllUnits(this)"></th>` + UNIT_COLS.map(c => `<th style="cursor:pointer;white-space:nowrap;" onclick="sortUnits('${c.key}')">${esc(c.label)}${arrow(c.key)}</th>`).join('') + `<th>Facilities</th><th></th>`;
+  const trs = rows.map(u => {
+    const a = u.amenities || {};
+    const am = Object.keys(a).filter(k => a[k] === true).slice(0, 3).join(', ') + (a.bathrooms_count != null ? ` · ${a.bathrooms_count} bath` : '');
+    return `<tr><td><input type="checkbox" class="unit-chk" value="${esc(u.id)}" onclick="updateUnitSel()"></td>`
+      + UNIT_COLS.map(c => {
+        let v = u[c.key]; if (c.fmt) v = c.fmt(v);
+        if (c.key === 'building') return `<td><a href="#" onclick="manageBuilding('${esc(u.building_id)}');return false;">${esc(v || '—')}</a></td>`;
+        if (c.key === 'status') return `<td><span class="badge ${u.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(v || '')}</span></td>`;
+        if (c.key === 'created_at') return `<td>${fmtDate(v)}</td>`;
+        return `<td>${esc(v == null || v === '' ? '—' : v)}</td>`;
+      }).join('')
+      + `<td style="font-size:11px;color:var(--text-2);">${esc(am.replace(/^ · /, '') || '—')}</td>`
+      + `<td><button class="btn btn-ghost btn-sm" onclick="deleteUnit('${esc(u.id)}')" style="color:#B42318;">Delete</button></td></tr>`;
+  }).join('');
+  document.getElementById('units-table').innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+  const cnt = document.getElementById('unit-count'); if (cnt) cnt.textContent = `${rows.length} unit(s)`;
+}
+function toggleAllUnits(cb) { document.querySelectorAll('.unit-chk').forEach(c => { c.checked = cb.checked; }); updateUnitSel(); }
+function updateUnitSel() { const n = document.querySelectorAll('.unit-chk:checked').length; const b = document.getElementById('unit-delsel'); if (b) b.style.display = n ? '' : 'none'; }
+async function deleteUnit(id) {
+  if (!confirm('Permanently delete this unit?\n\nThe building is NOT affected.')) return;
+  const j = await adminFetch('/api/admin/delete-units', 'POST', { unitIds: [id] });
+  if (j.ok) { showToast('Unit deleted'); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+async function deleteSelectedUnits() {
+  const ids = [...document.querySelectorAll('.unit-chk:checked')].map(c => c.value);
+  if (!ids.length) { showToast('Select units first', 'info'); return; }
+  const typed = prompt(`Permanently delete ${ids.length} unit(s)? Buildings are NOT affected.\n\nType DELETE to confirm:`);
+  if (typed === null) return; if (typed !== 'DELETE') { showToast('Cancelled — text did not match', 'info'); return; }
+  const j = await adminFetch('/api/admin/delete-units', 'POST', { unitIds: ids, confirm: 'DELETE' });
+  if (j.ok) { showToast(`${j.deleted} unit(s) deleted`); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+
 async function loadBuildings() {
   const panel = document.getElementById('panel-buildings');
   panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
@@ -562,8 +662,8 @@ async function loadBuildings() {
   if (BLD_VIS === 'visible') rows = rows.filter(b => !b.admin_hidden);
   else if (BLD_VIS === 'hidden') rows = rows.filter(b => !!b.admin_hidden);
   BLD_SHOWN = rows.map(b => b.id);
-  if (!rows.length) { list.innerHTML = emptyBox(`No ${BLD_VIS === 'all' ? '' : BLD_VIS + ' '}buildings for this status.`); return; }
-  list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th><th>Name</th><th>Market</th><th>District</th><th>Grade</th><th>Units</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(b.market || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button> <button class="btn btn-ghost btn-sm" style="color:#B42318;" onclick="deleteBuildings(['${esc(b.id)}'],false)">Delete</button></td></tr>`).join('')}</tbody></table></div>`;
+  BLD_ROWS = rows;
+  renderBuildingsList();
 }
 async function setBuildingHidden(ids, hidden, btn) {
   if (!ids || !ids.length) { showToast('Select at least one building', 'info'); return; }
@@ -627,7 +727,7 @@ async function exportListings(btn) {
 
 // ── Bulk unit import (attaches units to EXISTING buildings; never creates/edits a
 //    building). Match by building_id (from the export) or building name+market+submarket.
-const UNIT_IMPORT_COLS = ['building_id', 'building_name', 'market', 'submarket', 'unit_floor', 'size_sqm', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'offering_type', 'fit_out', 'availability_date', 'minimum_term', 'notes', 'unit_id'];
+const UNIT_IMPORT_COLS = ['building_id', 'building_name', 'market', 'submarket', 'unit_floor', 'size_sqm', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'offering_type', 'fit_out', 'availability_date', 'minimum_term', 'notes', 'unit_amenities', 'unit_id'];
 let IMPORT_ROWS = [];
 function parseCSV(text) {
   const rows = []; let row = [], cur = '', q = false;
