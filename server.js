@@ -1661,7 +1661,7 @@ function shapeListingServer(b, units, mediaByB, granted) {
     },
     hasPublicImage, image: hasPublicImage ? ('/api/listing-image?b=' + encodeURIComponent(b.id)) : null,
     address: granted ? (b.address || '') : '', mapsUrl: granted ? (b.google_maps_url || '') : '',
-    units: units.map((u) => ({ id: u.id, floor: u.unit_floor, size: Number(u.size_sqm) || 0, desks: Number(u.desks) || 0, meetingRooms: Number(u.meeting_rooms) || 0, rent: Number(u.asking_rent) || 0, type: u.offering_type, fitOut: u.fit_out || '', amenities: u.unit_amenities || null })),
+    units: units.map((u) => ({ id: u.id, floor: u.unit_floor, size: Number(u.size_sqm) || 0, desks: Number(u.desks) || 0, meetingRooms: Number(u.meeting_rooms) || 0, rent: Number(u.asking_rent) || 0, type: u.offering_type, fitOut: u.fit_out || '', amenities: u.unit_amenities || null, pricingBasis: u.pricing_basis || '', currency: u.currency || '' })),
   };
 }
 async function approvedGrantsFor(userId) {
@@ -1832,7 +1832,11 @@ function handlePublicListings(req, res) {
             address: b.address, mapsUrl: b.mapsUrl, floors: b.floors, floorplate: b.floorplate,
             yearBuilt: b.yearBuilt, buildingHeight: b.buildingHeight, gla: b.gla,
             floor: u.floor, size: u.size, desks: u.desks, meetingRooms: u.meetingRooms, offeringType: u.type, fitOut: u.fitOut, unitAmenities: u.amenities,
-            rent: u.rent, rentCurrency: b.rentCurrency, rentUnit: b.rentUnit, rentUsd: toUsd(u.rent, b.rentCurrency, fx.rates),
+            // The unit's OWN pricing basis (per sqm / per desk / per unit) drives the
+            // Stay-vs-Go math — never the building-level rentUnit, which can be wrong
+            // for a building that mixes per-sqm and per-desk units.
+            pricingBasis: u.pricingBasis || b.rentUnit, unitCurrency: u.currency || b.rentCurrency,
+            rent: u.rent, rentCurrency: u.currency || b.rentCurrency, rentUnit: b.rentUnit, rentUsd: toUsd(u.rent, u.currency || b.rentCurrency, fx.rates),
           }));
         });
       });

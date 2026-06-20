@@ -71,7 +71,11 @@
           <div class="fg"><label class="fl">Parking cost (per month, total)</label><input type="number" class="fi" id="sg-parking" value="0" oninput="recalc()"></div>
           <div class="fg" id="sg-cowork-fg"><label class="fl">Coworking rate (per desk / month) — optional</label><input type="number" class="fi" id="sg-cowork" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Only needed to include a coworking option.</p></div>
         </div>
-        <div class="fg" id="sg-stay-fg" style="display:none;"><label class="fl">Your current office cost (per month, all-in)</label><input type="number" class="fi" id="sg-stay" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;">Rent + service charge + parking you pay today — the baseline we compare your saved options against.</p></div>
+        <div id="sg-stay-fg" style="display:none;border-top:1px solid var(--border);margin-top:8px;padding-top:14px;">
+          <div class="form-sec-title" style="margin-top:0;" data-i18n="sg.curLease">Your current lease</div>
+          <p style="font-size:11px;color:var(--text-2);margin:-4px 0 10px;" data-i18n="sg.curLeaseHelp">What you pay and occupy today — you fill these in. They’re the baseline your saved units are compared against.</p>
+          <div class="fg"><label class="fl" data-i18n="sg.curCost">Current office cost (per month, all-in)</label><input type="number" class="fi" id="sg-stay" value="0" oninput="recalc()"><p style="font-size:11px;color:var(--text-2);margin-top:4px;" data-i18n="sg.curCostHelp">Rent + service charge + parking you pay today.</p></div>
+        </div>
 
         <div id="sg-manual" class="hidden" style="border-top:1px solid var(--border);margin-top:8px;padding-top:14px;">
           <div class="form-sec-title" style="margin-top:0;">Manual CAPEX assumptions</div>
@@ -452,6 +456,38 @@ function onSavedToggle() {
   SELECTED_SAVED = checked.slice(0, 3).map(c => c.value);
   renderComparison();
 }
+// ── Basis-aware unit economics ───────────────────────────────────────────────
+// A listing's monthly cost depends on HOW it's priced. Never multiply a per-desk
+// rate by an area in sqm.
+let DESKS_NEEDED = {};   // listing id -> desks the user needs (per-desk units only)
+function svgT(k, fb) { return (window.URBN_I18N && URBN_I18N.t(k)) || fb; }
+function unitBasis(b) {
+  const basis = String(b.pricingBasis || b.rentUnit || '').toLowerCase();
+  const off = String(b.offeringType || '').toLowerCase();
+  if (off.indexOf('coworking') >= 0 || basis.indexOf('desk') >= 0) return 'per_desk';
+  if (basis.indexOf('office') >= 0 || basis.indexOf('total') >= 0 || basis.indexOf('unit') >= 0) return 'per_unit_month';
+  return 'per_sqm';
+}
+function isAnnualBasis(b) { return /year|\/\s*yr|annum/.test(String(b.pricingBasis || b.rentUnit || '').toLowerCase()); }
+function basisLabel(basis) { return basis === 'per_desk' ? svgT('sg.basisDesk', 'per desk / month') : basis === 'per_unit_month' ? svgT('sg.basisUnit', 'per unit / month') : svgT('sg.basisSqm', 'per sqm / month'); }
+function desksNeededFor(b, brief) {
+  const avail = Number(b.desks) || 0;
+  if (DESKS_NEEDED[b.id] != null) { const v = DESKS_NEEDED[b.id]; return avail ? Math.max(1, Math.min(v, avail)) : Math.max(1, v); }
+  const want = brief || avail || 1;
+  return avail ? Math.max(1, Math.min(want, avail)) : Math.max(1, want);
+}
+// Monthly occupancy cost, branching on the unit's stored pricing basis.
+function unitMonthly(b, opts) {
+  const basis = unitBasis(b), rate = Number(b.rent) || 0;
+  if (basis === 'per_desk') return rate * desksNeededFor(b, opts.desks);          // desks × per-desk rate
+  if (basis === 'per_unit_month') return rate + (opts.parking || 0);              // flat whole-unit rate
+  let sqmRate = rate; if (isAnnualBasis(b)) sqmRate = sqmRate / 12;               // annual → monthly
+  const a = b.size || opts.area || 0;
+  return (sqmRate + (opts.svc || 0)) * a + (opts.parking || 0);                   // (rate + svc) × area
+}
+function setDesksNeeded(id, val) { const v = parseInt(val, 10); DESKS_NEEDED[id] = isNaN(v) ? 1 : Math.max(1, v); renderComparison(); }
+function fromTag() { return `<span class="badge badge-gated" style="font-size:8px;">${sgEsc(svgT('sg.fromListing', 'from listing'))}</span>`; }
+
 function renderComparison() {
   const wrap = document.getElementById('sg-compare'); if (!wrap) return;
   const area = n('sg-area'), desks = n('sg-desks'), term = n('sg-term'), svc = n('sg-svc'), parking = n('sg-parking');
@@ -469,13 +505,18 @@ function renderComparison() {
     const b = URBN_LISTINGS.findListing(id); if (!b) return null;   // b is a listing (unit)
     const row = COST_BY_MARKET[b.market] || null;
     const ci = costRowInputs(row, level);
-    const cur = row ? (row.currency || 'USD') : curOf(b.market);
-    const lArea = b.size || area;                                   // the listing's own size
+    const cur = b.unitCurrency || b.rentCurrency || (row ? (row.currency || 'USD') : curOf(b.market));
+    const basis = unitBasis(b);                                     // per_sqm | per_desk | per_unit_month
+    const lArea = b.size || area;
     const rent = b.rent || n('sg-rent');
-    const monthly = (rent + svc) * lArea + parking;
-    const cap = row ? computeCapex(ci, lArea, desks, cond) : null;
-    const total = cap ? (cap.upfront + monthly * term + cap.reinstatement) : null;
-    return { b, row, cur, rent, monthly, cap, total, lArea };
+    const dNeed = basis === 'per_desk' ? desksNeededFor(b, desks) : null;
+    // Basis-aware monthly cost — per-desk uses desks×rate, never rate×sqm.
+    const monthly = unitMonthly(b, { svc, parking, area, desks });
+    // Fit-out CAPEX applies to space you fit out (per-sqm / whole-unit). Desk /
+    // coworking is plug-and-play, so no upfront CAPEX is modelled.
+    const cap = (row && basis !== 'per_desk') ? computeCapex(ci, lArea, desks, cond) : null;
+    const total = cap ? (cap.upfront + monthly * term + cap.reinstatement) : (monthly * term);
+    return { b, row, cur, rent, monthly, cap, total, lArea, basis, dNeed };
   }).filter(Boolean);
   if (!cols.length) { wrap.innerHTML = ''; return; }
   // Relocate mode: prepend the user's current office as the baseline column.
@@ -486,12 +527,20 @@ function renderComparison() {
   const best = totals.length ? totals.reduce((a, b) => a.total < b.total ? a : b) : null;
   const fb = (m) => (typeof getImg === 'function') ? getImg(m) : '';
   const sizeText = (b) => b.size ? (fmt(b.size) + ' m²') : ((b.availMin || b.availMax) ? (fmt(b.availMin) + '–' + fmt(b.availMax) + ' m²') : (b.gla ? fmt(b.gla) + ' m²' : '—'));
+  const unitLabel = b => b.basis === 'per_desk' ? '/desk/mo' : (b.basis === 'per_unit_month' ? '/unit/mo' : '/m²/mo');
   const rowsDef = [
-    ['District', c => c.current ? '—' : sgEsc(c.b.submarket || marketLabel(c.b.market))],
-    ['Available area', c => c.current ? '—' : sizeText(c.b)],
-    ['Indicative rent', c => (c.current || c.rent == null) ? '—' : fmtMoney(c.cur, c.rent) + ' /m²/mo'],
-    ['Monthly cost', c => fmtMoney(c.cur, c.monthly)],
-    ['Upfront CAPEX', c => c.current ? fmtMoney(c.cur, 0) : (c.cap ? fmtMoney(c.cur, c.cap.upfront) : '—')],
+    ['District', c => c.current ? sgEsc(svgT('sg.curLease', 'Your current lease')) : sgEsc(c.b.submarket || marketLabel(c.b.market))],
+    ['Pricing basis', c => c.current ? '—' : `${sgEsc(basisLabel(c.basis))} ${fromTag()}`],
+    ['Available', c => c.current ? '—' : (c.basis === 'per_desk' ? `${fmt(Number(c.b.desks) || 0)} ${svgT('sg.desks', 'desks')}` : sizeText(c.b))],
+    ['Rate', c => (c.current || c.rent == null) ? '—' : `${fmtMoney(c.cur, c.rent)} ${unitLabel(c)} ${fromTag()}`],
+    ['Desks needed', c => c.current ? '—' : (c.basis === 'per_desk'
+        ? `<input type="number" min="1"${Number(c.b.desks) ? ' max="' + Number(c.b.desks) + '"' : ''} value="${c.dNeed}" oninput="setDesksNeeded('${sgEsc(c.b.id)}',this.value)" style="width:74px;padding:5px 8px;" class="fi"> <span style="font-size:10px;color:var(--text-2);">${Number(c.b.desks) ? svgT('sg.ofN', 'of') + ' ' + Number(c.b.desks) : ''}</span>`
+        : `<span style="color:var(--text-3);">n/a</span>`)],
+    ['Monthly cost', c => {
+      if (!c.current && c.basis === 'per_desk') return `<strong>${fmtMoney(c.cur, c.monthly)}</strong><div style="font-size:10px;color:var(--text-2);">${c.dNeed} ${svgT('sg.desks', 'desks')} × ${fmtMoney(c.cur, c.rent)} = ${fmtMoney(c.cur, c.monthly)}</div>`;
+      return fmtMoney(c.cur, c.monthly);
+    }],
+    ['Upfront CAPEX', c => c.current ? fmtMoney(c.cur, 0) : (c.cap ? fmtMoney(c.cur, c.cap.upfront) : (c.basis === 'per_desk' ? svgT('sg.plugPlay', 'none (plug-and-play)') : '—'))],
     ['Total over ' + term + ' mo', c => c.total != null ? '<strong>' + fmtMoney(c.cur, c.total) + '</strong>' : 'n/a'],
     ['Prices as of', c => (c.row && c.row.effective_date) ? fmtAsOf(c.row.effective_date) : '—'],
   ];
@@ -510,7 +559,7 @@ function renderComparison() {
   };
   wrap.innerHTML = `
     <div class="card" style="padding:0;overflow:auto;margin-bottom:18px;">
-      <div style="padding:16px 18px 0;"><div class="form-sec-title" style="margin-top:0;">${title}</div><p style="font-size:11.5px;color:var(--text-2);margin:-6px 0 8px;">Same brief (${area} m², ${desks} desks, ${term} mo, ${level} fit-out + ticked conditions) applied to each option.</p></div>
+      <div style="padding:16px 18px 0;"><div class="form-sec-title" style="margin-top:0;">${title}</div><p style="font-size:11.5px;color:var(--text-2);margin:-6px 0 8px;">${svgT('sg.compareHelp', "The first column is your current lease (your inputs on the left). Each other column is a saved unit — values tagged ‘from listing’ come straight from the listing; only ‘Desks needed’ is yours to set. Per-desk units are costed as desks × per-desk rate (no sqm math).")}</p></div>
       <table class="data-table">
         <thead><tr><th style="vertical-align:bottom;"></th>${cols.map(c => `<th style="min-width:180px;">${headCell(c)}${best && c === best ? '<div><span class="badge badge-available" style="font-size:8px;margin-top:4px;">Lowest total</span></div>' : ''}</th>`).join('')}</tr></thead>
         <tbody>${rowsDef.map(([label, fn]) => `<tr><td style="color:var(--text-2);">${label}</td>${cols.map(c => `<td>${fn(c)}</td>`).join('')}</tr>`).join('')}</tbody>
