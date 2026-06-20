@@ -1094,10 +1094,14 @@ function handleAdmin(req, res, urlPath) {
             floor: u.unit_floor || '', size: u.size_sqm != null ? Number(u.size_sqm) : null, desks: u.desks != null ? Number(u.desks) : null,
             meetingRooms: u.meeting_rooms != null ? Number(u.meeting_rooms) : null, rent: u.asking_rent != null ? Number(u.asking_rent) : null,
             currency: u.currency || '', pricingBasis: u.pricing_basis || '', fitOut: u.fit_out || '', offeringType: u.offering_type || '',
-            status: u.status || '', amenities: u.unit_amenities || null, source, created_at: u.created_at,
+            serviceCharge: u.service_charge != null ? Number(u.service_charge) : null, serviceChargeBasis: u.service_charge_basis || '',
+            availabilityDate: u.availability_date || '', minTerm: u.min_term || '', notes: u.notes || '',
+            status: u.status || '', amenities: u.unit_amenities || null, source, created_at: u.created_at, updated_at: u.updated_at,
           };
         });
-        return sendJson(res, 200, { ok: true, units: out });
+        // Buildings reference for the edit modal's reassignment dropdown.
+        const blist = buildings.map((b) => ({ id: b.id, name: b.name || '', market: b.market || '', submarket: b.submarket || '' }));
+        return sendJson(res, 200, { ok: true, units: out, buildings: blist });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/analytics') {
         const [buildings, units, reqs, subs, saved, profiles, companies, revealGrants, capexRows] = await Promise.all([
@@ -1508,12 +1512,39 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/update-unit') {
+        // Edit ONE unit. Never touches the building row (building reassignment only
+        // changes units.building_id after verifying the target exists). The
+        // units_set_updated_at trigger bumps updated_at automatically.
         if (!body.id) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        const allowed = ['unit_floor', 'size_sqm', 'offering_type', 'fit_out', 'desks', 'meeting_rooms', 'asking_rent', 'currency', 'pricing_basis', 'service_charge', 'service_charge_basis', 'availability_date', 'min_term', 'notes', 'allocated_parking_spaces', 'parking_included', 'unit_parking_price', 'status'];
-        const fields = body.fields || {}; const patch = {};
-        for (const k of allowed) if (k in fields) patch[k] = fields[k];
+        const fields = body.fields || {}, patch = {};
+        const NUM = ['size_sqm', 'desks', 'meeting_rooms', 'asking_rent', 'service_charge', 'allocated_parking_spaces', 'unit_parking_price'];
+        const TEXT = ['unit_floor', 'fit_out', 'pricing_basis', 'service_charge_basis', 'min_term', 'notes'];
+        const OFFERINGS = ['Whole building', 'Full floor', 'Partial floor', 'Private office', 'Coworking desks', 'Serviced office suite', 'Coworking / Flexible workspace'];
+        const STATUSES = ['draft', 'pending_review', 'approved', 'rejected'];
+        for (const k of NUM) if (k in fields) {
+          if (fields[k] === '' || fields[k] == null) { patch[k] = null; continue; }
+          const v = Number(fields[k]); if (isNaN(v)) return sendJson(res, 400, { ok: false, error: 'invalid_number' }); patch[k] = v;
+        }
+        for (const k of TEXT) if (k in fields) patch[k] = (fields[k] == null || fields[k] === '') ? null : String(fields[k]).slice(0, 2000);
+        if ('parking_included' in fields) patch.parking_included = !!fields.parking_included;
+        if ('offering_type' in fields) { const v = fields.offering_type; if (v && OFFERINGS.indexOf(v) < 0) return sendJson(res, 400, { ok: false, error: 'invalid_offering' }); patch.offering_type = v || null; }
+        if ('status' in fields) { if (!STATUSES.includes(fields.status)) return sendJson(res, 400, { ok: false, error: 'invalid_status' }); patch.status = fields.status; }
+        if ('currency' in fields) { const v = String(fields.currency || '').toUpperCase(); if (v && !/^[A-Z]{3}$/.test(v)) return sendJson(res, 400, { ok: false, error: 'invalid_currency' }); patch.currency = v || null; }
+        if ('availability_date' in fields) patch.availability_date = dateOrNull(fields.availability_date);
+        if ('unit_amenities' in fields) {
+          let ua = fields.unit_amenities;
+          if (typeof ua === 'string') { if (ua.trim() === '') ua = null; else { try { ua = JSON.parse(ua); } catch (e) { return sendJson(res, 400, { ok: false, error: 'invalid_amenities' }); } } }
+          if (ua != null && typeof ua !== 'object') return sendJson(res, 400, { ok: false, error: 'invalid_amenities' });
+          patch.unit_amenities = ua;
+        }
+        if ('building_id' in fields && fields.building_id) {
+          const found = await sbGet(`buildings?id=eq.${encodeURIComponent(fields.building_id)}&select=id`);
+          if (!found.length) return sendJson(res, 400, { ok: false, error: 'building_not_found' });
+          patch.building_id = String(fields.building_id);
+        }
         if (!Object.keys(patch).length) return sendJson(res, 400, { ok: false, error: 'no_fields' });
         await sbPatch('units', `id=eq.${encodeURIComponent(body.id)}`, patch);
+        await writeAudit(req, user, 'unit.update', { targetType: 'unit', targetIds: [String(body.id)], metadata: { fields: Object.keys(patch) } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/set-media-flags') {
