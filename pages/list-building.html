@@ -377,10 +377,13 @@ function selectedAmenities() { return [...document.querySelectorAll('.ll-amenity
 const LL_UNIT_FACILITIES = ['Bathrooms', 'Private pantry / kitchenette', 'Private meeting room', 'Private offices', 'Open-plan area', 'Reception area', 'Server / IT room', 'Storage room', 'Balcony / terrace', 'Furnished', 'Plug-and-play', 'Other'];
 function renderUnitFacilities() {
   const box = document.getElementById('ll-unit-facilities'); if (!box) return;
+  // Checkbox VALUE stays the English enum (backend stores it); only the visible
+  // label is localized so the stored facility set never changes with UI language.
+  const ufT = a => { const v = (window.URBN_I18N && URBN_I18N.t) ? URBN_I18N.t('uf.' + a) : null; return v != null ? v : a; };
   box.innerHTML = LL_UNIT_FACILITIES.map((a, i) => {
     const toggle = a === 'Bathrooms' ? ` onchange="document.getElementById('ll-bath-count-wrap').style.display=this.checked?'block':'none'"`
       : (a === 'Other' ? ` onchange="document.getElementById('ll-other-fac-wrap').style.display=this.checked?'block':'none'"` : '');
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-ufac" value="${llEsc(a)}" id="ll-ufac-${i}"${toggle}>${llEsc(a)}</label>`;
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" class="ll-ufac" value="${llEsc(a)}" id="ll-ufac-${i}"${toggle}>${llEsc(ufT(a))}</label>`;
   }).join('');
 }
 // Returns a plain object {feature:true, ...} plus bathrooms_count / other_note, or null.

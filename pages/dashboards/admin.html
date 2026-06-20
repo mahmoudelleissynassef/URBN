@@ -540,6 +540,7 @@ const BLD_COLS = [
   { key: 'name', label: 'Name', type: 'text' }, { key: 'market', label: 'Market', type: 'text', fmt: v => niceMarket(v) },
   { key: 'submarket', label: 'District', type: 'text' }, { key: 'grade', label: 'Grade', type: 'text' },
   { key: 'unitCount', label: 'Units', type: 'num' }, { key: 'status', label: 'Status', type: 'text' },
+  { key: 'created_at', label: 'Created', type: 'date' }, { key: 'updated_at', label: 'Updated', type: 'date' },
 ];
 function sortBuildings(key) {
   if (BLD_SORT.key === key) BLD_SORT.dir = BLD_SORT.dir === 'asc' ? 'desc' : 'asc';
@@ -554,17 +555,23 @@ function renderBuildingsList() {
   const arrow = k => BLD_SORT.key === k ? (BLD_SORT.dir === 'asc' ? ' ↑' : ' ↓') : '';
   const ths = `<th style="width:28px;"><input type="checkbox" onclick="document.querySelectorAll('.bld-chk').forEach(c=>c.checked=this.checked)"></th>`
     + BLD_COLS.map(c => `<th style="cursor:pointer;white-space:nowrap;" onclick="sortBuildings('${c.key}')">${esc(c.label)}${arrow(c.key)}</th>`).join('') + `<th></th>`;
-  const trs = rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(niceMarket(b.market) || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button> <button class="btn btn-ghost btn-sm" style="color:#B42318;" onclick="deleteBuildings(['${esc(b.id)}'],false)">Delete</button></td></tr>`).join('');
+  const trs = rows.map(b => `<tr${b.admin_hidden ? ' style="opacity:.55;"' : ''}><td><input type="checkbox" class="bld-chk" value="${esc(b.id)}"></td><td>${esc(b.name || '')}${b.admin_hidden ? ' <span class="badge badge-gated" style="font-size:9px;">hidden</span>' : ''}</td><td>${esc(niceMarket(b.market) || '')}</td><td>${esc(b.submarket || '')}</td><td>${esc(b.grade || '')}</td><td>${Number(b.unitCount || 0)}</td><td><span class="badge ${b.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(b.status)}</span></td><td style="white-space:nowrap;">${fmtDate(b.created_at)}</td><td style="white-space:nowrap;">${fmtDate(b.updated_at)}</td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="setBuildingHidden(['${esc(b.id)}'],${b.admin_hidden ? 'false' : 'true'},this)">${b.admin_hidden ? 'Unhide' : 'Hide'}</button> <button class="btn btn-ghost btn-sm" style="color:#B42318;" onclick="deleteBuildings(['${esc(b.id)}'],false)">Delete</button></td></tr>`).join('');
   list.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
 }
 // ── Units ────────────────────────────────────────────────────────────────────
-let ADMIN_UNITS = [], UNIT_SORT = { key: 'created_at', dir: 'desc' }, UNIT_Q = '';
+let ADMIN_UNITS = [], ADMIN_BLDS = [], UNIT_SORT = { key: 'created_at', dir: 'desc' }, UNIT_Q = '';
+// Unit facility enum keys — STORED values are these stable English strings; only the
+// displayed label is translated (in list-building). Admin UI shows English labels.
+const ADMIN_UNIT_FACILITIES = ['Bathrooms', 'Private pantry / kitchenette', 'Private meeting room', 'Private offices', 'Open-plan area', 'Reception area', 'Server / IT room', 'Storage room', 'Balcony / terrace', 'Furnished', 'Plug-and-play', 'Other'];
+const UNIT_OFFERINGS = ['Whole building', 'Full floor', 'Partial floor', 'Private office', 'Coworking desks', 'Serviced office suite', 'Coworking / Flexible workspace'];
+const UNIT_STATUSES = ['draft', 'pending_review', 'approved', 'rejected'];
 const UNIT_COLS = [
   { key: 'building', label: 'Building', type: 'text' }, { key: 'market', label: 'Market', type: 'text', fmt: v => niceMarket(v) },
   { key: 'submarket', label: 'District', type: 'text' }, { key: 'floor', label: 'Floor', type: 'text' },
   { key: 'size', label: 'Area', type: 'num' }, { key: 'desks', label: 'Desks', type: 'num' }, { key: 'rent', label: 'Rent', type: 'num' },
   { key: 'currency', label: 'Cur', type: 'text' }, { key: 'fitOut', label: 'Fit-out', type: 'text' }, { key: 'offeringType', label: 'Offering', type: 'text' },
-  { key: 'status', label: 'Status', type: 'text' }, { key: 'source', label: 'Source', type: 'text' }, { key: 'created_at', label: 'Created', type: 'date' },
+  { key: 'status', label: 'Status', type: 'text' }, { key: 'source', label: 'Source', type: 'text' },
+  { key: 'created_at', label: 'Created', type: 'date' }, { key: 'updated_at', label: 'Updated', type: 'date' },
 ];
 // Generic client-side row comparator used by Units + Buildings sortable tables.
 function cmpRows(a, b, key, type, dir) {
@@ -581,6 +588,7 @@ async function loadUnits() {
   const j = await adminFetch('/api/admin/units', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   ADMIN_UNITS = j.units || [];
+  ADMIN_BLDS = j.buildings || [];
   if (!ADMIN_UNITS.length) { panel.innerHTML = emptyBox('No units yet. Import units from the Buildings tab (⬆ Import units), or wait for submissions.'); return; }
   panel.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
     <input id="unit-search" class="fi" placeholder="Search building, market, district, status…" oninput="UNIT_Q=this.value;renderUnitsTable()" style="max-width:360px;">
@@ -608,11 +616,11 @@ function renderUnitsTable() {
         let v = u[c.key]; if (c.fmt) v = c.fmt(v);
         if (c.key === 'building') return `<td><a href="#" onclick="manageBuilding('${esc(u.building_id)}');return false;">${esc(v || '—')}</a></td>`;
         if (c.key === 'status') return `<td><span class="badge ${u.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(v || '')}</span></td>`;
-        if (c.key === 'created_at') return `<td>${fmtDate(v)}</td>`;
+        if (c.type === 'date') return `<td style="white-space:nowrap;">${fmtDate(v)}</td>`;
         return `<td>${esc(v == null || v === '' ? '—' : v)}</td>`;
       }).join('')
       + `<td style="font-size:11px;color:var(--text-2);">${esc(am.replace(/^ · /, '') || '—')}</td>`
-      + `<td><button class="btn btn-ghost btn-sm" onclick="deleteUnit('${esc(u.id)}')" style="color:#B42318;">Delete</button></td></tr>`;
+      + `<td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="openUnit('${esc(u.id)}')">Edit</button> <button class="btn btn-ghost btn-sm" onclick="deleteUnit('${esc(u.id)}')" style="color:#B42318;">Delete</button></td></tr>`;
   }).join('');
   document.getElementById('units-table').innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
   const cnt = document.getElementById('unit-count'); if (cnt) cnt.textContent = `${rows.length} unit(s)`;
@@ -631,6 +639,74 @@ async function deleteSelectedUnits() {
   if (typed === null) return; if (typed !== 'DELETE') { showToast('Cancelled — text did not match', 'info'); return; }
   const j = await adminFetch('/api/admin/delete-units', 'POST', { unitIds: ids, confirm: 'DELETE' });
   if (j.ok) { showToast(`${j.deleted} unit(s) deleted`); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+// Full unit editor (Units tab). Updates ONE unit via /api/admin/update-unit; never
+// touches the building row. Market/district are building-level → shown read-only;
+// reassign the unit to a different building to change them.
+function openUnit(id) {
+  const u = ADMIN_UNITS.find(x => x.id === id);
+  if (!u) { showToast('Unit not found — reload the list', 'error'); return; }
+  const panel = document.getElementById('panel-units');
+  const a = u.amenities || {};
+  const bldOpts = ADMIN_BLDS.map(b => `<option value="${esc(b.id)}"${b.id === u.building_id ? ' selected' : ''}>${esc(b.name || b.id)}${b.submarket ? ' — ' + esc(b.submarket) : ''}</option>`).join('');
+  const offOpts = `<option value="">—</option>` + UNIT_OFFERINGS.map(o => `<option value="${esc(o)}"${o === u.offeringType ? ' selected' : ''}>${esc(o)}</option>`).join('');
+  const stOpts = UNIT_STATUSES.map(s => `<option value="${esc(s)}"${s === u.status ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  const facChecks = ADMIN_UNIT_FACILITIES.map(f => `<label style="display:flex;gap:6px;align-items:center;font-size:12.5px;padding:4px 0;"><input type="checkbox" class="ue-fac" value="${esc(f)}"${a[f] === true ? ' checked' : ''} onchange="ueFacToggle()">${esc(f)}</label>`).join('');
+  panel.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="loadUnits()" style="margin-bottom:14px;">← Back to units</button>
+    <h3 style="font-size:20px;margin-bottom:6px;">Edit unit</h3>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:18px;">${esc(u.id)} · Created ${fmtDate(u.created_at)} · Updated <span id="ue-upd">${fmtDate(u.updated_at)}</span></div>
+    <div class="card" style="padding:22px;max-width:760px;">
+      <div class="form-sec-title" style="margin-top:0;">Building &amp; location</div>
+      <div class="fg"><label class="fl">Building (reassign)</label><select class="fi fi-sel" id="ue-bld" onchange="ueBldChanged()">${bldOpts}</select></div>
+      <div style="font-size:11.5px;color:var(--text-2);margin:-6px 0 12px;">Market &amp; district come from the building: <strong id="ue-loc">${esc(niceMarket(u.market) || '—')}${u.submarket ? ' · ' + esc(u.submarket) : ''}</strong>. To change them, reassign this unit to another building above.</div>
+      <div class="form-sec-title">Unit details</div>
+      <div class="fgs">${fieldInput('Floor', 'ue-floor', u.floor)}${fieldInput('Area (sqm)', 'ue-size', u.size, 'number')}</div>
+      <div class="fgs">${fieldInput('Desks', 'ue-desks', u.desks, 'number')}${fieldInput('Meeting rooms', 'ue-mr', u.meetingRooms, 'number')}</div>
+      <div class="fgs">${fieldInput('Asking rent', 'ue-rent', u.rent, 'number')}${fieldInput('Currency (3-letter)', 'ue-cur', u.currency)}</div>
+      <div class="fgs"><div class="fg"><label class="fl">Offering type</label><select class="fi fi-sel" id="ue-off">${offOpts}</select></div>${fieldInput('Fit-out', 'ue-fitout', u.fitOut)}</div>
+      <div class="fgs"><div class="fg"><label class="fl">Status</label><select class="fi fi-sel" id="ue-status">${stOpts}</select></div>${fieldInput('Pricing basis', 'ue-basis', u.pricingBasis)}</div>
+      <div class="fgs">${fieldInput('Service charge', 'ue-svc', u.serviceCharge, 'number')}${fieldInput('Service charge basis', 'ue-svcbasis', u.serviceChargeBasis)}</div>
+      <div class="fgs">${fieldInput('Availability date', 'ue-avail', u.availabilityDate, 'date')}${fieldInput('Min term', 'ue-term', u.minTerm)}</div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fi" id="ue-notes" rows="2">${esc(u.notes || '')}</textarea></div>
+      <div class="form-sec-title">Unit facilities</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 16px;">${facChecks}</div>
+      <div class="fgs" style="margin-top:10px;">
+        <div class="fg" id="ue-bath-wrap" style="${a['Bathrooms'] === true ? '' : 'display:none;'}"><label class="fl">Number of bathrooms</label><input type="number" class="fi" id="ue-bath" value="${esc(a.bathrooms_count == null ? '' : a.bathrooms_count)}"></div>
+        <div class="fg" id="ue-other-wrap" style="${a['Other'] === true ? '' : 'display:none;'}"><label class="fl">Other facility (describe)</label><input type="text" class="fi" id="ue-other" value="${esc(a.other_note || '')}"></div>
+      </div>
+      <button class="btn btn-navy btn-sm" style="margin-top:6px;" onclick="saveUnitEdit('${esc(u.id)}',this)">Save unit</button>
+    </div>`;
+}
+function ueBldChanged() {
+  const sel = document.getElementById('ue-bld'); if (!sel) return;
+  const b = ADMIN_BLDS.find(x => x.id === sel.value) || {};
+  const loc = document.getElementById('ue-loc');
+  if (loc) loc.textContent = (niceMarket(b.market) || '—') + (b.submarket ? ' · ' + b.submarket : '');
+}
+function ueFacToggle() {
+  const checked = f => [...document.querySelectorAll('.ue-fac')].some(c => c.value === f && c.checked);
+  const bw = document.getElementById('ue-bath-wrap'); if (bw) bw.style.display = checked('Bathrooms') ? '' : 'none';
+  const ow = document.getElementById('ue-other-wrap'); if (ow) ow.style.display = checked('Other') ? '' : 'none';
+}
+async function saveUnitEdit(id, btn) {
+  const fields = {
+    building_id: gv('ue-bld'), unit_floor: gv('ue-floor'), size_sqm: numOr(gv('ue-size')), desks: numOr(gv('ue-desks')),
+    meeting_rooms: numOr(gv('ue-mr')), asking_rent: numOr(gv('ue-rent')), currency: gv('ue-cur').toUpperCase(),
+    offering_type: gv('ue-off'), fit_out: gv('ue-fitout'), status: gv('ue-status'), pricing_basis: gv('ue-basis'),
+    service_charge: numOr(gv('ue-svc')), service_charge_basis: gv('ue-svcbasis'), availability_date: gv('ue-avail'),
+    min_term: gv('ue-term'), notes: document.getElementById('ue-notes').value.trim(),
+  };
+  // Rebuild unit_amenities (full replace). Stored keys are stable English enums.
+  const ua = {};
+  [...document.querySelectorAll('.ue-fac:checked')].forEach(c => { ua[c.value] = true; });
+  if (ua['Bathrooms']) { const n = numOr(gv('ue-bath')); if (n != null) ua.bathrooms_count = n; }
+  if (ua['Other']) { const t = gv('ue-other'); if (t) ua.other_note = t; }
+  fields.unit_amenities = Object.keys(ua).length ? ua : null;
+  setBtnBusy(btn, true, 'Saving…');
+  const j = await adminFetch('/api/admin/update-unit', 'POST', { id, fields });
+  setBtnBusy(btn, false);
+  if (j.ok) { showToast('Unit saved'); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 
 async function loadBuildings() {
