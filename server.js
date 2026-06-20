@@ -1871,7 +1871,7 @@ function handlePublicListings(req, res) {
           }));
         });
       });
-      return sendJson(res, 200, { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)' } });
+      return sendJson(res, 200, { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)', rates: fx.rates || null } });
     } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [], listings: [] }); }
   })();
 }
