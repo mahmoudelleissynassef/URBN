@@ -237,6 +237,7 @@ function initHeroBg(){
   const v = document.createElement('video');
   v.className = 'hero-slide';
   v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true;
+  v.setAttribute('muted', '');
   v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
   v.preload = 'auto'; v.poster = HERO_POSTER;
   const webm = document.createElement('source'); webm.src = '/assets/hero/hero.webm'; webm.type = 'video/webm';
@@ -245,7 +246,10 @@ function initHeroBg(){
   v.addEventListener('playing', () => v.classList.add('on'));   // fade video in over poster
   v.addEventListener('error', () => v.remove());                // fall back to poster
   bg.insertBefore(v, overlay);
-  const p = v.play(); if (p && p.catch) p.catch(() => {});       // ignore autoplay rejections
+  const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  tryPlay();
+  v.addEventListener('canplay', tryPlay, { once: true });       // retry once data is ready
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && v.paused) tryPlay(); }); // and when a bg tab is focused
 }
 
 document.addEventListener('DOMContentLoaded',async ()=>{
