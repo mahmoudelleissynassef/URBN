@@ -3,6 +3,7 @@ const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const PORT = process.env.PORT || 3000;
 
@@ -170,7 +171,15 @@ function rateLimited(ip) {
 
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Accept-Encoding' };
+  // Gzip larger JSON payloads (e.g. /api/listings ~400KB -> ~50KB) when accepted.
+  if (res._acceptsGzip && body.length > 1024) {
+    const gz = zlib.gzipSync(body);
+    headers['Content-Encoding'] = 'gzip';
+    res.writeHead(status, headers);
+    return res.end(gz);
+  }
+  res.writeHead(status, headers);
   res.end(body);
 }
 
@@ -1797,10 +1806,16 @@ function toUsd(amount, cur, rates) {
   return rate ? Math.round(amount / rate) : null;
 }
 
+let ANON_LISTINGS_CACHE = { at: 0, payload: null };  // anon /api/listings, 60s TTL
 function handlePublicListings(req, res) {
   (async () => {
     try {
       const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+      // Anonymous responses are identical for everyone — serve a short-lived cache
+      // instead of rebuilding the ~400KB payload from 3 DB queries on every request.
+      if (!token && ANON_LISTINGS_CACHE.payload && (Date.now() - ANON_LISTINGS_CACHE.at) < 60000) {
+        return sendJson(res, 200, ANON_LISTINGS_CACHE.payload);
+      }
       let grantedIds = new Set(), admin = false, userId = null;
       if (token) { const user = await getAuthUser(token); if (user && user.id) { userId = user.id; admin = await isAdmin(user.id); if (!admin) grantedIds = await approvedGrantsFor(user.id); } }
       const ent = await getUserEntitlements(userId, admin);
@@ -1871,7 +1886,9 @@ function handlePublicListings(req, res) {
           }));
         });
       });
-      return sendJson(res, 200, { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)', rates: fx.rates || null } });
+      const payload = { ok: true, buildings: out, listings, fx: { base: 'USD', date: fx.date, source: 'ExchangeRate-API (open)', rates: fx.rates || null } };
+      if (!token) ANON_LISTINGS_CACHE = { at: Date.now(), payload };   // cache the anon result (60s)
+      return sendJson(res, 200, payload);
     } catch (e) { console.error('[api/listings]', e.message); return sendJson(res, 200, { ok: true, buildings: [], listings: [] }); }
   })();
 }
@@ -2092,6 +2109,7 @@ function clientIp(req) {
 }
 
 const server = http.createServer((req, res) => {
+  res._acceptsGzip = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
   // Baseline security headers.
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -2229,8 +2247,14 @@ const server = http.createServer((req, res) => {
       res.writeHead(404, { 'Content-Type': 'text/html' });
       return res.end('<h1>404 — Not Found</h1>');
     }
-    const type = mimeTypes[path.extname(filePath)] || 'application/octet-stream';
+    const ext = path.extname(filePath);
+    const type = mimeTypes[ext] || 'application/octet-stream';
     const total = stat.size;
+    // Cache-Control: media/fonts long, code short (fast propagation on deploy), HTML revalidate.
+    const cache = ['.mp4', '.webm', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.woff', '.woff2', '.webp'].includes(ext)
+      ? 'public, max-age=86400'
+      : (ext === '.css' || ext === '.js') ? 'public, max-age=600'
+      : (ext === '.html' ? 'no-cache' : 'public, max-age=300');
     // Range support (HTTP 206) — required for <video>/<audio> streaming & seeking.
     const range = req.headers['range'];
     const m = range && /^bytes=(\d*)-(\d*)$/.exec(range);
@@ -2241,10 +2265,10 @@ const server = http.createServer((req, res) => {
         res.writeHead(416, { 'Content-Range': `bytes */${total}`, 'Accept-Ranges': 'bytes' });
         return res.end();
       }
-      res.writeHead(206, { 'Content-Type': type, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Accept-Ranges': 'bytes' });
+      res.writeHead(206, { 'Content-Type': type, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Accept-Ranges': 'bytes', 'Cache-Control': cache });
       return fs.createReadStream(filePath, { start, end }).pipe(res);
     }
-    res.writeHead(200, { 'Content-Type': type, 'Content-Length': total, 'Accept-Ranges': 'bytes' });
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': total, 'Accept-Ranges': 'bytes', 'Cache-Control': cache });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(filePath).pipe(res);
   });
