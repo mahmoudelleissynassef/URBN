@@ -2224,15 +2224,29 @@ const server = http.createServer((req, res) => {
   let filePath = path.join(__dirname, reqPath);
   if (!path.extname(filePath)) filePath += '.html';
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/html' });
-      res.end('<h1>404 — Not Found</h1>');
-      return;
+      return res.end('<h1>404 — Not Found</h1>');
     }
-    const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
-    res.end(data);
+    const type = mimeTypes[path.extname(filePath)] || 'application/octet-stream';
+    const total = stat.size;
+    // Range support (HTTP 206) — required for <video>/<audio> streaming & seeking.
+    const range = req.headers['range'];
+    const m = range && /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m) {
+      let start = m[1] === '' ? total - parseInt(m[2], 10) : parseInt(m[1], 10);
+      let end = m[2] === '' || parseInt(m[2], 10) >= total ? total - 1 : parseInt(m[2], 10);
+      if (isNaN(start) || isNaN(end) || start > end || start < 0 || end >= total) {
+        res.writeHead(416, { 'Content-Range': `bytes */${total}`, 'Accept-Ranges': 'bytes' });
+        return res.end();
+      }
+      res.writeHead(206, { 'Content-Type': type, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Accept-Ranges': 'bytes' });
+      return fs.createReadStream(filePath, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': total, 'Accept-Ranges': 'bytes' });
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(filePath).pipe(res);
   });
 });
 
