@@ -215,33 +215,35 @@
 // The first entry is a built-in fallback so the hero is never blank. Any image
 // that fails to load is skipped automatically.
 // Hero background: an instant poster image (LCP + fallback), with a cinematic
-// muted looping video faded in on top for desktop visitors. Mobile, reduced-motion
-// and data-saver users keep the static poster only (no video download).
+// muted looping video faded in on top. Desktop gets the 16:9 montage, mobile a
+// dedicated lighter 9:16 portrait cut. Reduced-motion / data-saver users keep the
+// static poster only (no video download).
 const HERO_POSTER = '/assets/hero/hero-poster.jpg';
+const HERO_POSTER_M = '/assets/hero/hero-mobile-poster.jpg';
 const HERO_POSTER_FALLBACK = 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85';
 function initHeroBg(){
   const bg = document.getElementById('hero-bg');
   if (!bg) return;
   const overlay = bg.querySelector('.hero-overlay');
+  const isDesktop = window.matchMedia('(min-width:768px)').matches;
+  const posterSrc = isDesktop ? HERO_POSTER : HERO_POSTER_M;
   // Base poster — paints immediately, and is the fallback everywhere.
   const poster = document.createElement('img');
   poster.className = 'hero-slide on';
-  poster.src = HERO_POSTER; poster.alt = ''; poster.loading = 'eager'; poster.fetchPriority = 'high';
+  poster.src = posterSrc; poster.alt = ''; poster.loading = 'eager'; poster.fetchPriority = 'high';
   poster.onerror = () => { poster.onerror = null; poster.src = HERO_POSTER_FALLBACK; };
   bg.insertBefore(poster, overlay);
-  // Motion video — desktop only, respecting reduced-motion + data-saver.
-  const okMotion = window.matchMedia('(min-width:768px)').matches
-    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    && !(navigator.connection && navigator.connection.saveData);
-  if (!okMotion) return;
+  // Respect reduced-motion + data-saver: static poster only.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData)) return;
+  const base = isDesktop ? '/assets/hero/hero' : '/assets/hero/hero-mobile';
   const v = document.createElement('video');
   v.className = 'hero-slide';
   v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true;
   v.setAttribute('muted', '');
   v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
-  v.preload = 'auto'; v.poster = HERO_POSTER;
-  const webm = document.createElement('source'); webm.src = '/assets/hero/hero.webm'; webm.type = 'video/webm';
-  const mp4 = document.createElement('source'); mp4.src = '/assets/hero/hero.mp4'; mp4.type = 'video/mp4';
+  v.preload = 'auto'; v.poster = posterSrc;
+  const webm = document.createElement('source'); webm.src = base + '.webm'; webm.type = 'video/webm';
+  const mp4 = document.createElement('source'); mp4.src = base + '.mp4'; mp4.type = 'video/mp4';
   v.appendChild(webm); v.appendChild(mp4);
   v.addEventListener('playing', () => v.classList.add('on'));   // fade video in over poster
   v.addEventListener('error', () => v.remove());                // fall back to poster
