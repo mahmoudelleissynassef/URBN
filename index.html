@@ -214,46 +214,43 @@
 // To add/replace photos: drop image files in /assets/hero/ and edit this list.
 // The first entry is a built-in fallback so the hero is never blank. Any image
 // that fails to load is skipped automatically.
-const HERO_IMAGES = [
-  '/assets/hero/pexels-ademseye07-30976821.jpg',
-  '/assets/hero/pexels-andrew-harvard-1340985-34862401.jpg',
-  '/assets/hero/pexels-aymane-hanni-2148955127-30362133.jpg',
-  '/assets/hero/pexels-christian-nzayisenga-2160342483-36653830.jpg',
-  '/assets/hero/pexels-croberin-1422408.jpg',
-  '/assets/hero/pexels-droneafrica-18806089.jpg',
-  '/assets/hero/pexels-eons-31782030.jpg',
-  '/assets/hero/pexels-jean-marc-bonnel-387362531-18435332.jpg',
-  '/assets/hero/pexels-lovetosmile-36200692.jpg',
-  '/assets/hero/pexels-mike-mijares-78163062-36834747.jpg',
-  '/assets/hero/pexels-mwauraken-29069344.jpg',
-  // Fallback (kept last so a real photo paints first):
-  'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85',
-];
-function initHeroCarousel(){
+// Hero background: an instant poster image (LCP + fallback), with a cinematic
+// muted looping video faded in on top for desktop visitors. Mobile, reduced-motion
+// and data-saver users keep the static poster only (no video download).
+const HERO_POSTER = '/assets/hero/hero-poster.jpg';
+const HERO_POSTER_FALLBACK = 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=85';
+function initHeroBg(){
   const bg = document.getElementById('hero-bg');
   if (!bg) return;
   const overlay = bg.querySelector('.hero-overlay');
-  HERO_IMAGES.forEach((src, i) => {
-    const img = document.createElement('img');
-    img.className = 'hero-slide' + (i === 0 ? ' on' : '');
-    img.src = src; img.alt = ''; img.loading = i === 0 ? 'eager' : 'lazy';
-    img.onerror = () => img.remove();         // skip missing/broken images
-    bg.insertBefore(img, overlay);
-  });
-  function live(){ return Array.from(bg.querySelectorAll('.hero-slide')).filter(s => s.complete && s.naturalWidth > 0); }
-  let idx = 0;
-  setInterval(() => {
-    const s = live();
-    if (s.length < 2) return;                  // nothing to rotate yet
-    s.forEach(x => x.classList.remove('on'));
-    idx = (idx + 1) % s.length;
-    s[idx].classList.add('on');
-  }, 6000);
+  // Base poster — paints immediately, and is the fallback everywhere.
+  const poster = document.createElement('img');
+  poster.className = 'hero-slide on';
+  poster.src = HERO_POSTER; poster.alt = ''; poster.loading = 'eager'; poster.fetchPriority = 'high';
+  poster.onerror = () => { poster.onerror = null; poster.src = HERO_POSTER_FALLBACK; };
+  bg.insertBefore(poster, overlay);
+  // Motion video — desktop only, respecting reduced-motion + data-saver.
+  const okMotion = window.matchMedia('(min-width:768px)').matches
+    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    && !(navigator.connection && navigator.connection.saveData);
+  if (!okMotion) return;
+  const v = document.createElement('video');
+  v.className = 'hero-slide';
+  v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true;
+  v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+  v.preload = 'auto'; v.poster = HERO_POSTER;
+  const webm = document.createElement('source'); webm.src = '/assets/hero/hero.webm'; webm.type = 'video/webm';
+  const mp4 = document.createElement('source'); mp4.src = '/assets/hero/hero.mp4'; mp4.type = 'video/mp4';
+  v.appendChild(webm); v.appendChild(mp4);
+  v.addEventListener('playing', () => v.classList.add('on'));   // fade video in over poster
+  v.addEventListener('error', () => v.remove());                // fall back to poster
+  bg.insertBefore(v, overlay);
+  const p = v.play(); if (p && p.catch) p.catch(() => {});       // ignore autoplay rejections
 }
 
 document.addEventListener('DOMContentLoaded',async ()=>{
   injectNav(''); injectFooter('');
-  initHeroCarousel();
+  initHeroBg();
   await URBN_LISTINGS.load();
   // Signed-out visitors get a leaner landing: no rates ticker, name-only market
   // cards, and the districts / offices-by-city sections hidden (data-auth="in").

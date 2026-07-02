@@ -12,7 +12,7 @@ const mimeTypes = {
   '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
   '.xml': 'application/xml', '.txt': 'text/plain', '.webmanifest': 'application/manifest+json',
-  '.csv': 'text/csv',
+  '.csv': 'text/csv', '.mp4': 'video/mp4', '.webm': 'video/webm', '.webp': 'image/webp',
 };
 
 // ── Clean URL routing ────────────────────────────────────────────────────────
