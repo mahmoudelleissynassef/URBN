@@ -178,6 +178,12 @@
         <a href="market-scan.html" class="btn btn-navy"><span data-i18n="cta.requestScan">Request a Market Scan</span> →</a>
       </div>
     </div>
+    <!-- Cards render in pages (see renderNextPage): the button loads the next batch
+         on click, and the sentinel auto-loads as it scrolls into view. -->
+    <div id="load-more-wrap" class="hidden" style="text-align:center;margin-top:26px;">
+      <button id="load-more-btn" class="btn btn-outline" onclick="renderNextPage()" data-i18n="off.loadMore">Load more</button>
+    </div>
+    <div id="load-more-sentinel" aria-hidden="true" style="height:1px;"></div>
   </div>
 </div>
 
@@ -195,6 +201,52 @@ let view = 'units';
 // helpful sparse-state notice on the Units view. Tune the sparse cutoff here.
 const UNITS_THRESHOLD = 10;
 let UNITS_SPARSE = false;
+
+// ── Card pagination ──────────────────────────────────────────────────────────
+// With hundreds of matches, building every card up front makes the first paint
+// slow and the DOM heavy. Instead we render one page at a time from LAST_RES: a
+// "Load more" button appends the next batch, and an IntersectionObserver on a
+// sentinel auto-loads as the user scrolls. The map path still uses the full set.
+const PAGE_SIZE = 30;
+let PAGE_SHOWN = 0, PAGE_CARD = null, PAGE_OBS = null;
+
+function renderNextPage() {
+  const grid = document.getElementById('results');
+  if (!grid || !PAGE_CARD) return;
+  const slice = LAST_RES.slice(PAGE_SHOWN, PAGE_SHOWN + PAGE_SIZE);
+  if (slice.length) grid.insertAdjacentHTML('beforeend', slice.map(PAGE_CARD).join(''));
+  PAGE_SHOWN += slice.length;
+  updateLoadMore();
+}
+
+function updateLoadMore() {
+  const wrap = document.getElementById('load-more-wrap');
+  const sentinel = document.getElementById('load-more-sentinel');
+  if (!wrap) return;
+  const remaining = LAST_RES.length - PAGE_SHOWN;
+  if (remaining > 0 && DISPLAY === 'cards') {
+    const tt = (k, fb) => (window.URBN_I18N ? (URBN_I18N.t(k) || fb) : fb);
+    const btn = document.getElementById('load-more-btn');
+    if (btn) btn.textContent = `${tt('off.loadMore', 'Load more')} (${remaining})`;
+    wrap.classList.remove('hidden');
+    if (sentinel && 'IntersectionObserver' in window) {
+      if (!PAGE_OBS) PAGE_OBS = new IntersectionObserver(
+        es => { if (es.some(e => e.isIntersecting)) renderNextPage(); },
+        { rootMargin: '600px' });
+      PAGE_OBS.observe(sentinel);
+    }
+  } else {
+    wrap.classList.add('hidden');
+    if (PAGE_OBS && sentinel) PAGE_OBS.unobserve(sentinel);
+  }
+}
+
+function hideLoadMore() {
+  const wrap = document.getElementById('load-more-wrap');
+  if (wrap) wrap.classList.add('hidden');
+  const sentinel = document.getElementById('load-more-sentinel');
+  if (PAGE_OBS && sentinel) PAGE_OBS.unobserve(sentinel);
+}
 let DISPLAY = 'cards', LAST_RES = [], MAP = null, MARKERS = [], CLUSTER = null, MAP_ITEMS = [];
 
 // Approximate city centroids. Markers are jittered around these so the map never
