@@ -415,12 +415,17 @@ function applyFilters() {
   LAST_RES = res;
   const grid = document.getElementById('results');
   const noR = document.getElementById('no-results');
-  if (!res.length) { grid.innerHTML = ''; noR.classList.remove('hidden'); if (DISPLAY === 'map') renderMap([]); return; }
+  if (!res.length) { grid.innerHTML = ''; hideLoadMore(); noR.classList.remove('hidden'); if (DISPLAY === 'map') renderMap([]); return; }
   noR.classList.add('hidden');
   grid.style.gridTemplateColumns = 'repeat(3,1fr)';
-  grid.innerHTML = buildingsView
-    ? res.map(b => renderCard(b, '../', { noSave: true })).join('')
-    : res.map(l => renderListingCard(l, '../')).join('');
+  // Render the first page only; renderNextPage appends the rest on demand
+  // (button / scroll). Reset paging on every filter/sort/view change.
+  PAGE_CARD = buildingsView
+    ? (b => renderCard(b, '../', { noSave: true }))
+    : (l => renderListingCard(l, '../'));
+  grid.innerHTML = '';
+  PAGE_SHOWN = 0;
+  renderNextPage();
   if (DISPLAY === 'map') renderMap(res);
 }
 
