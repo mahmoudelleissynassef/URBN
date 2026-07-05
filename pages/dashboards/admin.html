@@ -420,12 +420,85 @@ function renderUsers() {
   const rows = ADMIN_USERS.filter(u => !q || [u.full_name, u.email, u.company].some(v => String(v || '').toLowerCase().includes(q)));
   const box = document.getElementById('users-table');
   if (!rows.length) { box.innerHTML = emptyBox('No matching users.'); return; }
-  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Type</th><th>Tier</th><th>Market</th><th>Saves</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
+  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Tier</th><th>Admin</th><th>Listings</th><th>Saves</th><th>Last active</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
     const tier = u.tier || 'free';
-    const mkt = tier === 'starter' ? marketName(u.assigned_market) : (tier === 'free' ? '—' : 'all');
-    const manage = u.company_id ? `<button class="btn btn-ghost btn-sm" onclick="manageTier('${u.id}')">Manage tier</button>` : '';
-    return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.phone || '—')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${esc(mkt)}</td><td>${Number(u.saves || 0)}</td><td>${fmtDate(u.created_at)}</td><td>${manage}</td></tr>`;
+    const adminBadge = u.is_admin ? '<span class="badge" style="background:#243A5E;color:#fff;">admin</span>' : '<span style="color:var(--text-2);">—</span>';
+    const bAdded = Number(u.buildings_added || 0), uAdded = Number(u.units_added || 0);
+    const listings = (bAdded || uAdded) ? `${bAdded} bldg / ${uAdded} unit` : '—';
+    const last = u.last_sign_in_at ? fmtDate(u.last_sign_in_at) : 'never';
+    return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${adminBadge}</td><td style="white-space:nowrap;">${listings}</td><td>${Number(u.saves || 0)}</td><td style="white-space:nowrap;">${esc(last)}</td><td>${fmtDate(u.created_at)}</td><td><button class="btn btn-ghost btn-sm" onclick="openUserPanel('${u.id}')">Manage</button></td></tr>`;
   }).join('')}</tbody></table></div>`;
+}
+// Consolidated per-user panel: read-only summary + every user action in one place.
+function openUserPanel(userId) {
+  const u = ADMIN_USERS.find(x => x.id === userId); if (!u) return;
+  const tier = u.tier || 'free';
+  const mkt = tier === 'starter' ? marketName(u.assigned_market) : (tier === 'free' ? '' : 'all');
+  const last = u.last_sign_in_at ? fmtDate(u.last_sign_in_at) : 'never';
+  const ov = document.createElement('div'); ov.className = 'mbg'; ov.style.cssText = 'display:flex;'; ov.id = 'user-modal';
+  ov.innerHTML = `<div class="modal" style="max-width:520px;">
+    <div class="mh"><div><div class="label mb12">User</div><h3>${esc(u.full_name || u.email || '')}</h3></div><div class="mx" onclick="document.getElementById('user-modal').remove()">X</div></div>
+    <div class="mb">
+      ${row('Email', u.email)}${row('Phone', u.phone || '—')}${row('Company', u.company || '—')}${row('Type', u.user_type || '—')}
+      ${row('Tier', tier + (mkt ? ' · ' + mkt : ''))}${row('Admin', u.is_admin ? 'Yes' : 'No')}
+      ${row('Listings added', bLabel(u))}${row('Saved', Number(u.saves || 0))}${row('Requests', Number(u.requests || 0))}
+      ${row('Last active', last)}${row('Joined', fmtDate(u.created_at))}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;border-top:1px solid #E6E8EB;padding-top:16px;">
+        ${u.company_id ? `<button class="btn btn-ghost btn-sm" onclick="document.getElementById('user-modal').remove();manageTier('${u.id}')">Manage tier</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="setUserAdmin('${u.id}', ${u.is_admin ? 'false' : 'true'})">${u.is_admin ? 'Remove admin' : 'Make admin'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEmailUser('${u.id}')">Send email</button>
+        <button class="btn btn-ghost btn-sm" onclick="sendPasswordReset('${u.id}')">Send password reset</button>
+        <button class="btn btn-sm" style="color:#B42318;border:1px solid #FECDCA;background:#FEF3F2;" onclick="deleteUser('${u.id}')">Delete user</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+function bLabel(u) { return `${Number(u.buildings_added || 0)} building(s), ${Number(u.units_added || 0)} unit(s)`; }
+async function setUserAdmin(userId, makeAdmin) {
+  if (!confirm(makeAdmin ? 'Grant FULL admin rights to this user? They will be able to manage all users, listings and settings.' : 'Remove admin rights from this user?')) return;
+  const j = await adminFetch('/api/admin/set-admin', 'POST', { userId, makeAdmin });
+  if (j.ok) { showToast(makeAdmin ? 'Admin granted' : 'Admin removed'); document.getElementById('user-modal')?.remove(); loadUsers(); }
+  else showToast('Failed: ' + (j.error === 'cannot_self_demote' ? 'you cannot remove your own admin rights' : (j.error || 'error')), 'error');
+}
+async function sendPasswordReset(userId) {
+  if (!confirm('Email this user a link to set a new password?')) return;
+  const j = await adminFetch('/api/admin/send-password-reset', 'POST', { userId });
+  if (j.ok) showToast('Password-reset email sent');
+  else showToast('Failed: ' + (j.error || 'error'), 'error');
+}
+async function deleteUser(userId) {
+  const u = ADMIN_USERS.find(x => x.id === userId);
+  if (!confirm(`Permanently delete ${u ? (u.email || u.full_name) : 'this user'}? This removes their account and cannot be undone.`)) return;
+  const j = await adminFetch('/api/admin/delete-user', 'POST', { userId });
+  if (j.ok) { showToast('User deleted'); document.getElementById('user-modal')?.remove(); loadUsers(); }
+  else showToast('Failed: ' + (j.error === 'cannot_delete_self' ? 'you cannot delete your own account' : (j.error || 'error')), 'error');
+}
+function openEmailUser(userId) {
+  const u = ADMIN_USERS.find(x => x.id === userId); if (!u) return;
+  const ov = document.createElement('div'); ov.className = 'mbg'; ov.style.cssText = 'display:flex;'; ov.id = 'email-modal';
+  ov.innerHTML = `<div class="modal" style="max-width:480px;">
+    <div class="mh"><div><div class="label mb12">Email</div><h3>Email ${esc(u.full_name || u.email || '')}</h3></div><div class="mx" onclick="document.getElementById('email-modal').remove()">X</div></div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">Sends a branded email to <strong>${esc(u.email || '')}</strong>. Replies go to the admin inbox.</p>
+      <div class="fg"><label class="fl">Subject *</label><input class="fi" id="em-subject" type="text" maxlength="200"></div>
+      <div class="fg"><label class="fl">Message *</label><textarea class="fi" id="em-message" rows="6" maxlength="5000" placeholder="Write your message… line breaks are preserved."></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-ghost" onclick="document.getElementById('email-modal').remove()">Cancel</button><button class="btn btn-navy" id="em-send" onclick="submitEmailUser('${u.id}')">Send email</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+}
+async function submitEmailUser(userId) {
+  const subject = document.getElementById('em-subject').value.trim();
+  const message = document.getElementById('em-message').value.trim();
+  if (!subject || !message) { showToast('Subject and message are required', 'info'); return; }
+  const btn = document.getElementById('em-send'); setBtnBusy(btn, true, 'Sending…');
+  const j = await adminFetch('/api/admin/email-user', 'POST', { userId, subject, message });
+  setBtnBusy(btn, false);
+  if (j.ok) { document.getElementById('email-modal')?.remove(); showToast('Email sent'); }
+  else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 function manageTier(userId) {
   const u = ADMIN_USERS.find(x => x.id === userId); if (!u) return;
@@ -493,6 +566,9 @@ async function loadAnalytics() {
   const mostSaved = (e.mostSaved || []).length
     ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
     : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
+  const mostViewed = (e.mostViewed || []).length
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Views</th><th>Unique</th></tr></thead><tbody>${e.mostViewed.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.views)}</td><td>${Number(x.uniqueViews)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p style="font-size:12.5px;color:var(--text-2);">No building views recorded yet.</p>`;
   panel.innerHTML =
     sec('Supply', statTiles([['Approved buildings', s.approvedBuildings], ['Approved units', s.approvedUnits], ['Total sqm', s.totalSqm], ['Total desks', s.totalDesks]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Listings by market</strong>' + kvTable(s.listingsByMarket, ['Market', 'Listings']) + '</div>'
@@ -501,7 +577,9 @@ async function loadAnalytics() {
     + sec('Demand', statTiles([['Access requests by market', Object.keys(d.accessByMarket || {}).length], ['Market scans', Object.keys(d.scanByMarket || {}).length]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Access requests by market</strong>' + kvTable(d.accessByMarket, ['Market', 'Requests']) + '</div>'
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Market scans by market</strong>' + kvTable(d.scanByMarket, ['Market', 'Scans']) + '</div>')
-    + sec('Engagement', statTiles([['Total saves', e.totalSaves]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong>' + mostSaved + '</div>')
+    + sec('Engagement', statTiles([['Total saves', e.totalSaves], ['Building views (all-time)', e.totalViews], ['Building views (7d)', e.viewsLast7]])
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-viewed buildings</strong>' + mostViewed + '</div>'
+      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong>' + mostSaved + '</div>')
     + sec('Membership', statTiles([['Total companies', m.totalCompanies], ['Total users', m.totalUsers], ['Pending membership', m.pendingMembership]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Active companies by tier</strong>' + kvTable(m.companiesByTier, ['Tier', 'Companies']) + '</div>')
     + sec('Requests', statTiles([['Reveal requests', Object.values((a.requests||{}).revealByBuilding||{}).reduce((x,y)=>x+y,0)], ['Site visits', Object.values((a.requests||{}).siteVisitsByMarket||{}).reduce((x,y)=>x+y,0)], ['Offers', Object.values((a.requests||{}).offersByMarket||{}).reduce((x,y)=>x+y,0)], ['Introductions', (a.requests||{}).introductions], ['Listings approved', (a.requests||{}).listingsApproved], ['Listings rejected', (a.requests||{}).listingsRejected]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Pending by type</strong>' + kvTable((a.requests||{}).pendingByType, ['Type', 'Pending']) + '</div>'
