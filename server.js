@@ -249,6 +249,25 @@ function adminRecipient() {
 function privacyRecipient() {
   return envVal('PRIVACY_CONTACT_EMAIL') || adminRecipient();
 }
+// Owner/founder notifications (new signup, subscription activated, weekly recap).
+// Prefers the configured admin chain; falls back to the owner address so these
+// always land even if no *_EMAIL env var is set on the host.
+const OWNER_FALLBACK_EMAIL = 'mahmoud.nassef@urbnoffices.com';
+function ownerRecipient() { return adminRecipient() || OWNER_FALLBACK_EMAIL; }
+// Send a branded internal notification to the site owner. Best-effort — never
+// throws into the caller (owner alerts must not break the underlying action).
+async function notifyOwner(subject, badge, innerRowsHtml, title) {
+  try {
+    const inner = `<tr><td style="padding:8px 0 2px;"></td></tr>` + innerRowsHtml;
+    const html = emailShell(title || subject, badge, inner, true);
+    await sendResendEmail({
+      subject, html, text: subject,
+      from: process.env.REQUESTS_FROM || process.env.LEAD_FROM,
+      to: ownerRecipient(),
+    });
+    return true;
+  } catch (e) { console.error('[notifyOwner]', e.message); return false; }
+}
 
 async function sendResendEmail({ subject, text, html, replyTo, from, to }) {
   const key = process.env.RESEND_API_KEY;
@@ -774,6 +793,7 @@ function readJsonBody(req, max = 64 * 1024) {
     req.on('error', () => resolve(null));
   });
 }
+const isUuidStr = (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ''));
 const numOrNull = (x) => (x === '' || x == null || isNaN(Number(x))) ? null : Number(x);
 const arrOrNull = (s) => { const a = String(s || '').split(/[;,]/).map((x) => x.trim()).filter(Boolean); return a.length ? a : null; };
 const dateOrNull = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '').trim()) ? String(s).trim() : null;
@@ -814,6 +834,17 @@ async function generateRecoveryLink(email, redirectTo) {
   if (r.status < 200 || r.status >= 300) return null;
   let j = null; try { j = JSON.parse(r.body || '{}'); } catch (e) {}
   return (j && (j.action_link || (j.properties && j.properties.action_link))) || null;
+}
+// Hard-delete an auth user (GoTrue admin API, service role). The FK from
+// profiles → auth.users cascades the profile; company/subscription rows are
+// shared and intentionally left intact. Returns true on success.
+async function deleteAuthUser(userId) {
+  const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base || !key || !userId) return false;
+  const r = await httpsRequest(`${base.replace(/\/$/, '')}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE', headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  return r.status >= 200 && r.status < 300;
 }
 function groupCount(arr, keyFn) {
   const m = {}; (arr || []).forEach((x) => { const k = keyFn(x); if (k == null || k === '') return; m[k] = (m[k] || 0) + 1; }); return m;
@@ -1046,13 +1077,23 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, latest });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/users') {
-        const [profiles, companies, saved, reqs, authUsers, subs] = await Promise.all([
+        const [profiles, companies, saved, reqs, authUsers, subs, admins, buildings, units] = await Promise.all([
           sbGet('profiles?select=*&order=created_at.desc'), sbGet('companies?select=id,name'),
           sbGet('saved_properties?select=user_id'), sbGet('client_requests?select=email'), listAuthUsers(),
           sbGet('company_subscriptions?select=company_id,tier,status,assigned_market,notes&order=created_at.desc'),
+          sbGet('admin_users?select=user_id'), sbGet('buildings?select=id,submitted_by'), sbGet('units?select=building_id'),
         ]);
-        const emailById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; });
+        const emailById = {}; const authById = {}; authUsers.forEach((u) => { emailById[u.id] = u.email; authById[u.id] = u; });
         const compById = {}; companies.forEach((c) => { compById[c.id] = c.name; });
+        const adminSet = new Set((admins || []).map((a) => a.user_id));
+        // Listings a user added: buildings they submitted, plus the units inside them.
+        const unitsByBuilding = groupCount(units, (u) => u.building_id);
+        const bCountByUser = {}, uCountByUser = {};
+        (buildings || []).forEach((b) => {
+          if (!b.submitted_by) return;
+          bCountByUser[b.submitted_by] = (bCountByUser[b.submitted_by] || 0) + 1;
+          uCountByUser[b.submitted_by] = (uCountByUser[b.submitted_by] || 0) + (unitsByBuilding[b.id] || 0);
+        });
         // Newest ACTIVE subscription per company = the effective tier (matches
         // getUserEntitlements). Falls back to newest row if none active yet.
         const activeSub = {}, anySub = {};
@@ -1065,9 +1106,12 @@ function handleAdmin(req, res, urlPath) {
         const users = profiles.map((p) => {
           const email = emailById[p.id] || '';
           const sub = activeSub[p.company_id] || anySub[p.company_id] || null;
+          const au = authById[p.id] || {};
           return { id: p.id, email, full_name: p.full_name, phone: p.phone || '', company: compById[p.company_id] || '', company_id: p.company_id || null,
             user_type: p.user_type, requested_tier: p.requested_tier, created_at: p.created_at,
             tier: sub ? sub.tier : 'free', tier_status: sub ? sub.status : null, assigned_market: (sub && sub.assigned_market) || null, notes: (sub && sub.notes) || '',
+            is_admin: adminSet.has(p.id), last_sign_in_at: au.last_sign_in_at || null,
+            buildings_added: bCountByUser[p.id] || 0, units_added: uCountByUser[p.id] || 0,
             requests: reqByEmail[email.toLowerCase()] || 0, saves: savedByUser[p.id] || 0 };
         });
         return sendJson(res, 200, { ok: true, users });
@@ -1120,6 +1164,9 @@ function handleAdmin(req, res, urlPath) {
           sbGet('listing_access_grants?select=building_id,company_id,status').catch(() => []),
           sbGet('market_construction_costs?order=market.asc,effective_date.desc.nullslast,created_at.desc&select=market,effective_date,updated_at').catch(() => []),
         ]);
+        // Building view/click tracking (raw opens + unique sessions). Separate query
+        // so an empty/absent table never breaks the rest of analytics.
+        const views = await sbGet('building_views?select=building_id,session_hash,created_at&order=created_at.desc&limit=50000').catch(() => []);
         const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
         const capexByMarket = {}; capexRows.forEach((c) => { if (!capexByMarket[c.market]) capexByMarket[c.market] = c.updated_at || c.effective_date; });
         const access = reqs.filter((r) => r.request_type === 'access'), scan = reqs.filter((r) => r.request_type === 'market-scan');
@@ -1132,10 +1179,17 @@ function handleAdmin(req, res, urlPath) {
         const companiesByTier = groupCount(Object.values(latestSub).filter((s) => s.status === 'active'), (s) => s.tier);
         const savedByBuilding = groupCount(saved, (s) => s.building_id);
         const mostSaved = Object.entries(savedByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', saves: n }));
+        // Building clicks/views: total opens, unique sessions per building, last 7 days.
+        const weekAgoIso = new Date(Date.now() - 7 * 864e5).toISOString();
+        const viewsByBuilding = groupCount(views, (v) => v.building_id);
+        const uniqSets = {}; views.forEach((v) => { (uniqSets[v.building_id] = uniqSets[v.building_id] || new Set()).add(v.session_hash || v.created_at); });
+        const mostViewed = Object.entries(viewsByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', views: n, uniqueViews: (uniqSets[id] || new Set()).size }));
+        const viewsLast7 = views.filter((v) => v.created_at && v.created_at >= weekAgoIso).length;
         return sendJson(res, 200, { ok: true, analytics: {
           supply: { approvedBuildings: buildings.length, approvedUnits: units.length, totalSqm: sum(units.map((u) => Number(u.size_sqm) || 0)), totalDesks: sum(units.map((u) => Number(u.desks) || 0)), listingsByMarket: groupCount(buildings, (b) => b.market), listingsBySubmarket: groupCount(buildings, (b) => b.submarket), listingsByOffering: groupCount(units, (u) => u.offering_type), avgRentByMarket, rentRangeByMarket, pendingBySource: groupCount(listReqs.filter((r) => r.status === 'pending' || r.status === 'new'), (r) => r.source_page) },
           demand: { accessByMarket: groupCount(access, (r) => r.market), scanByMarket: groupCount(scan, (r) => r.market), requestsByCompany: groupCount(reqs, (r) => r.company), latest: reqs.slice(0, 8).map((r) => ({ type: r.request_type, market: r.market, company: r.company, email: r.email, created_at: r.created_at })) },
-          engagement: { mostSaved, totalSaves: saved.length, savedByMarket: groupCount(saved, (s) => (bById[s.building_id] || {}).market) },
+          engagement: { mostSaved, totalSaves: saved.length, savedByMarket: groupCount(saved, (s) => (bById[s.building_id] || {}).market),
+            mostViewed, totalViews: views.length, viewsLast7 },
           membership: { companiesByTier, pendingMembership: memReqs.filter((r) => r.status === 'pending').length, totalCompanies: companies.length, totalUsers: profiles.length },
           dataQuality: { buildingsMissingPhoto: buildings.filter((b) => !b.image_url).length, buildingsMissingMaps: buildings.filter((b) => !b.google_maps_url).length, unitsMissingRent: units.filter((u) => !u.asking_rent).length, unitsMissingServiceCharge: units.filter((u) => u.service_charge == null).length, buildingsNoUnits: buildings.filter((b) => !units.some((u) => u.building_id === b.id)).length, buildingsMissingAmenities: buildings.filter((b) => !Array.isArray(b.amenities) || !b.amenities.length).length, buildingsMissingParking: buildings.filter((b) => b.parking_spaces_available == null && !b.parking_arrangement).length },
           requests: {
@@ -1335,6 +1389,9 @@ function handleAdmin(req, res, urlPath) {
         if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         await sendMembershipDecisionEmail(row.email, row.name, tier, true);
+        await notifyOwner('URBN: subscription activated — ' + (tier || 'tier'), 'Subscription',
+          emailSection('Subscription activated', emailRow('Tier', tier) + emailRow('Company', row.company || (p.companyName || '')) + emailRow('Contact', row.name) + emailRow('Email', row.email) + emailRow('Market', assignedMarket || 'all') + emailRow('Via', 'Approved membership request')),
+          'Subscription activated');
         await writeAudit(req, user, 'membership.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { companyId: p.companyId || null, tier, assignedMarket } });
         return sendJson(res, 200, { ok: true });
       }
@@ -1353,6 +1410,12 @@ function handleAdmin(req, res, urlPath) {
         const ALLOWED = ['pending', 'contacted', 'paid'];
         if (!body.requestId || !ALLOWED.includes(body.status)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
         await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: body.status, reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        if (body.status === 'paid') {
+          const r2 = (await sbGet(`client_requests?id=eq.${body.requestId}&select=name,email,company,payload`).catch(() => []))[0] || {};
+          await notifyOwner('URBN: marked paid — ' + (r2.company || r2.email || 'member'), 'Payment',
+            emailSection('Marked paid', emailRow('Company', r2.company || '') + emailRow('Contact', r2.name || '') + emailRow('Email', r2.email || '') + emailRow('Tier', (r2.payload || {}).requestedTier || '')),
+            'Payment marked');
+        }
         await writeAudit(req, user, 'membership.status', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { status: body.status } });
         return sendJson(res, 200, { ok: true });
       }
@@ -1362,6 +1425,13 @@ function handleAdmin(req, res, urlPath) {
         const assignedMarket = body.tier === 'starter' ? (normalizeMarket(body.assignedMarket) || null) : null;
         const notes = String(body.notes || '').slice(0, 1000) || null;
         await sbUpsert('company_subscriptions', [{ company_id: body.companyId, tier: body.tier, status: 'active', assigned_market: assignedMarket, notes, requested_by: user.id }]);
+        // Owner alert only when moving onto a PAID tier (not free/downgrades).
+        if (body.tier !== 'free') {
+          const co = (await sbGet(`companies?id=eq.${encodeURIComponent(body.companyId)}&select=name`).catch(() => []))[0] || {};
+          await notifyOwner('URBN: subscription set to ' + body.tier, 'Subscription',
+            emailSection('Tier set by admin', emailRow('Tier', body.tier) + emailRow('Company', co.name || body.companyId) + emailRow('Market', assignedMarket || 'all') + emailRow('Via', 'Admin set-tier')),
+            'Subscription set');
+        }
         await writeAudit(req, user, 'membership.set_tier', { targetType: 'company', targetIds: [String(body.companyId)], metadata: { tier: body.tier, assignedMarket, hasNotes: !!notes } });
         return sendJson(res, 200, { ok: true });
       }
@@ -1573,6 +1643,68 @@ function handleAdmin(req, res, urlPath) {
         numFields.forEach((k) => { rec[k] = numOrNull(body[k]); });
         const inserted = await insertSupabaseTable('market_construction_costs', rec);
         return sendJson(res, 200, { ok: true, id: Array.isArray(inserted) && inserted[0] ? inserted[0].id : null });
+      }
+      // ── User management: admin rights / delete / email / password reset ──────
+      if (urlPath === '/api/admin/set-admin') {
+        const uid = String(body.userId || '');
+        if (!isUuidStr(uid)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const makeAdmin = body.makeAdmin === true;
+        // Never let an admin strip their OWN rights — avoids accidental lockout.
+        if (!makeAdmin && uid === user.id) return sendJson(res, 400, { ok: false, error: 'cannot_self_demote' });
+        if (makeAdmin) await sbUpsert('admin_users', [{ user_id: uid }]);
+        else await sbDelete('admin_users', `user_id=eq.${uid}`);
+        await writeAudit(req, user, 'user.set_admin', { targetType: 'user', targetIds: [uid], metadata: { makeAdmin } });
+        return sendJson(res, 200, { ok: true, isAdmin: makeAdmin });
+      }
+      if (urlPath === '/api/admin/delete-user') {
+        const uid = String(body.userId || '');
+        if (!isUuidStr(uid)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        if (uid === user.id) return sendJson(res, 400, { ok: false, error: 'cannot_delete_self' });
+        const okDel = await deleteAuthUser(uid);
+        // Best-effort app-row cleanup (profile normally cascades via FK; be safe).
+        try { await sbDelete('admin_users', `user_id=eq.${uid}`); } catch (e) {}
+        try { await sbDelete('profiles', `id=eq.${uid}`); } catch (e) {}
+        await writeAudit(req, user, 'user.delete', { targetType: 'user', targetIds: [uid], success: okDel });
+        if (!okDel) return sendJson(res, 502, { ok: false, error: 'delete_failed' });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/email-user') {
+        // Recipient by userId (preferred) or explicit email.
+        let toEmail = String(body.email || '').trim().toLowerCase();
+        if (!toEmail && isUuidStr(String(body.userId || ''))) {
+          const au = await listAuthUsers(); toEmail = (au.find((u) => u.id === body.userId) || {}).email || '';
+        }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(toEmail)) return sendJson(res, 400, { ok: false, error: 'invalid_email' });
+        const subject = String(body.subject || '').slice(0, 200).trim();
+        const message = String(body.message || '').slice(0, 5000).trim();
+        if (!subject || !message) return sendJson(res, 400, { ok: false, error: 'subject_and_message_required' });
+        const inner = `<tr><td style="padding:22px 24px;color:#374151;font-size:14px;line-height:1.7;">${escapeHtml(message).replace(/\n/g, '<br>')}</td></tr>`;
+        const html = emailShell(subject, null, inner, false);
+        try {
+          await sendResendEmail({ subject, html, text: message, from: process.env.NO_REPLY_FROM || process.env.LEAD_FROM, to: toEmail, replyTo: ownerRecipient() });
+        } catch (e) { await writeAudit(req, user, 'user.email', { targetType: 'user', success: false, metadata: { toEmail } }); return sendJson(res, 502, { ok: false, error: 'email_failed' }); }
+        await writeAudit(req, user, 'user.email', { targetType: 'user', metadata: { toEmail, subject } });
+        return sendJson(res, 200, { ok: true });
+      }
+      if (urlPath === '/api/admin/send-password-reset') {
+        let toEmail = String(body.email || '').trim().toLowerCase();
+        if (!toEmail && isUuidStr(String(body.userId || ''))) {
+          const au = await listAuthUsers(); toEmail = (au.find((u) => u.id === body.userId) || {}).email || '';
+        }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(toEmail)) return sendJson(res, 400, { ok: false, error: 'invalid_email' });
+        const link = await generateRecoveryLink(toEmail, 'https://urbnoffices.com/sign-in');
+        if (!link) return sendJson(res, 502, { ok: false, error: 'link_failed' });
+        const inner = `<tr><td style="padding:22px 24px;color:#374151;font-size:14px;line-height:1.7;">` +
+          `<p style="margin:0 0 14px;">A password reset was requested for your <strong>URBN Offices</strong> account. Set a new password below:</p>` +
+          `<p style="margin:0 0 18px;"><a href="${escapeHtml(link)}" style="display:inline-block;background:#243A5E;color:#fff;padding:11px 20px;border-radius:6px;text-decoration:none;">Set a new password &rarr;</a></p>` +
+          `<p style="margin:0;font-size:12px;color:#6B7280;">If you didn’t request this, you can safely ignore this email. The link expires for security.</p>` +
+          `</td></tr>`;
+        const html = emailShell('Reset your URBN Offices password', 'Password reset', inner, false);
+        try {
+          await sendResendEmail({ subject: 'Reset your URBN Offices password', html, text: `Set a new password: ${link}`, from: process.env.NO_REPLY_FROM || process.env.LEAD_FROM, to: toEmail });
+        } catch (e) { return sendJson(res, 502, { ok: false, error: 'email_failed' }); }
+        await writeAudit(req, user, 'user.password_reset', { targetType: 'user', metadata: { toEmail } });
+        return sendJson(res, 200, { ok: true });
       }
       return sendJson(res, 404, { ok: false, error: 'unknown_admin_endpoint' });
     } catch (e) {
@@ -1804,6 +1936,30 @@ function toUsd(amount, cur, rates) {
   if (cur === 'USD') return Math.round(amount);
   const rate = rates[cur];
   return rate ? Math.round(amount / rate) : null;
+}
+
+// Public building view/click tracking. Fire-and-forget: writes one building_views
+// row via the service role. An optional bearer resolves viewer_id; a salted
+// IP+UA+day session hash gives light per-day dedup so analytics can show unique
+// sessions vs raw opens. Always answers 204 and never surfaces an error — a bad
+// or unknown building_id (FK violation) is simply swallowed.
+function handleTrackView(req, res) {
+  readJsonBody(req, 2048).then(async (body) => {
+    try {
+      const buildingId = body && String(body.buildingId || '').trim();
+      const source = (body && ['detail', 'card', 'map'].includes(body.source)) ? body.source : 'detail';
+      if (buildingId && buildingId.length <= 128) {
+        let viewerId = null;
+        const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+        if (token) { try { const u = await getAuthUser(token); viewerId = (u && u.id) || null; } catch (e) {} }
+        const ip = clientIp(req);
+        const day = new Date().toISOString().slice(0, 10);
+        const session_hash = crypto.createHash('sha256').update((process.env.IP_HASH_SALT || '') + ip + String(req.headers['user-agent'] || '') + day).digest('hex').slice(0, 32);
+        await insertSupabaseTable('building_views', { building_id: buildingId, viewer_id: viewerId, session_hash, source });
+      }
+    } catch (e) { /* tracking must never surface errors */ }
+    res.writeHead(204); res.end();
+  });
 }
 
 let ANON_LISTINGS_CACHE = { at: 0, payload: null };  // anon /api/listings, 60s TTL
@@ -2155,7 +2311,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && /^\/api\/admin\//.test(urlPath)) {
     const ip = clientIp(req);
     if (rateLimited('admin:' + ip, 100, 60000)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
-    if (urlPath === '/api/admin/delete-buildings' && rateLimited('admindel:' + ip, 12, 60000)) {
+    if (/^\/api\/admin\/(delete-buildings|delete-user)$/.test(urlPath) && rateLimited('admindel:' + ip, 12, 60000)) {
       return sendJson(res, 429, { ok: false, error: 'rate_limited' });
     }
   }
@@ -2192,6 +2348,12 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/construction-costs') {
     if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
     return handleConstructionCosts(req, res);
+  }
+  if (urlPath === '/api/track-view') {
+    if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    // Light per-IP cap; over-limit is silently dropped (204) so it never blocks browsing.
+    if (rateLimited('view:' + clientIp(req), 120, 60000)) { res.writeHead(204); return res.end(); }
+    return handleTrackView(req, res);
   }
 
   if (urlPath.startsWith('/api/admin/')) {
@@ -2274,4 +2436,80 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => console.log(`URBN Platform running on port ${PORT}`));
+// ── Background jobs: signup alerts + weekly recap (Thu 10:00 Africa/Cairo) ─────
+// Railway runs a single always-on Node process, so we schedule in-process with
+// setInterval and persist watermarks in app_job_state — a restart never double-
+// sends. Every job is best-effort and wrapped in try/catch.
+async function getJobState(key) {
+  try { const rows = await sbGet(`app_job_state?key=eq.${encodeURIComponent(key)}&select=value`); return (rows[0] && rows[0].value) || null; }
+  catch (e) { return null; }
+}
+async function setJobState(key, value) {
+  try { await sbUpsert('app_job_state', [{ key, value, updated_at: new Date().toISOString() }]); } catch (e) {}
+}
+// Cairo wall-clock parts via Intl — handles Egypt's DST switches automatically.
+function cairoNowParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false, weekday: 'short' }).formatToParts(new Date());
+  const get = (t) => (parts.find((p) => p.type === t) || {}).value;
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, hour: parseInt(get('hour'), 10), weekday: get('weekday') };
+}
+// Poll GoTrue for new sign-ups since the last watermark and alert the owner.
+async function pollNewSignups() {
+  try {
+    const users = await listAuthUsers();
+    if (!Array.isArray(users) || !users.length) return;
+    const state = await getJobState('signup_watermark');
+    const watermark = state && state.last;
+    const maxCreated = users.reduce((m, u) => (u.created_at && u.created_at > m ? u.created_at : m), '');
+    // First run ever: record the newest user but DON'T email the whole backlog.
+    if (!watermark) { await setJobState('signup_watermark', { last: maxCreated || new Date().toISOString() }); return; }
+    const fresh = users.filter((u) => u.created_at && u.created_at > watermark).sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+    if (!fresh.length) return;
+    let profById = {};
+    try { const ids = fresh.map((u) => u.id).filter(Boolean); if (ids.length) (await sbGet(`profiles?id=in.(${ids.join(',')})&select=id,full_name,phone,user_type`)).forEach((p) => { profById[p.id] = p; }); } catch (e) {}
+    for (const u of fresh) {
+      const p = profById[u.id] || {}; const md = u.user_metadata || {};
+      await notifyOwner('URBN: new sign-up — ' + (u.email || 'user'), 'New sign-up',
+        emailSection('New account', emailRow('Email', u.email) + emailRow('Name', p.full_name || md.full_name || '') + emailRow('Type', p.user_type || md.user_type || '') + emailRow('Phone', p.phone || '') + emailRow('Signed up', u.created_at)),
+        'New sign-up');
+    }
+    await setJobState('signup_watermark', { last: fresh[fresh.length - 1].created_at });
+  } catch (e) { console.error('[pollNewSignups]', e.message); }
+}
+// Once per Thursday at 10:00 Cairo, email the owner a 7-day recap.
+async function maybeSendWeeklyRecap() {
+  try {
+    const { date, hour, weekday } = cairoNowParts();
+    if (weekday !== 'Thu' || hour !== 10) return;
+    const state = await getJobState('weekly_recap');
+    if (state && state.lastDate === date) return;
+    const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+    const [newUsers, reqs, subs, buildings, views] = await Promise.all([
+      sbGet(`profiles?created_at=gte.${weekAgo}&select=id`).catch(() => []),
+      sbGet(`client_requests?created_at=gte.${weekAgo}&select=request_type,status`).catch(() => []),
+      sbGet(`company_subscriptions?created_at=gte.${weekAgo}&select=tier,status`).catch(() => []),
+      sbGet(`buildings?created_at=gte.${weekAgo}&select=id,status`).catch(() => []),
+      sbGet(`building_views?created_at=gte.${weekAgo}&select=building_id`).catch(() => []),
+    ]);
+    const reqByType = groupCount(reqs, (r) => r.request_type);
+    const activated = subs.filter((s) => s.status === 'active').length;
+    const viewsByB = groupCount(views, (v) => v.building_id);
+    let bNames = {};
+    try { const topIds = Object.keys(viewsByB); if (topIds.length) (await sbGet(`buildings?id=in.(${topIds.join(',')})&select=id,name`)).forEach((b) => { bNames[b.id] = b.name; }); } catch (e) {}
+    const topViewed = Object.entries(viewsByB).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, n]) => `${escapeHtml(bNames[id] || id)} — ${n}`).join('<br>') || '—';
+    const reqLines = Object.entries(reqByType).map(([t, n]) => emailRow(t, n)).join('') || emailRow('Requests', 0);
+    const inner =
+      emailSection('This week at a glance', emailRow('New sign-ups', newUsers.length) + emailRow('New requests', reqs.length) + emailRow('Subscriptions activated', activated) + emailRow('New buildings', buildings.length) + emailRow('Building views', views.length)) +
+      emailSection('Requests by type', reqLines) +
+      emailSection('Most viewed buildings (7d)', `<tr><td style="padding:6px 0;color:#111418;font-size:13px;">${topViewed}</td></tr>`);
+    const sent = await notifyOwner('URBN weekly recap — ' + date, 'Weekly recap', inner, 'Weekly recap');
+    if (sent) await setJobState('weekly_recap', { lastDate: date, at: new Date().toISOString() });
+  } catch (e) { console.error('[weeklyRecap]', e.message); }
+}
+function startBackgroundJobs() {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return; // no-op locally
+  setTimeout(() => { pollNewSignups(); setInterval(pollNewSignups, 3 * 60 * 1000); }, 25000);
+  setTimeout(() => { maybeSendWeeklyRecap(); setInterval(maybeSendWeeklyRecap, 10 * 60 * 1000); }, 40000);
+}
+
+server.listen(PORT, () => { console.log(`URBN Platform running on port ${PORT}`); startBackgroundJobs(); });
