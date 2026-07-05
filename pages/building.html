@@ -102,6 +102,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   B = URBN_LISTINGS.find(id);
   if (!B) { document.getElementById('bpage').innerHTML='<div style="text-align:center;padding:120px 0;"><div style="font-family:var(--fd);font-size:28px;margin-bottom:16px;">Building not available</div><p style="color:var(--text-2);margin-bottom:20px;">This building isn’t currently available, or it hasn’t been approved for listing yet.</p><a href="/offices" class="btn btn-navy">Browse Offices</a></div>'; return; }
 
+  // Record a building open (fire-and-forget; powers the admin view analytics).
+  try {
+    const hdr = { 'Content-Type': 'application/json' };
+    if (typeof URBNAuth !== 'undefined' && URBNAuth.session && URBNAuth.session.access_token) hdr.Authorization = 'Bearer ' + URBNAuth.session.access_token;
+    fetch('/api/track-view', { method: 'POST', headers: hdr, body: JSON.stringify({ buildingId: B.id, source: 'detail' }), keepalive: true }).catch(() => {});
+  } catch (e) {}
+
   try {
   const mkt = URBN_DATA.markets.find(m => m.id === B.market);
   const saved = USER.saved.includes(B.id);
