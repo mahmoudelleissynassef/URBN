@@ -80,7 +80,7 @@ fetch('/api/config').then(r => r.json()).then(c => { if (c && Array.isArray(c.re
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
-  const user = await URBNAuth.requireAuth('/pages/signin.html');
+  const user = await URBNAuth.requireAuth('/sign-in');
   if (!user) return;
   const me = await adminFetch('/api/admin/me', 'GET');
   if (!me || !me.ok || !me.admin) {

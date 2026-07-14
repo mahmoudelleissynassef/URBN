@@ -28,7 +28,7 @@ let ACCT = { profile: null, company: null, sub: null };
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../'); injectFooter('../');
-  const user = await URBNAuth.requireAuth('/pages/signin.html');
+  const user = await URBNAuth.requireAuth('/sign-in');
   if (!user) return;
   await loadAccount(user);
 });
@@ -79,7 +79,7 @@ function renderAccount(user) {
         <span class="badge badge-grade" style="text-transform:capitalize;">${esc(tier)}</span>
         <span class="badge ${status==='active'?'badge-available':'badge-gated'}" style="text-transform:capitalize;">${esc(status)}</span>
       </div>
-      <p style="font-size:13px;color:var(--text-2);margin-top:14px;line-height:1.7;">Paid tiers are activated manually after verification. To request a different tier, visit <a href="subscription.html" class="text-navy" style="text-decoration:underline;">Pricing</a>.</p>
+      <p style="font-size:13px;color:var(--text-2);margin-top:14px;line-height:1.7;">Paid tiers are activated manually after verification. To request a different tier, visit <a href="/pricing" class="text-navy" style="text-decoration:underline;">Pricing</a>.</p>
     </div>`;
 }
 

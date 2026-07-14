@@ -1,3 +1,7 @@
 node_modules/
 .DS_Store
 .claude/
+# Never commit secrets — the service-role key here grants full DB + user-admin access.
+.env
+.env.*
+!.env.example
