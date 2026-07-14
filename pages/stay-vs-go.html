@@ -3,30 +3,37 @@
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stay vs Go — Occupancy Cost Analysis — URBN</title>
-  <meta name="description" content="A guided way to compare the cost of staying in your office versus moving — simulate a new office or use a saved listing, all in one currency."/>
+  <meta name="description" content="Compare the cost of staying in your office versus moving — fit out a lease, take a fitted office, or go coworking — side by side, in one currency."/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="../css/urbn.css"/>
   <style>
-    .sg-choice{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--bg-white,#fff);border-radius:8px;padding:18px 20px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .05s;}
-    .sg-choice:hover{border-color:var(--navy,#243A5E);box-shadow:0 4px 16px rgba(36,58,94,.08);}
-    .sg-choice:active{transform:translateY(1px);}
-    .sg-choice-t{font-family:var(--fd);font-size:19px;color:var(--navy,#243A5E);}
-    .sg-choice-d{font-size:12.5px;color:var(--text-2);margin-top:5px;line-height:1.6;}
-    .sg-crumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--text-2);margin-bottom:18px;}
-    .sg-crumb a{color:var(--navy,#243A5E);text-decoration:none;cursor:pointer;border-bottom:1px dotted currentColor;}
-    .sg-crumb span.sep{opacity:.5;}
-    .sg-step-h{font-family:var(--fd);font-size:26px;color:var(--navy,#243A5E);margin:0 0 6px;}
-    .sg-step-sub{font-size:13px;color:var(--text-2);line-height:1.7;margin:0 0 20px;max-width:560px;}
+    .sg-step-h{font-family:var(--fd);font-size:22px;color:var(--navy,#243A5E);margin:0 0 4px;}
+    .sg-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--navy,#243A5E);color:#fff;font-family:var(--fm);font-size:12px;margin-right:9px;vertical-align:middle;}
+    .sg-sec{margin-bottom:22px;}
+    .sg-sub{font-size:12.5px;color:var(--text-2);line-height:1.7;margin:0 0 14px;max-width:600px;}
+    /* Toggleable scenario card */
+    .sg-opt{border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s;background:var(--bg-white,#fff);}
+    .sg-opt.on{border-color:var(--navy,#243A5E);box-shadow:0 4px 18px rgba(36,58,94,.07);}
+    .sg-opt-head{display:flex;gap:12px;align-items:flex-start;padding:16px 18px;cursor:pointer;user-select:none;}
+    .sg-opt-head:hover{background:rgba(36,58,94,.02);}
+    .sg-opt-check{flex:0 0 auto;width:20px;height:20px;border:2px solid var(--border);border-radius:5px;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.15s;}
+    .sg-opt.on .sg-opt-check{background:var(--navy,#243A5E);border-color:var(--navy,#243A5E);}
+    .sg-opt.on .sg-opt-check::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px;}
+    .sg-opt-t{font-family:var(--fd);font-size:16px;color:var(--navy,#243A5E);}
+    .sg-opt-d{font-size:12px;color:var(--text-2);margin-top:3px;line-height:1.55;}
+    .sg-opt-body{padding:2px 18px 18px;border-top:1px solid var(--border);}
+    .sg-hint{font-size:11.5px;color:var(--text-2);line-height:1.6;}
+    .sg-empty{border:1px dashed var(--border);border-radius:10px;padding:22px;text-align:center;color:var(--text-2);font-size:13px;}
   </style>
 </head>
 <body>
 <div id="nav-placeholder"></div>
 <div class="pt-nav" style="padding:56px 0 80px;">
   <div class="w">
-    <div class="mb24" style="max-width:680px;">
+    <div class="mb24" style="max-width:700px;">
       <span class="overline label-navy">Decision Tool</span>
       <h1 style="font-size:42px;">Stay vs Go</h1>
-      <p style="font-size:14.5px;color:var(--text-2);margin-top:12px;line-height:1.8;">Answer a few questions and we'll show the <strong>upfront cost</strong>, <strong>monthly cost</strong> and <strong>total over your lease</strong> — all in one currency you choose, so the numbers are directly comparable. Benchmarks come from URBN's verified construction-cost data; you can override any assumption, and we never show invented numbers.</p>
+      <p style="font-size:14.5px;color:var(--text-2);margin-top:12px;line-height:1.8;">Set your basics once, switch on the options you want to weigh up, and see the <strong>upfront cost</strong>, <strong>monthly cost</strong> and <strong>total over your term</strong> side by side — all in one currency. Add what you pay today and it becomes a stay-or-move comparison. Benchmarks come from URBN's verified construction-cost data; override anything, and we never show invented numbers.</p>
     </div>
 
     <!-- Auth gate: shown to signed-out visitors instead of the tool -->
@@ -34,7 +41,7 @@
       <div class="card" style="padding:32px;">
         <div class="overline label-navy" style="margin-bottom:8px;">Paid feature</div>
         <h2 id="sg-gate-title" style="font-size:24px;margin-bottom:10px;">Stay vs Go is available on Starter and above</h2>
-        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Stay vs Go compares the cost of staying in your current office against moving — simulate a new office or pull in your own saved listings — with upfront cost, monthly cost and total cost over the lease term, using URBN's verified construction-cost benchmarks.</p>
+        <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin-bottom:18px;">Stay vs Go compares the cost of staying in your current office against moving — fit out a lease, take a move-in-ready office, go coworking, or pull in your own saved listings — with upfront cost, monthly cost and total cost over the term, using URBN's verified construction-cost benchmarks.</p>
         <div id="sg-gate-cta" style="display:flex;gap:10px;flex-wrap:wrap;">
           <a href="/pricing" class="btn btn-navy">View plans</a>
           <a href="/sign-in?next=%2Fstay-vs-go" class="btn btn-outline">Sign in</a>
@@ -42,16 +49,17 @@
       </div>
     </div>
 
-    <div id="sg-tool" style="display:none;max-width:920px;">
-      <!-- Currency bar (hidden on the first question) -->
-      <div id="sg-curbar" style="display:none;margin-bottom:18px;">
+    <div id="sg-tool" style="display:none;max-width:940px;">
+      <!-- Currency bar -->
+      <div id="sg-curbar" style="display:none;margin-bottom:20px;">
         <div class="card" style="padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg);">
           <div style="font-family:var(--fm);font-size:9px;letter-spacing:.16em;color:var(--text-2);text-transform:uppercase;">Show all figures in</div>
           <select class="fi fi-sel" id="sg-dcur" onchange="changeCurrency()" style="max-width:140px;"></select>
           <span id="sg-fx-note" style="font-size:10.5px;color:var(--text-2);"></span>
         </div>
       </div>
-      <div id="sg-screen"></div>
+      <div id="sg-form"></div>
+      <div id="sg-results" style="margin-top:26px;"></div>
     </div>
   </div>
 </div>
@@ -75,23 +83,22 @@
   else { if (tool) tool.style.display = 'none'; if (gate) gate.style.display = ''; }
 })();
 
-// ── Wizard state ─────────────────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────────────────────────────
+// Shared basics + one config object per comparison scenario. A scenario shows in
+// the results the moment its `on` flag is true — you can compare as many as you like.
 const W = {
-  mode: null,        // 'price' | 'staymove'
-  source: null,      // 'sim'   | 'saved'
-  simType: null,     // 'cowork'| 'regular'
-  market: '',
-  currentMonthly: 0, // staymove baseline (display currency)
-  area: 800, desks: 80, term: 36,
-  rent: 30, svc: 8, parking: 0, deskRate: 0,
-  fitLevel: 'standard',
-  cond: { catA: true, fitted: false, furn: false, it: false },
+  market: '', desks: 80, area: 800, term: 36,
+  currentMonthly: 0,   // optional — set → stay-or-move; blank → pricing options
+  lease:  { on: true,  rent: 30, svc: 8, fitLevel: 'standard', cond: 'catA', furn: false, it: false },
+  fitted: { on: false, rent: 45, svc: 8 },
+  cowork: { on: false, deskRate: 250 },
+  saved:  { on: false, ids: [], fitLevel: 'standard', cond: 'catA', furn: false, it: false },
   mFitout: 0, mFurniture: 0, mItav: 0, mFees: 0,   // manual build-cost (markets w/o benchmark)
-  savedIds: [],
 };
 let DCUR = 'USD';
-let SG_COST_MARKETS = {};   // id -> { name, currency }
-let COST_BY_MARKET = {};    // id -> full cost row
+let SG_COST_MARKETS = {};    // id -> { name, currency }
+let COST_BY_MARKET = {};     // id -> full cost row
+let SAVED_LISTINGS = [];     // the user's saved units (loaded once)
 const DCUR_CHOICES = ['USD', 'EUR', 'GBP', 'EGP', 'AED', 'SAR', 'KES', 'ZAR', 'NGN', 'MAD', 'RWF', 'GHS', 'XOF', 'ETB'];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -125,9 +132,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (firstMarket) W.market = firstMarket;
   const m = (typeof p === 'function') ? p('m') : '';
   if (m && SG_COST_MARKETS[m]) W.market = m;
+  await loadSaved();
   buildCurrencyChoices();
-  screenMode();
+  document.getElementById('sg-curbar').style.display = 'block';
+  renderForm();
 });
+
+async function loadSaved() {
+  try {
+    await URBNAuth.init();
+    const { data } = await URBNAuth.client.from('saved_properties').select('unit_id').eq('user_id', URBNAuth.user.id);
+    const ids = Array.isArray(data) ? data.map(r => r.unit_id).filter(Boolean) : [];
+    SAVED_LISTINGS = ids.map(id => URBN_LISTINGS.findListing(id)).filter(Boolean);
+  } catch (e) { SAVED_LISTINGS = []; }
+}
 
 // ── Currency layer ───────────────────────────────────────────────────────────
 function ratesMap() { return (typeof URBN_LISTINGS !== 'undefined' && URBN_LISTINGS.fx && URBN_LISTINGS.fx.rates) || null; }
@@ -161,11 +179,15 @@ function changeCurrency() {
   const sel = document.getElementById('sg-dcur'); if (!sel) return;
   const next = sel.value, prev = DCUR;
   if (next === prev) return;
-  ['currentMonthly', 'rent', 'svc', 'parking', 'deskRate', 'mFitout', 'mFurniture', 'mItav'].forEach(k => {
-    if (W[k]) W[k] = Math.round(conv(W[k], prev, next));
-  });
+  const cv = v => (v ? Math.round(conv(v, prev, next)) : v);
+  W.currentMonthly = cv(W.currentMonthly);
+  W.lease.rent = cv(W.lease.rent); W.lease.svc = cv(W.lease.svc);
+  W.fitted.rent = cv(W.fitted.rent); W.fitted.svc = cv(W.fitted.svc);
+  W.cowork.deskRate = cv(W.cowork.deskRate);
+  W.mFitout = cv(W.mFitout); W.mFurniture = cv(W.mFurniture); W.mItav = cv(W.mItav);
   DCUR = next;
-  renderCurrent();   // re-render the active screen with converted values
+  renderForm();
+  if (document.getElementById('sg-results').innerHTML.trim()) renderResults();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -176,6 +198,8 @@ function costForMarket(id) { return COST_BY_MARKET[id] || null; }
 function fmtAsOf(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' }); } catch (e) { return d; } }
 function marketOptions(selId) { return Object.keys(SG_COST_MARKETS).map(id => `<option value="${id}"${id === selId ? ' selected' : ''}>${sgEsc(SG_COST_MARKETS[id].name)}</option>`).join(''); }
 function num(v, d) { const x = Number(v); return isNaN(x) ? (d || 0) : x; }
+// A plain-English "condition" maps to the two build states the engine needs.
+function condMap(c) { return c === 'shell' ? { catA: false, fitted: false } : c === 'fitted' ? { catA: true, fitted: true } : { catA: true, fitted: false }; }
 
 function costRowInputs(costRow, level) {
   if (costRow) {
@@ -233,242 +257,193 @@ function waterfallHTML(segs, total) {
   return `<div class="wf" role="img" aria-label="Upfront cost waterfall totalling ${fmtD(total)}"><div class="wf-cap">How the upfront cost builds up</div>${bars}${totalRow}</div>`;
 }
 
-// ── Navigation ───────────────────────────────────────────────────────────────
-let CURRENT = 'mode';
-function setScreen(html, showCur) {
-  document.getElementById('sg-curbar').style.display = showCur ? 'block' : 'none';
-  document.getElementById('sg-screen').innerHTML = html;
-  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+// ── The single-page form ─────────────────────────────────────────────────────
+function fitSelect(scope) {
+  return `<select class="fi fi-sel" onchange="W.${scope}.fitLevel=this.value"><option value="basic"${W[scope].fitLevel === 'basic' ? ' selected' : ''}>Basic</option><option value="standard"${W[scope].fitLevel === 'standard' ? ' selected' : ''}>Standard</option><option value="premium"${W[scope].fitLevel === 'premium' ? ' selected' : ''}>Premium</option></select>`;
 }
-function renderCurrent() {
-  ({ mode: screenMode, baseline: screenBaseline, source: screenSource, simType: screenSimType, configRegular: screenConfigRegular, configCowork: screenConfigCowork, saved: screenSaved, results: screenResults }[CURRENT] || screenMode)();
+function condSelect(scope) {
+  const v = W[scope].cond;
+  return `<select class="fi fi-sel" onchange="W.${scope}.cond=this.value;renderForm()">
+    <option value="shell"${v === 'shell' ? ' selected' : ''}>Bare shell — needs everything</option>
+    <option value="catA"${v === 'catA' ? ' selected' : ''}>Basic landlord finish (floors, ceilings, air-con)</option>
+    <option value="fitted"${v === 'fitted' ? ' selected' : ''}>Already fitted out (walls, meeting rooms, finishes)</option>
+  </select>`;
 }
-function crumb() {
-  const parts = [];
-  if (W.mode) parts.push(['mode', W.mode === 'price' ? 'Pricing options' : 'Stay or move']);
-  if (W.mode === 'staymove' && CURRENT !== 'mode' && CURRENT !== 'baseline') parts.push(['baseline', 'Current office']);
-  if (W.source) parts.push(['source', W.source === 'sim' ? 'Simulation' : 'Saved office']);
-  if (W.source === 'sim' && W.simType) parts.push([W.simType === 'cowork' ? 'configCowork' : 'configRegular', W.simType === 'cowork' ? 'Coworking' : 'Regular office']);
-  if (!parts.length) return '';
-  return `<div class="sg-crumb">${parts.map((p, i) => `<a onclick="goCrumb('${p[0]}')">${p[1]}</a>${i < parts.length - 1 ? '<span class="sep">›</span>' : ''}`).join('')}</div>`;
+function incChecks(scope) {
+  return `<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;">
+    <label style="display:flex;gap:7px;align-items:center;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W[scope].furn ? 'checked' : ''} onchange="W.${scope}.furn=this.checked">Furniture already included</label>
+    <label style="display:flex;gap:7px;align-items:center;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W[scope].it ? 'checked' : ''} onchange="W.${scope}.it=this.checked">IT, AV &amp; cabling included</label>
+  </div>`;
 }
-function goCrumb(target) {
-  // Reset state downstream of the crumb the user jumped back to.
-  if (target === 'mode') { W.source = null; W.simType = null; screenMode(); }
-  else if (target === 'baseline') { W.source = null; W.simType = null; screenBaseline(); }
-  else if (target === 'source') { W.simType = null; screenSource(); }
-  else if (target === 'configCowork') screenConfigCowork();
-  else if (target === 'configRegular') screenConfigRegular();
+function optHead(scope, title, desc) {
+  return `<div class="sg-opt-head" onclick="toggleOpt('${scope}')"><div class="sg-opt-check"></div><div><div class="sg-opt-t">${title}</div><div class="sg-opt-d">${desc}</div></div></div>`;
 }
 
-// ── Screen 1: mode ───────────────────────────────────────────────────────────
-function screenMode() {
-  CURRENT = 'mode';
-  setScreen(`
-    <h2 class="sg-step-h">What are you trying to do?</h2>
-    <p class="sg-step-sub">This shapes the questions we ask next.</p>
-    <div style="display:flex;flex-direction:column;gap:14px;max-width:620px;">
-      <button class="sg-choice" onclick="pickMode('price')">
-        <div class="sg-choice-t">Price options in a market</div>
-        <div class="sg-choice-d">You're expanding or entering a market and want to estimate what taking space would cost — by simulating an office, or using one of your saved listings.</div>
-      </button>
-      <button class="sg-choice" onclick="pickMode('staymove')">
-        <div class="sg-choice-t">Decide whether to stay or move</div>
-        <div class="sg-choice-d">Compare what you pay in your current office against the cost of moving. We'll ask what you pay today first, then what you'd compare against.</div>
-      </button>
-    </div>`, false);
-}
-function pickMode(m) { W.mode = m; if (m === 'staymove') screenBaseline(); else screenSource(); }
+function renderForm() {
+  const leaseRow = costForMarket(W.market);
+  const benchNote = leaseRow
+    ? `<div style="font-size:11.5px;color:#1E6B3F;margin-top:8px;">✓ Build-cost benchmarks loaded for ${sgEsc(marketLabel(W.market))}${leaseRow.effective_date ? ' · prices as of ' + fmtAsOf(leaseRow.effective_date) : ''}.</div>`
+    : `<div style="font-size:11.5px;color:#B42318;margin-top:8px;">No build-cost benchmarks for this market yet — enter your own fit-out costs below when you switch on “Fit out a lease”.</div>`;
 
-// ── Screen 1b: baseline (stay-or-move only — asked FIRST) ────────────────────
-function screenBaseline() {
-  CURRENT = 'baseline';
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">First — what are you paying now?</h2>
-    <p class="sg-step-sub">Your current all-in monthly cost is the baseline everything else is compared against.</p>
-    <div class="card" style="padding:24px;max-width:560px;">
-      <div class="fg"><label class="fl">Where is your current office?</label><select class="fi fi-sel" onchange="W.market=this.value">${marketOptions(W.market)}</select></div>
-      <div class="fg"><label class="fl">Current cost — per month, all-in (${DCUR})</label><input type="number" class="fi" value="${W.currentMonthly || ''}" placeholder="rent + service charge + parking" oninput="W.currentMonthly=num(this.value)"></div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Your office size (sqm)</label><input type="number" class="fi" value="${W.area}" oninput="W.area=num(this.value)"></div>
-        <div class="fg"><label class="fl">Team size (desks)</label><input type="number" class="fi" value="${W.desks}" oninput="W.desks=num(this.value)"></div>
-      </div>
-      <div class="fg" style="margin-bottom:0;"><label class="fl">Comparison period (months)</label><input type="number" class="fi" value="${W.term}" oninput="W.term=num(this.value)"></div>
+  // Option 1: fit out a lease
+  const leaseBody = W.lease.on ? `<div class="sg-opt-body">
+    <div class="fgs">
+      <div class="fg"><label class="fl">Rent — per m² / month (${DCUR})</label><input type="number" class="fi" value="${W.lease.rent}" oninput="W.lease.rent=num(this.value)"></div>
+      <div class="fg"><label class="fl">Service charge — per m² / month (${DCUR})</label><input type="number" class="fi" value="${W.lease.svc}" oninput="W.lease.svc=num(this.value)"></div>
     </div>
-    <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn btn-navy" onclick="screenSource()">Continue →</button><button class="btn btn-ghost" onclick="screenMode()">← Back</button></div>`, true);
-}
-
-// ── Screen 2: source ─────────────────────────────────────────────────────────
-function screenSource() {
-  CURRENT = 'source';
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">${W.mode === 'staymove' ? 'What do you want to compare against?' : 'How do you want to price it?'}</h2>
-    <p class="sg-step-sub">${W.mode === 'staymove' ? 'Compare your current office against either a simulated office or one of your saved listings.' : 'Estimate from typical rates, or use the real commercials of an office you\'ve saved.'}</p>
-    <div style="display:flex;flex-direction:column;gap:14px;max-width:620px;">
-      <button class="sg-choice" onclick="pickSource('sim')">
-        <div class="sg-choice-t">Run a simulation</div>
-        <div class="sg-choice-d">Estimate costs from typical rates — choose a coworking-style office (price per desk) or a regular office (rent, term, area and fit-out).</div>
-      </button>
-      <button class="sg-choice" onclick="pickSource('saved')">
-        <div class="sg-choice-t">Use a saved office</div>
-        <div class="sg-choice-d">Load the real commercials of an office you've saved, then choose what fit-out you'd carry out depending on its current state.</div>
-      </button>
+    <div class="fgs">
+      <div class="fg"><label class="fl">Condition of the space</label>${condSelect('lease')}</div>
+      <div class="fg"><label class="fl">Fit-out quality</label>${fitSelect('lease')}</div>
     </div>
-    <div style="margin-top:18px;"><button class="btn btn-ghost" onclick="${W.mode === 'staymove' ? 'screenBaseline()' : 'screenMode()'}">← Back</button></div>`, true);
-}
-function pickSource(s) { W.source = s; if (s === 'sim') screenSimType(); else screenSaved(); }
+    ${incChecks('lease')}
+    ${leaseRow ? '' : `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Build-cost assumptions (no benchmark for this market)</div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">Fit-out (per m²)</label><input type="number" class="fi" value="${W.mFitout || ''}" placeholder="e.g. 4500" oninput="W.mFitout=num(this.value)"></div>
+        <div class="fg"><label class="fl">Furniture (per desk)</label><input type="number" class="fi" value="${W.mFurniture || ''}" placeholder="e.g. 1200" oninput="W.mFurniture=num(this.value)"></div>
+      </div>
+      <div class="fgs">
+        <div class="fg"><label class="fl">IT / AV (per desk)</label><input type="number" class="fi" value="${W.mItav || ''}" placeholder="e.g. 900" oninput="W.mItav=num(this.value)"></div>
+        <div class="fg"><label class="fl">Fees + contingency (%)</label><input type="number" class="fi" value="${W.mFees || ''}" placeholder="e.g. 18" oninput="W.mFees=num(this.value)"></div>
+      </div>
+    </div>`}
+    <p class="sg-hint" style="margin-top:10px;">We only cost the works that are missing, then add professional fees and a moving allowance.</p>
+  </div>` : '';
 
-// ── Screen 2a: simulation type ───────────────────────────────────────────────
-function screenSimType() {
-  CURRENT = 'simType';
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">What kind of office?</h2>
-    <p class="sg-step-sub">Coworking is priced per desk and is move-in ready. A regular office is leased and fitted out.</p>
-    <div style="display:flex;flex-direction:column;gap:14px;max-width:620px;">
-      <button class="sg-choice" onclick="pickSimType('cowork')">
-        <div class="sg-choice-t">Coworking / serviced office</div>
-        <div class="sg-choice-d">Pay a price per desk each month. No upfront fit-out. We'll ask for the per-desk rate and how many desks you need.</div>
-      </button>
-      <button class="sg-choice" onclick="pickSimType('regular')">
-        <div class="sg-choice-t">Regular office (lease + fit-out)</div>
-        <div class="sg-choice-d">Lease space and fit it out. We'll ask for the rent, term, area and what fit-out you need.</div>
-      </button>
+  // Option 2: move-in-ready fitted office
+  const fittedBody = W.fitted.on ? `<div class="sg-opt-body">
+    <div class="fgs">
+      <div class="fg"><label class="fl">Rent — per m² / month (${DCUR})</label><input type="number" class="fi" value="${W.fitted.rent}" oninput="W.fitted.rent=num(this.value)"></div>
+      <div class="fg"><label class="fl">Service charge — per m² / month (${DCUR})</label><input type="number" class="fi" value="${W.fitted.svc}" oninput="W.fitted.svc=num(this.value)"></div>
     </div>
-    <div style="margin-top:18px;"><button class="btn btn-ghost" onclick="screenSource()">← Back</button></div>`, true);
-}
-function pickSimType(t) { W.simType = t; if (t === 'cowork') screenConfigCowork(); else screenConfigRegular(); }
+    <p class="sg-hint" style="margin-top:10px;">A fully fitted, furnished office you move straight into — higher rent, but no upfront fit-out.</p>
+  </div>` : '';
 
-// ── Screen 2a-i: coworking config ────────────────────────────────────────────
-function screenConfigCowork() {
-  CURRENT = 'configCowork';
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">Coworking office details</h2>
-    <p class="sg-step-sub">We'll cost this as desks × per-desk rate over your chosen period — no upfront fit-out.</p>
-    <div class="card" style="padding:24px;max-width:560px;">
-      <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" onchange="W.market=this.value">${marketOptions(W.market)}</select></div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Desks needed</label><input type="number" class="fi" value="${W.desks}" oninput="W.desks=num(this.value)"></div>
-        <div class="fg"><label class="fl">Price per desk / month (${DCUR})</label><input type="number" class="fi" value="${W.deskRate || ''}" placeholder="e.g. 250" oninput="W.deskRate=num(this.value)"></div>
-      </div>
-      <div class="fg" style="margin-bottom:0;"><label class="fl">Comparison period (months)</label><input type="number" class="fi" value="${W.term}" oninput="W.term=num(this.value)"></div>
-    </div>
-    <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn btn-navy" onclick="screenResults()">See results →</button><button class="btn btn-ghost" onclick="screenSimType()">← Back</button></div>`, true);
-}
+  // Option 3: coworking
+  const coworkBody = W.cowork.on ? `<div class="sg-opt-body">
+    <div class="fg" style="margin-bottom:0;max-width:280px;"><label class="fl">Price per desk / month (${DCUR})</label><input type="number" class="fi" value="${W.cowork.deskRate || ''}" placeholder="e.g. 250" oninput="W.cowork.deskRate=num(this.value)"></div>
+    <p class="sg-hint" style="margin-top:10px;">Costed as your team size (${W.desks} desks) × the per-desk rate. Move-in ready, no upfront fit-out.</p>
+  </div>` : '';
 
-// ── Screen 2a-ii: regular office config ──────────────────────────────────────
-function screenConfigRegular() {
-  CURRENT = 'configRegular';
-  const row = costForMarket(W.market);
-  const benchNote = row
-    ? `<div style="font-size:12px;color:#1E6B3F;margin:-4px 0 12px;">✓ Build-cost benchmarks loaded for ${sgEsc(marketLabel(W.market))}${row.effective_date ? ' · prices as of ' + fmtAsOf(row.effective_date) : ''}.</div>`
-    : `<div style="font-size:12px;color:#B42318;margin:-4px 0 12px;">No build-cost benchmarks for this market yet — enter your own below.</div>`;
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">Regular office details</h2>
-    <p class="sg-step-sub">Tell us the space and rent, then tick what's already in place — we only cost the fit-out works that are missing.</p>
-    <div class="card" style="padding:24px;max-width:600px;">
-      <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" onchange="W.market=this.value;screenConfigRegular()">${marketOptions(W.market)}</select></div>
-      ${benchNote}
-      <div class="fgs">
-        <div class="fg"><label class="fl">Total area (sqm)</label><input type="number" class="fi" value="${W.area}" oninput="W.area=num(this.value)"></div>
-        <div class="fg"><label class="fl">Team size (desks)</label><input type="number" class="fi" value="${W.desks}" oninput="W.desks=num(this.value)"></div>
-      </div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Rent — per sqm / month (${DCUR})</label><input type="number" class="fi" value="${W.rent}" oninput="W.rent=num(this.value)"></div>
-        <div class="fg"><label class="fl">Service charge — per sqm / month (${DCUR})</label><input type="number" class="fi" value="${W.svc}" oninput="W.svc=num(this.value)"></div>
-      </div>
-      <div class="fgs">
-        <div class="fg"><label class="fl">Tenure (lease term, months)</label><input type="number" class="fi" value="${W.term}" oninput="W.term=num(this.value)"></div>
-        <div class="fg"><label class="fl">Fit-out quality</label><select class="fi fi-sel" onchange="W.fitLevel=this.value"><option value="basic"${W.fitLevel === 'basic' ? ' selected' : ''}>Basic</option><option value="standard"${W.fitLevel === 'standard' ? ' selected' : ''}>Standard</option><option value="premium"${W.fitLevel === 'premium' ? ' selected' : ''}>Premium</option></select></div>
-      </div>
-      <div class="fg" style="margin-bottom:6px;"><label class="fl">What's already in the space? (we only cost what's missing)</label>
-        <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">
-          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.catA ? 'checked' : ''} onchange="W.cond.catA=this.checked"><span><strong>Basic landlord finish done</strong> — floors, ceilings, air-con, lifts</span></label>
-          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.fitted ? 'checked' : ''} onchange="W.cond.fitted=this.checked"><span><strong>Already fitted out</strong> — walls, meeting rooms, finishes</span></label>
-          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.furn ? 'checked' : ''} onchange="W.cond.furn=this.checked"><span><strong>Furniture included</strong></span></label>
-          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.it ? 'checked' : ''} onchange="W.cond.it=this.checked"><span><strong>IT, AV &amp; cabling included</strong></span></label>
-        </div>
-      </div>
-      ${row ? '' : `<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
-        <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;">Build-cost assumptions (no benchmark for this market)</div>
+  // Option 4: saved offices
+  let savedBody = '';
+  if (W.saved.on) {
+    const list = SAVED_LISTINGS.length
+      ? SAVED_LISTINGS.map(l => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);"><input type="checkbox" class="sg-saved-cb" value="${sgEsc(l.id)}" ${W.saved.ids.indexOf(l.id) >= 0 ? 'checked' : ''} onchange="onSavedToggle()"><span><strong>${sgEsc(l.name)}</strong> — ${sgEsc(marketLabel(l.market))}${l.size ? ' · ' + l.size + ' m²' : ''}${l.rent ? ' · ' + money(l.rent, l.unitCurrency || l.rentCurrency || curForMarket(l.market)) + (unitBasis(l) === 'per_desk' ? '/desk/mo' : unitBasis(l) === 'per_unit_month' ? '/unit/mo' : '/m²/mo') : ''}</span></label>`).join('')
+      : `<p class="sg-hint">You have no saved offices yet. <a href="/offices" class="text-navy" style="text-decoration:underline;">Browse offices</a> and tap the heart to save — then compare up to 3 here.</p>`;
+    savedBody = `<div class="sg-opt-body">
+      ${list}
+      ${SAVED_LISTINGS.length ? `<div style="margin-top:12px;">
         <div class="fgs">
-          <div class="fg"><label class="fl">Fit-out (per sqm)</label><input type="number" class="fi" value="${W.mFitout || ''}" placeholder="e.g. 4500" oninput="W.mFitout=num(this.value)"></div>
-          <div class="fg"><label class="fl">Furniture (per desk)</label><input type="number" class="fi" value="${W.mFurniture || ''}" placeholder="e.g. 1200" oninput="W.mFurniture=num(this.value)"></div>
+          <div class="fg"><label class="fl">Condition of the saved space</label>${condSelect('saved')}</div>
+          <div class="fg"><label class="fl">Fit-out quality</label>${fitSelect('saved')}</div>
         </div>
-        <div class="fgs">
-          <div class="fg"><label class="fl">IT / AV (per desk)</label><input type="number" class="fi" value="${W.mItav || ''}" placeholder="e.g. 900" oninput="W.mItav=num(this.value)"></div>
-          <div class="fg"><label class="fl">Fees + contingency (%)</label><input type="number" class="fi" value="${W.mFees || ''}" placeholder="e.g. 18" oninput="W.mFees=num(this.value)"></div>
-        </div>
-      </div>`}
-    </div>
-    <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn btn-navy" onclick="screenResults()">See results →</button><button class="btn btn-ghost" onclick="screenSimType()">← Back</button></div>`, true);
-}
-
-// ── Screen 2b: saved offices ─────────────────────────────────────────────────
-async function screenSaved() {
-  CURRENT = 'saved';
-  setScreen(`${crumb()}<h2 class="sg-step-h">Choose saved offices</h2><p class="sg-step-sub">Loading your saved offices…</p>`, true);
-  let ids = [];
-  try { await URBNAuth.init(); const { data } = await URBNAuth.client.from('saved_properties').select('unit_id').eq('user_id', URBNAuth.user.id); ids = Array.isArray(data) ? data.map(r => r.unit_id).filter(Boolean) : []; } catch (e) {}
-  try { await URBN_LISTINGS.load(); } catch (e) {}
-  const saved = ids.map(id => URBN_LISTINGS.findListing(id)).filter(Boolean);
-  const list = saved.length
-    ? saved.map(l => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:6px 0;cursor:pointer;border-bottom:1px solid var(--border);"><input type="checkbox" class="sg-saved-cb" value="${sgEsc(l.id)}" ${W.savedIds.indexOf(l.id) >= 0 ? 'checked' : ''} onchange="onSavedToggle()"><span><strong>${sgEsc(l.name)}</strong> — ${sgEsc(marketLabel(l.market))}${l.size ? ' · ' + l.size + ' m²' : ''}${l.rent ? ' · ' + money(l.rent, l.unitCurrency || l.rentCurrency || curForMarket(l.market)) + (unitBasis(l) === 'per_desk' ? '/desk/mo' : unitBasis(l) === 'per_unit_month' ? '/unit/mo' : '/m²/mo') : ''}</span></label>`).join('')
-    : `<p style="font-size:13px;color:var(--text-2);">You have no saved offices yet. <a href="/offices" class="text-navy" style="text-decoration:underline;">Browse offices</a> and tap the heart to save, then compare up to 3 here.</p>`;
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">Choose saved offices</h2>
-    <p class="sg-step-sub">Pick up to 3. We'll load their real commercials; then tell us what fit-out you'd carry out, based on each one's current state.</p>
-    <div class="card" style="padding:22px;max-width:620px;">
-      <div style="margin-bottom:14px;">${list}</div>
-      ${saved.length ? `<div style="border-top:1px solid var(--border);padding-top:14px;">
-        <div class="fgs">
-          <div class="fg"><label class="fl">Comparison period (months)</label><input type="number" class="fi" value="${W.term}" oninput="W.term=num(this.value)"></div>
-          <div class="fg"><label class="fl">Fit-out quality</label><select class="fi fi-sel" onchange="W.fitLevel=this.value"><option value="basic"${W.fitLevel === 'basic' ? ' selected' : ''}>Basic</option><option value="standard"${W.fitLevel === 'standard' ? ' selected' : ''}>Standard</option><option value="premium"${W.fitLevel === 'premium' ? ' selected' : ''}>Premium</option></select></div>
-        </div>
-        <div class="fg" style="margin-bottom:0;"><label class="fl">What fit-out works will you carry out? (untick what's already in place)</label>
-          <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px;">
-            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.catA ? 'checked' : ''} onchange="W.cond.catA=this.checked"><span><strong>Basic landlord finish in place</strong> (floors, ceilings, air-con)</span></label>
-            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.fitted ? 'checked' : ''} onchange="W.cond.fitted=this.checked"><span><strong>Already fitted out</strong> (walls, meeting rooms, finishes)</span></label>
-            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.furn ? 'checked' : ''} onchange="W.cond.furn=this.checked"><span><strong>Furniture included</strong></span></label>
-            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer;"><input type="checkbox" ${W.cond.it ? 'checked' : ''} onchange="W.cond.it=this.checked"><span><strong>IT, AV &amp; cabling included</strong></span></label>
-          </div>
-          <p style="font-size:11px;color:var(--text-2);margin-top:6px;">Applied to the saved offices you compare. Per-desk / coworking units are move-in ready, so no fit-out is costed for them.</p>
-        </div>
+        ${incChecks('saved')}
+        <p class="sg-hint" style="margin-top:8px;">Applied to the leased saved offices. Per-desk / coworking units are move-in ready, so no fit-out is costed for them.</p>
       </div>` : ''}
+    </div>`;
+  }
+
+  const anyOn = W.lease.on || W.fitted.on || W.cowork.on || (W.saved.on && W.saved.ids.length);
+
+  document.getElementById('sg-form').innerHTML = `
+    <!-- Step 1: basics -->
+    <div class="sg-sec">
+      <h2 class="sg-step-h"><span class="sg-num">1</span>Set the basics</h2>
+      <p class="sg-sub">Where you're looking, how big a team, and over what period. These apply to every option below.</p>
+      <div class="card" style="padding:22px;">
+        <div class="fgs">
+          <div class="fg"><label class="fl">Market</label><select class="fi fi-sel" onchange="W.market=this.value;renderForm()">${marketOptions(W.market)}</select></div>
+          <div class="fg"><label class="fl">Comparison period (months)</label><input type="number" class="fi" value="${W.term}" oninput="W.term=num(this.value)"></div>
+        </div>
+        <div class="fgs" style="margin-bottom:0;">
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Team size (desks)</label><input type="number" class="fi" value="${W.desks}" oninput="W.desks=num(this.value)"></div>
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Space you need (m²)</label><input type="number" class="fi" value="${W.area}" oninput="W.area=num(this.value)"></div>
+        </div>
+        ${benchNote}
+      </div>
     </div>
-    <div style="margin-top:18px;display:flex;gap:10px;">${saved.length ? `<button class="btn btn-navy" id="sg-saved-next" onclick="screenResults()"${W.savedIds.length ? '' : ' disabled style="opacity:.5;"'}>See results →</button>` : ''}<button class="btn btn-ghost" onclick="screenSource()">← Back</button></div>`, true);
+
+    <!-- Step 2: current office (optional) -->
+    <div class="sg-sec">
+      <h2 class="sg-step-h"><span class="sg-num">2</span>Your current office <span style="font-family:var(--f);font-size:13px;color:var(--text-2);font-weight:400;">— optional</span></h2>
+      <p class="sg-sub">Enter what you pay today and we'll tell you whether moving saves money. Leave it blank to simply compare options.</p>
+      <div class="card" style="padding:22px;">
+        <div class="fg" style="margin-bottom:0;max-width:360px;"><label class="fl">Current cost — per month, all-in (${DCUR})</label><input type="number" class="fi" value="${W.currentMonthly || ''}" placeholder="rent + service charge + parking" oninput="W.currentMonthly=num(this.value)"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: options -->
+    <div class="sg-sec">
+      <h2 class="sg-step-h"><span class="sg-num">3</span>Options to compare</h2>
+      <p class="sg-sub">Switch on the ways of taking space you want to weigh up — as many as you like.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="sg-opt${W.lease.on ? ' on' : ''}">${optHead('lease', 'Fit out a lease', 'Lease raw or part-fitted space and fit it out. Upfront cost, then rent.')}${leaseBody}</div>
+        <div class="sg-opt${W.fitted.on ? ' on' : ''}">${optHead('fitted', 'Move-in-ready fitted office', 'Take a fully fitted, furnished office. Higher rent, no upfront fit-out.')}${fittedBody}</div>
+        <div class="sg-opt${W.cowork.on ? ' on' : ''}">${optHead('cowork', 'Coworking / serviced', 'Pay a price per desk each month. Flexible, move-in ready.')}${coworkBody}</div>
+        <div class="sg-opt${W.saved.on ? ' on' : ''}">${optHead('saved', 'A saved office', 'Compare the real commercials of offices you have saved (up to 3).')}${savedBody}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-navy btn-lg" onclick="renderResults()"${anyOn ? '' : ' disabled style="opacity:.5;"'}>Compare costs →</button>
+      <button class="btn btn-ghost" onclick="resetTool()">Reset</button>
+      ${anyOn ? '' : '<span class="sg-hint">Switch on at least one option above.</span>'}
+    </div>`;
+}
+
+function toggleOpt(scope) {
+  W[scope].on = !W[scope].on;
+  renderForm();
 }
 function onSavedToggle() {
   const cbs = [...document.querySelectorAll('.sg-saved-cb')];
   const checked = cbs.filter(c => c.checked);
   cbs.forEach(c => { c.disabled = !c.checked && checked.length >= 3; });
-  W.savedIds = checked.slice(0, 3).map(c => c.value);
-  const next = document.getElementById('sg-saved-next');
-  if (next) { next.disabled = !W.savedIds.length; next.style.opacity = W.savedIds.length ? '' : '.5'; }
+  W.saved.ids = checked.slice(0, 3).map(c => c.value);
+}
+function resetTool() {
+  W.currentMonthly = 0;
+  W.lease = { on: true, rent: 30, svc: 8, fitLevel: 'standard', cond: 'catA', furn: false, it: false };
+  W.fitted = { on: false, rent: 45, svc: 8 };
+  W.cowork = { on: false, deskRate: 250 };
+  W.saved = { on: false, ids: [], fitLevel: 'standard', cond: 'catA', furn: false, it: false };
+  document.getElementById('sg-results').innerHTML = '';
+  renderForm();
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
 }
 
 // ── Build cost columns for the results ───────────────────────────────────────
 function buildColumns() {
   const term = W.term || 1;
   const cols = [];
-  if (W.mode === 'staymove') {
+  if (W.currentMonthly > 0) {
     cols.push({ current: true, label: 'Your current office', sub: 'what you pay now', monthlyD: W.currentMonthly, upfrontD: 0, endD: 0, total: W.currentMonthly * term });
   }
-  if (W.source === 'sim' && W.simType === 'cowork') {
-    const monthly = (W.deskRate || 0) * (W.desks || 0);
-    cols.push({ label: 'Coworking / serviced', sub: (W.desks || 0) + ' desks × ' + money(W.deskRate) + '/desk', monthlyD: monthly, upfrontD: 0, endD: 0, total: monthly * term, plug: true });
-  } else if (W.source === 'sim' && W.simType === 'regular') {
-    const row = costForMarket(W.market); const ci = costRowInputs(row, W.fitLevel);
-    const cap = computeCapex(ci, W.area || 0, W.desks || 0, W.cond);
-    const monthly = ((W.rent || 0) + (W.svc || 0)) * (W.area || 0) + (W.parking || 0);
+  if (W.lease.on) {
+    const row = costForMarket(W.market); const ci = costRowInputs(row, W.lease.fitLevel);
+    const cond = { ...condMap(W.lease.cond), furn: W.lease.furn, it: W.lease.it };
+    const cap = computeCapex(ci, W.area || 0, W.desks || 0, cond);
+    const monthly = ((W.lease.rent || 0) + (W.lease.svc || 0)) * (W.area || 0);
     const upfrontD = conv(cap.upfront, ci.currency, DCUR), endD = conv(cap.reinstatement, ci.currency, DCUR);
-    cols.push({ label: 'Regular office (lease + fit-out)', sub: (W.area || 0) + ' m² · ' + W.fitLevel + ' fit-out', monthlyD: monthly, upfrontD, endD, total: upfrontD + monthly * term + endD, cap, ci, area: W.area || 0, desks: W.desks || 0, row });
-  } else if (W.source === 'saved') {
-    (W.savedIds || []).forEach(id => {
+    cols.push({ label: 'Fit out a lease', sub: (W.area || 0) + ' m² · ' + W.lease.fitLevel + ' fit-out', monthlyD: monthly, upfrontD, endD, total: upfrontD + monthly * term + endD, cap, ci, area: W.area || 0, desks: W.desks || 0, row });
+  }
+  if (W.fitted.on) {
+    const monthly = ((W.fitted.rent || 0) + (W.fitted.svc || 0)) * (W.area || 0);
+    cols.push({ label: 'Move-in-ready fitted', sub: (W.area || 0) + ' m² · fitted, no works', monthlyD: monthly, upfrontD: 0, endD: 0, total: monthly * term, plug: true });
+  }
+  if (W.cowork.on) {
+    const monthly = (W.cowork.deskRate || 0) * (W.desks || 0);
+    cols.push({ label: 'Coworking / serviced', sub: (W.desks || 0) + ' desks × ' + money(W.cowork.deskRate) + '/desk', monthlyD: monthly, upfrontD: 0, endD: 0, total: monthly * term, plug: true });
+  }
+  if (W.saved.on) {
+    (W.saved.ids || []).forEach(id => {
       const b = URBN_LISTINGS.findListing(id); if (!b) return;
       const row = costForMarket(b.market); const unitCur = b.unitCurrency || b.rentCurrency || curForMarket(b.market);
-      const basis = unitBasis(b); const ci = costRowInputs(row, W.fitLevel); const lArea = b.size || W.area || 0;
-      const monthlyD = conv(unitMonthly(b, { svc: W.svc, parking: W.parking, area: W.area, desks: W.desks }), unitCur, DCUR);
-      const cap = (row && basis !== 'per_desk') ? computeCapex(ci, lArea, W.desks || 0, W.cond) : null;
+      const basis = unitBasis(b); const ci = costRowInputs(row, W.saved.fitLevel); const lArea = b.size || W.area || 0;
+      const cond = { ...condMap(W.saved.cond), furn: W.saved.furn, it: W.saved.it };
+      const monthlyD = conv(unitMonthly(b, { svc: W.lease.svc, parking: 0, area: W.area, desks: W.desks }), unitCur, DCUR);
+      const cap = (row && basis !== 'per_desk') ? computeCapex(ci, lArea, W.desks || 0, cond) : null;
       const upfrontD = cap ? conv(cap.upfront, ci.currency, DCUR) : 0, endD = cap ? conv(cap.reinstatement, ci.currency, DCUR) : 0;
       cols.push({ label: b.name, sub: basisLabel(basis), saved: b, basis, monthlyD, upfrontD, endD, total: upfrontD + monthlyD * term + endD, cap, ci, area: lArea, desks: W.desks || 0, row, plug: basis === 'per_desk' });
     });
@@ -477,17 +452,17 @@ function buildColumns() {
 }
 
 // ── Results ──────────────────────────────────────────────────────────────────
-function screenResults() {
-  CURRENT = 'results';
+function renderResults() {
   const term = W.term || 0;
   const cols = buildColumns();
   const options = cols.filter(c => !c.current);
+  if (!options.length) { return; }
+  const hasBaseline = W.currentMonthly > 0;
   const ranked = options.filter(c => c.total != null).sort((a, b) => a.total - b.total);
   const bestOpt = ranked[0] || null;
 
-  // Verdict
   let verdict = '';
-  if (W.mode === 'staymove') {
+  if (hasBaseline) {
     const current = cols.find(c => c.current);
     if (current && bestOpt) {
       const diff = current.total - bestOpt.total;     // >0 → moving cheaper
@@ -497,8 +472,6 @@ function screenResults() {
           <div style="font-family:var(--fd);font-size:27px;font-weight:400;color:var(--navy);line-height:1.2;">${diff > 0 ? 'Moving could save you ' + money(Math.abs(diff)) : diff < 0 ? 'Staying is cheaper by ' + money(Math.abs(diff)) : 'Staying and moving cost about the same'}</div>
           <div style="font-size:13px;color:var(--text-2);margin-top:10px;line-height:1.8;">Staying costs <strong>${fmtD(current.total)}</strong>. ${options.length > 1 ? 'Your cheapest option' : 'The option you set up'} (${sgEsc(bestOpt.label)}) costs <strong>${fmtD(bestOpt.total)}</strong>${bestOpt.upfrontD ? ' including ' + fmtD(bestOpt.upfrontD) + ' upfront fit-out' : ''}.</div>
         </div>`;
-    } else {
-      verdict = `<div class="card" style="padding:22px;"><p style="font-size:13px;color:var(--text-2);">Add your current monthly cost and at least one option to compare.</p></div>`;
     }
   } else if (bestOpt) {
     const worst = ranked[ranked.length - 1];
@@ -540,7 +513,7 @@ function screenResults() {
       </table>
     </div>`;
 
-  // CAPEX breakdown for the first column that has a fit-out build (regular sim / saved unit)
+  // CAPEX breakdown for the first column that has a fit-out build (lease / saved unit)
   const capCol = cols.find(c => c.cap && c.upfrontD > 0);
   let capex = '';
   if (capCol) {
@@ -557,7 +530,7 @@ function screenResults() {
     ];
     const rowsC = [];
     if (cap.catAWorks) rowsC.push(['Basic landlord finish — ' + mc(ci.shellToCatA) + '/m² × ' + area + ' m²', cc(cap.catAWorks)]);
-    if (cap.fitoutWorks) rowsC.push(['Fit-out (' + W.fitLevel + ') — ' + mc(ci.perSqm) + '/m² × ' + area + ' m²', cc(cap.fitoutWorks)]);
+    if (cap.fitoutWorks) rowsC.push(['Fit-out (' + (capCol.saved ? W.saved.fitLevel : W.lease.fitLevel) + ') — ' + mc(ci.perSqm) + '/m² × ' + area + ' m²', cc(cap.fitoutWorks)]);
     if (cap.furn) rowsC.push(['Furniture — ' + mc(ci.furniture) + '/desk × ' + desks + ' desks', cc(cap.furn)]);
     if (cap.it) rowsC.push(['IT / AV / cabling — ' + mc(ci.itav) + '/desk × ' + desks + ' desks', cc(cap.it)]);
     if (cap.fees) rowsC.push(['Professional fees &amp; contingency — ' + ci.feesPct + '%', cc(cap.fees)]);
@@ -577,27 +550,25 @@ function screenResults() {
       </div>`;
   }
 
-  const editTarget = W.source === 'saved' ? 'screenSaved()' : (W.simType === 'cowork' ? 'screenConfigCowork()' : 'screenConfigRegular()');
-  setScreen(`${crumb()}
-    <h2 class="sg-step-h">Your results</h2>
-    <p class="sg-step-sub">All figures in ${DCUR}. Change the display currency above, or go back to adjust your inputs.</p>
+  document.getElementById('sg-results').innerHTML = `
+    <h2 class="sg-step-h" style="font-size:24px;">Your results</h2>
+    <p class="sg-sub">All figures in ${DCUR}. Change the display currency at the top, or edit any input above and hit Compare again.</p>
     ${verdict}
     ${table}
     ${capex}
     <div class="card" style="padding:18px 20px;margin-top:18px;">
       <ul style="font-size:12px;color:var(--text-2);line-height:1.9;padding-left:18px;margin:0;">
-        <li>Monthly cost = (rent + service charge) × area + parking; coworking = per-desk rate × desks.</li>
+        <li>Monthly cost = (rent + service charge) × area; coworking = per-desk rate × desks.</li>
         <li>We only cost fit-out works that aren't already in place. Figures exclude VAT/taxes, agency fees and financing.</li>
         <li>Indicative early-stage comparison — not a quote, valuation, or financial advice.</li>
       </ul>
     </div>
     <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-navy" onclick="${editTarget}">← Adjust inputs</button>
-      <button class="btn btn-outline" onclick="resetWizard()">Start over</button>
-      <a href="/market-scan" class="btn btn-ghost">Request a Market Scan →</a>
-    </div>`, true);
+      <a href="/market-scan" class="btn btn-navy">Request a Market Scan →</a>
+      <a href="/offices" class="btn btn-ghost">Browse offices</a>
+    </div>`;
+  try { document.getElementById('sg-results').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
 }
-function resetWizard() { W.mode = null; W.source = null; W.simType = null; W.savedIds = []; screenMode(); }
 </script>
 </body>
 </html>
