@@ -284,6 +284,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   const T=(k,f)=>{var v=(window.URBN_I18N&&URBN_I18N.t)?URBN_I18N.t(k):null;return v!=null?v:f;};
   const tRegion=r=>T('region.'+r,r);
   const tCountry=c=>T('country.'+c,c);
+  const thumb=m=>`<img class="city-card-thumb" src="/assets/img/city-${m.id}.jpg" alt="${m.name} skyline" loading="lazy" onerror="this.style.display='none'">`;
   URBN_DATA.markets.slice(0,8).forEach(m=>{
     const s=URBN_DATA.marketStats[m.id];
     const bc=URBN_LISTINGS.count(m.id);
@@ -292,10 +293,11 @@ document.addEventListener('DOMContentLoaded',async ()=>{
     const href=live?`/offices?m=${m.id}`:'/market-scan';
     const comingSoon=T('home.comingSoon','Coming soon');
     if(!signedIn){
-      mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}><div class="city-card-region">${tRegion(m.region)}</div><div class="city-card-name" style="margin-top:6px;">${m.name}, ${tCountry(m.country)}</div></a>`;
+      mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}>${thumb(m)}<div class="city-card-region">${tRegion(m.region)}</div><div class="city-card-name" style="margin-top:6px;">${m.name}, ${tCountry(m.country)}</div></a>`;
       return;
     }
     mg.innerHTML+=`<a href="${href}" class="city-card"${live?'':' style="opacity:.85;"'}>
+      ${thumb(m)}
       <div class="city-card-region">${tRegion(m.region)}</div>
       <div class="city-card-name">${m.name}, ${tCountry(m.country)} ${live?'':`<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">${comingSoon}</span>`}</div>
       <div class="city-card-divider"></div>

@@ -50,11 +50,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tRegion = r => T('region.' + r, r);
   const tCountry = c => T('country.' + c, c);
   const comingSoon = T('home.comingSoon', 'Coming soon');
+  // Per-market thumbnail (all 16 markets have one); hides itself if ever missing.
+  const thumb = m => `<img class="city-card-thumb" src="/assets/img/city-${m.id}.jpg" alt="${m.name} skyline" loading="lazy" onerror="this.style.display='none'">`;
 
   // Logged-out: teaser only — market names + coverage, no supply counts or rent
   // bands. (Protected building/unit data is already gated server-side in /api/listings.)
   if (!signedIn) {
     mg.innerHTML = URBN_DATA.markets.map(m => `<div class="city-card">
+      ${thumb(m)}
       <div class="city-card-region">${tRegion(m.region)}</div>
       <div class="city-card-name">${m.name}, ${tCountry(m.country)}</div>
       <div class="city-card-divider"></div>
@@ -74,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const subs = m.submarkets.slice(0, 2).join(', ');
     const href = live ? `/offices?m=${m.id}` : '/market-scan';
     mg.innerHTML += `<a href="${href}" class="city-card"${live ? '' : ' style="opacity:.85;"'}>
+      ${thumb(m)}
       <div class="city-card-region">${tRegion(m.region)}</div>
       <div class="city-card-name">${m.name}, ${tCountry(m.country)} ${live ? '' : `<span class="badge badge-gated" style="font-size:9px;vertical-align:middle;">${comingSoon}</span>`}</div>
       <div class="city-card-divider"></div>
