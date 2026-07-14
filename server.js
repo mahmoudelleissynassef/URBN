@@ -7,6 +7,11 @@ const zlib = require('zlib');
 
 const PORT = process.env.PORT || 3000;
 
+// Railway runs a single always-on process — an unhandled rejection/exception would
+// take the whole site down. Log and keep serving instead of crashing.
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', (e && e.stack) || e));
+process.on('uncaughtException', (e) => console.error('[uncaughtException]', (e && e.stack) || e));
+
 const mimeTypes = {
   '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
   '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
@@ -80,9 +85,6 @@ const ROUTE_REVERSE = (() => {
 // Stores each submission in Supabase (source of truth) and notifies via Resend.
 // All credentials come from environment variables — never hardcoded.
 const MAX_BODY = 64 * 1024;          // 64 KB payload cap (listing payloads + file paths)
-const RL_WINDOW_MS = 60 * 1000;      // rate-limit window
-const RL_MAX = 12;                   // max submissions per IP per window
-const rateBuckets = new Map();       // ip -> [timestamps]
 
 const REQUEST_TYPES = {
   'access': 'Request Access',
@@ -161,14 +163,6 @@ function allowedCurrenciesForMarket(marketId) {
   return out;
 }
 
-function rateLimited(ip) {
-  const now = Date.now();
-  const hits = (rateBuckets.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
-  hits.push(now);
-  rateBuckets.set(ip, hits);
-  return hits.length > RL_MAX;
-}
-
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
   const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Accept-Encoding' };
@@ -211,6 +205,8 @@ function httpsRequest(urlStr, { method = 'POST', headers = {} }, payload) {
       }
     );
     req.on('error', reject);
+    // Never let a stalled upstream (Supabase/Resend/GoTrue/FX) hang a request forever.
+    req.setTimeout(15000, () => req.destroy(new Error('upstream_timeout')));
     if (payload) req.write(payload);
     req.end();
   });
@@ -484,7 +480,7 @@ function buildUserConfirmation(type, data, name, requestId, createdAt) {
 
 function handleLeadRequest(req, res) {
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '';
-  if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+  if (rateLimited('lead:' + ip, 12, 60000)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
 
   let body = '';
   let tooLarge = false;
@@ -1246,7 +1242,7 @@ function handleAdmin(req, res, urlPath) {
       const body = await readJsonBody(req);
       if (!body) return sendJson(res, 400, { ok: false, error: 'invalid_json' });
       if (urlPath === '/api/admin/approve-listing') {
-        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        const row = (await sbGet(`client_requests?id=eq.${encodeURIComponent(body.requestId)}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         // Optional: attach to an existing inventory building chosen by the admin.
         await approveRequestRow(row, user.id, body.buildingId || null);
@@ -1348,18 +1344,18 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true, deleted });
       }
       if (urlPath === '/api/admin/reject-listing') {
-        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        const row = (await sbGet(`client_requests?id=eq.${encodeURIComponent(body.requestId)}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         const reasonCode = REJECTION_REASONS.includes(body.reasonCode) ? body.reasonCode : (body.reasonCode ? 'Other' : null);
         const note = String(body.reason || body.note || '').slice(0, 500);
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_reason: reasonCode, review_note: note });
+        await sbPatch('client_requests', `id=eq.${encodeURIComponent(body.requestId)}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_reason: reasonCode, review_note: note });
         const reasonText = [reasonCode, note].filter(Boolean).join(reasonCode && note ? ' — ' : '');
         await sendApprovalEmail(row.email, row.name, row.payload && row.payload.building, false, reasonText);
         await writeAudit(req, user, 'listing.reject', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { reason: reasonCode } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-batch-row') {
-        const row = (await sbGet(`listing_batch_rows?id=eq.${body.rowId}&select=*`))[0];
+        const row = (await sbGet(`listing_batch_rows?id=eq.${encodeURIComponent(body.rowId)}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         await approveBatchRowRec(row, user.id);
         await writeAudit(req, user, 'batch.approve_row', { targetType: 'batch_row', targetIds: [String(body.rowId)] });
@@ -1369,25 +1365,25 @@ function handleAdmin(req, res, urlPath) {
         const reasonCode = REJECTION_REASONS.includes(body.reasonCode) ? body.reasonCode : (body.reasonCode ? 'Other' : null);
         const note = String(body.reason || body.note || '').slice(0, 500);
         const errText = [reasonCode, note].filter(Boolean).join(' — ') || 'rejected by admin';
-        await sbPatch('listing_batch_rows', `id=eq.${body.rowId}`, { status: 'rejected', review_reason: reasonCode, review_note: note, reviewed_by: user.id, reviewed_at: new Date().toISOString(), errors: [errText] });
+        await sbPatch('listing_batch_rows', `id=eq.${encodeURIComponent(body.rowId)}`, { status: 'rejected', review_reason: reasonCode, review_note: note, reviewed_by: user.id, reviewed_at: new Date().toISOString(), errors: [errText] });
         await writeAudit(req, user, 'batch.reject_row', { targetType: 'batch_row', targetIds: [String(body.rowId)], metadata: { reason: reasonCode } });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/approve-valid-batch') {
-        const rows = await sbGet(`listing_batch_rows?batch_id=eq.${body.batchId}&status=eq.pending_review&select=*`);
+        const rows = await sbGet(`listing_batch_rows?batch_id=eq.${encodeURIComponent(body.batchId)}&status=eq.pending_review&select=*`);
         let n = 0; for (const row of rows) { await approveBatchRowRec(row, user.id); n++; }
         await writeAudit(req, user, 'batch.approve_all', { targetType: 'batch', targetIds: [String(body.batchId)], count: n });
         return sendJson(res, 200, { ok: true, approved: n });
       }
       if (urlPath === '/api/admin/approve-membership') {
-        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        const row = (await sbGet(`client_requests?id=eq.${encodeURIComponent(body.requestId)}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
         const p = row.payload || {}, tier = p.requestedTier || body.tier;
         // Starter is single-market — carry the requested (or admin-overridden) market
         // onto the activated subscription so entitlements scope correctly.
         const assignedMarket = tier === 'starter' ? (normalizeMarket(body.assignedMarket || p.assignedMarket) || null) : null;
         if (p.companyId && tier) await sbUpsert('company_subscriptions', [{ company_id: p.companyId, tier, status: 'active', assigned_market: assignedMarket, requested_by: user.id }]);
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        await sbPatch('client_requests', `id=eq.${encodeURIComponent(body.requestId)}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         await sendMembershipDecisionEmail(row.email, row.name, tier, true);
         await notifyOwner('URBN: subscription activated — ' + (tier || 'tier'), 'Subscription',
           emailSection('Subscription activated', emailRow('Tier', tier) + emailRow('Company', row.company || (p.companyName || '')) + emailRow('Contact', row.name) + emailRow('Email', row.email) + emailRow('Market', assignedMarket || 'all') + emailRow('Via', 'Approved membership request')),
@@ -1396,9 +1392,9 @@ function handleAdmin(req, res, urlPath) {
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reject-membership') {
-        const row = (await sbGet(`client_requests?id=eq.${body.requestId}&select=*`))[0];
+        const row = (await sbGet(`client_requests?id=eq.${encodeURIComponent(body.requestId)}&select=*`))[0];
         if (!row) return sendJson(res, 404, { ok: false, error: 'not_found' });
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
+        await sbPatch('client_requests', `id=eq.${encodeURIComponent(body.requestId)}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
         await sendMembershipDecisionEmail(row.email, row.name, (row.payload || {}).requestedTier, false);
         await writeAudit(req, user, 'membership.reject', { targetType: 'request', targetIds: [String(body.requestId)] });
         return sendJson(res, 200, { ok: true });
@@ -1409,9 +1405,9 @@ function handleAdmin(req, res, urlPath) {
         // a tier. Used while an admin chases payment outside the platform.
         const ALLOWED = ['pending', 'contacted', 'paid'];
         if (!body.requestId || !ALLOWED.includes(body.status)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: body.status, reviewed_by: user.id, reviewed_at: new Date().toISOString() });
+        await sbPatch('client_requests', `id=eq.${encodeURIComponent(body.requestId)}`, { status: body.status, reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         if (body.status === 'paid') {
-          const r2 = (await sbGet(`client_requests?id=eq.${body.requestId}&select=name,email,company,payload`).catch(() => []))[0] || {};
+          const r2 = (await sbGet(`client_requests?id=eq.${encodeURIComponent(body.requestId)}&select=name,email,company,payload`).catch(() => []))[0] || {};
           await notifyOwner('URBN: marked paid — ' + (r2.company || r2.email || 'member'), 'Payment',
             emailSection('Marked paid', emailRow('Company', r2.company || '') + emailRow('Contact', r2.name || '') + emailRow('Email', r2.email || '') + emailRow('Tier', (r2.payload || {}).requestedTier || '')),
             'Payment marked');
@@ -1545,21 +1541,21 @@ function handleAdmin(req, res, urlPath) {
       }
       if (urlPath === '/api/admin/unpublish-building') {
         if (!body.buildingId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        await sbPatch('buildings', `id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
-        await sbPatch('units', `building_id=eq.${body.buildingId}`, { status: String(body.status || 'draft') });
+        await sbPatch('buildings', `id=eq.${encodeURIComponent(body.buildingId)}`, { status: String(body.status || 'draft') });
+        await sbPatch('units', `building_id=eq.${encodeURIComponent(body.buildingId)}`, { status: String(body.status || 'draft') });
         return sendJson(res, 200, { ok: true });
       }
       if (urlPath === '/api/admin/reopen-listing') {
         if (!body.requestId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        await sbPatch('client_requests', `id=eq.${body.requestId}`, { status: 'pending', review_note: null });
+        await sbPatch('client_requests', `id=eq.${encodeURIComponent(body.requestId)}`, { status: 'pending', review_note: null });
         return sendJson(res, 200, { ok: true });
       }
       // ── Reveal / listing access grants ───────────────────────────────────
       if (urlPath === '/api/admin/approve-reveal') {
         if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        const g = (await sbGet(`listing_access_grants?id=eq.${body.grantId}&select=*`))[0];
+        const g = (await sbGet(`listing_access_grants?id=eq.${encodeURIComponent(body.grantId)}&select=*`))[0];
         if (!g) return sendJson(res, 404, { ok: false, error: 'not_found' });
-        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'approved', granted_by: user.id, granted_at: new Date().toISOString(), expires_at: body.expiresAt || null, notes: String(body.notes || '').slice(0, 500) || null });
+        await sbPatch('listing_access_grants', `id=eq.${encodeURIComponent(body.grantId)}`, { status: 'approved', granted_by: user.id, granted_at: new Date().toISOString(), expires_at: body.expiresAt || null, notes: String(body.notes || '').slice(0, 500) || null });
         if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() });
         try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, true); } catch (e) {}
         await writeAudit(req, user, 'reveal.approve', { targetType: 'grant', targetIds: [String(body.grantId)], metadata: { buildingId: g.building_id, grantedTo: g.user_id } });
@@ -1567,9 +1563,9 @@ function handleAdmin(req, res, urlPath) {
       }
       if (urlPath === '/api/admin/reject-reveal') {
         if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        const g = (await sbGet(`listing_access_grants?id=eq.${body.grantId}&select=*`))[0];
+        const g = (await sbGet(`listing_access_grants?id=eq.${encodeURIComponent(body.grantId)}&select=*`))[0];
         if (!g) return sendJson(res, 404, { ok: false, error: 'not_found' });
-        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'rejected', granted_by: user.id, notes: String(body.reason || '').slice(0, 500) || null });
+        await sbPatch('listing_access_grants', `id=eq.${encodeURIComponent(body.grantId)}`, { status: 'rejected', granted_by: user.id, notes: String(body.reason || '').slice(0, 500) || null });
         if (g.request_id) await sbPatch('client_requests', `id=eq.${g.request_id}`, { status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_note: String(body.reason || '').slice(0, 500) });
         try { const au = await listAuthUsers(); const u = au.find((x) => x.id === g.user_id); const b = (await sbGet(`buildings?id=eq.${encodeURIComponent(g.building_id)}&select=name,market`))[0] || {}; if (u && u.email) await sendRevealDecisionEmail(u.email, b.name, b.market, false); } catch (e) {}
         await writeAudit(req, user, 'reveal.reject', { targetType: 'grant', targetIds: [String(body.grantId)], metadata: { buildingId: g.building_id, grantedTo: g.user_id } });
@@ -1577,7 +1573,7 @@ function handleAdmin(req, res, urlPath) {
       }
       if (urlPath === '/api/admin/revoke-grant') {
         if (!body.grantId) return sendJson(res, 400, { ok: false, error: 'bad_request' });
-        await sbPatch('listing_access_grants', `id=eq.${body.grantId}`, { status: 'revoked', notes: String(body.reason || '').slice(0, 500) || null });
+        await sbPatch('listing_access_grants', `id=eq.${encodeURIComponent(body.grantId)}`, { status: 'revoked', notes: String(body.reason || '').slice(0, 500) || null });
         return sendJson(res, 200, { ok: true });
       }
       // ── Building / unit / media editing ──────────────────────────────────
@@ -1631,8 +1627,8 @@ function handleAdmin(req, res, urlPath) {
         const patch = {};
         ['is_public_safe', 'is_main', 'approved_for_public'].forEach((k) => { if (k in body) patch[k] = !!body[k]; });
         if (!Object.keys(patch).length) return sendJson(res, 400, { ok: false, error: 'no_fields' });
-        if (patch.is_main === true && body.buildingId) await sbPatch('listing_media', `building_id=eq.${encodeURIComponent(body.buildingId)}&id=neq.${body.mediaId}`, { is_main: false });
-        await sbPatch('listing_media', `id=eq.${body.mediaId}`, patch);
+        if (patch.is_main === true && body.buildingId) await sbPatch('listing_media', `building_id=eq.${encodeURIComponent(body.buildingId)}&id=neq.${encodeURIComponent(body.mediaId)}`, { is_main: false });
+        await sbPatch('listing_media', `id=eq.${encodeURIComponent(body.mediaId)}`, patch);
         return sendJson(res, 200, { ok: true });
       }
       // ── Construction / CAPEX inputs ──────────────────────────────────────
