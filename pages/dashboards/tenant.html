@@ -24,7 +24,7 @@
     <div class="dn" onclick="show('listings',this)">My Listings</div>
     <div class="dn" onclick="window.location.href='/pages/operator/batch-upload.html'">Batch Upload</div>
     <div class="dn" onclick="window.location.href='../account.html'">Account</div>
-    <div class="dn" onclick="window.location.href='../subscription.html'">Membership</div>
+    <div class="dn" onclick="window.location.href='/pricing'">Membership</div>
     <div class="dn" onclick="URBNAuth.signOut().then(()=>location.href='/index.html')">Sign Out</div>
   </div>
 
@@ -77,7 +77,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
-  const user = await URBNAuth.requireAuth('/pages/signin.html');
+  const user = await URBNAuth.requireAuth('/sign-in');
   if (!user) return;
   await URBN_LISTINGS.load();
   await loadDashboard(user);

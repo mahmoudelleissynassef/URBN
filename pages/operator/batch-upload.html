@@ -40,7 +40,7 @@ let BU_ROWS = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectNav('../../'); injectFooter('../../');
-  await URBNAuth.requireAuth('/pages/signin.html');
+  await URBNAuth.requireAuth('/sign-in');
 });
 
 // Minimal CSV parser (handles quoted fields). CSV only — .xlsx would need a
