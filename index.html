@@ -27,12 +27,35 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "URBN",
-    "description": "Corporate office intelligence and protected-introduction platform for occupiers entering Africa & MENA.",
-    "url": "https://urbnoffices.com/",
-    "logo": "https://urbnoffices.com/favicon.svg",
-    "areaServed": ["Africa", "Middle East and North Africa"]
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://urbnoffices.com/#organization",
+        "name": "URBN",
+        "alternateName": "URBN Offices",
+        "description": "Corporate office intelligence and protected-introduction platform for occupiers entering Africa & MENA.",
+        "url": "https://urbnoffices.com/",
+        "logo": "https://urbnoffices.com/favicon.svg",
+        "image": "https://urbnoffices.com/assets/img/og-cover.jpg",
+        "areaServed": ["Africa", "Middle East and North Africa"],
+        "knowsAbout": ["Grade A office space", "corporate real estate", "commercial leasing", "office fit-out costs"],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "general@urbnoffices.com",
+          "contactType": "customer support",
+          "areaServed": ["Africa", "Middle East"],
+          "availableLanguage": ["en", "fr"]
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://urbnoffices.com/#website",
+        "name": "URBN Offices",
+        "url": "https://urbnoffices.com/",
+        "publisher": { "@id": "https://urbnoffices.com/#organization" },
+        "inLanguage": "en"
+      }
+    ]
   }
   </script>
 </head>
