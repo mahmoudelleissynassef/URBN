@@ -79,8 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <a href="search.html?m=${d.market}" class="btn btn-navy btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
-        <a href="market-scan.html" class="btn btn-ghost btn-sm w-full" style="text-align:center;justify-content:center;">Request Market Scan</a>
+        <img src="/assets/img/city-${d.market}.jpg" alt="${d.city} skyline" loading="lazy" onerror="this.style.display='none'" style="width:100%;height:150px;object-fit:cover;border-radius:8px;margin-bottom:4px;">
+        <a href="/offices?m=${d.market}" class="btn btn-navy btn-sm w-full" style="text-align:center;justify-content:center;">Browse Offices →</a>
+        <a href="/market-scan" class="btn btn-ghost btn-sm w-full" style="text-align:center;justify-content:center;">Request Market Scan</a>
       </div>
     </div>`;
   });
