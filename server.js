@@ -2294,6 +2294,15 @@ const server = http.createServer((req, res) => {
 
   const urlPath = req.url.split('?')[0];
 
+  // Liveness probe for Railway's health check — answers 200 the instant the
+  // process is listening, with zero dependencies (no Supabase/env needed). This
+  // lets Railway hold traffic during a deploy/restart until the new process is
+  // ready, so users get zero-downtime deploys instead of transient 404s.
+  if (urlPath === '/healthz') {
+    res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+    return res.end('ok');
+  }
+
   // Anti-spam: cap POSTs to sensitive write endpoints per IP (30/min). Auth and
   // per-tier monthly caps are enforced separately inside the handlers.
   if (req.method === 'POST' && /^\/api\/(request|listing-request|batch)$/.test(urlPath)) {
