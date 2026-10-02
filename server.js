@@ -201,7 +201,7 @@ function httpsRequest(urlStr, { method = 'POST', headers = {} }, payload) {
       (resp) => {
         let data = '';
         resp.on('data', (c) => { data += c; });
-        resp.on('end', () => resolve({ status: resp.statusCode, body: data }));
+        resp.on('end', () => resolve({ status: resp.statusCode, body: data, headers: resp.headers }));
       }
     );
     req.on('error', reject);
@@ -725,6 +725,18 @@ async function sbGet(pathWithQuery) {
   if (r.status < 200 || r.status >= 300) throw new Error(`sb_get_${r.status}:${r.body.slice(0, 200)}`);
   return JSON.parse(r.body || '[]');
 }
+// Exact row count without downloading rows (PostgREST Prefer: count=exact + Content-Range).
+// Avoids the 1000-row API cap that len()-style counting hits. Returns null on any error.
+async function sbCount(pathWithQuery) {
+  try {
+    const base = process.env.SUPABASE_URL;
+    const q = pathWithQuery + (pathWithQuery.includes('?') ? '&' : '?') + 'select=id&limit=1';
+    const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${q}`, { method: 'GET', headers: { ...sbHeaders(), Prefer: 'count=exact' } });
+    if (r.status < 200 || r.status >= 300) return null;
+    const m = /\/(\d+)$/.exec(String((r.headers && r.headers['content-range']) || ''));
+    return m ? Number(m[1]) : null;
+  } catch (e) { return null; }
+}
 async function sbPatch(table, query, patch) {
   const base = process.env.SUPABASE_URL, body = JSON.stringify(patch);
   const r = await httpsRequest(`${base.replace(/\/$/, '')}/rest/v1/${table}?${query}`, { method: 'PATCH', headers: { ...sbHeaders(), Prefer: 'return=representation', 'Content-Length': Buffer.byteLength(body) } }, body);
@@ -994,6 +1006,154 @@ async function approveBatchRowRec(row, adminId) {
   } catch (e) {}
 }
 
+// Paginated GET (Supabase caps a single response at ~1000 rows). Caller supplies the
+// full query incl. a stable order=. Stops at `max` rows. Used by analytics + digest.
+async function sbGetAll(pathWithQuery, pageSize = 1000, max = 30000) {
+  const out = [];
+  for (let off = 0; off < max; off += pageSize) {
+    const page = await sbGet(`${pathWithQuery}${pathWithQuery.includes('?') ? '&' : '?'}limit=${pageSize}&offset=${off}`);
+    out.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return out;
+}
+// Constant-time string compare (hash both sides so lengths always match).
+function safeEqual(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a)).digest();
+  const hb = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+// Bucket ISO timestamps into a zero-filled daily (or weekly, if the span is long) series.
+function bucketSeries(isoDates, startMs, endMs) {
+  const DAY = 864e5;
+  const start = Math.floor(startMs / DAY) * DAY;
+  const days = Math.max(1, Math.floor((endMs - start) / DAY) + 1);
+  const step = days > 120 ? 7 * DAY : DAY;
+  const n = Math.ceil(days * DAY / step);
+  const counts = new Array(n).fill(0);
+  (isoDates || []).forEach((d) => { const t = Date.parse(d); if (isNaN(t) || t < start) return; const i = Math.min(n - 1, Math.floor((t - start) / step)); counts[i]++; });
+  return { bucket: step === DAY ? 'day' : 'week', points: counts.map((c, i) => ({ d: new Date(start + i * step).toISOString().slice(0, 10), n: c })) };
+}
+// "Needs attention" counters shared by the admin Overview and the weekly digest.
+// Each is null (not 0) when its query failed so the UI can show "-" instead of a false all-clear.
+async function computeAttention() {
+  const hrs = (h) => new Date(Date.now() - h * 36e5).toISOString();
+  const noUnits = (async () => {
+    try {
+      const [b, u] = await Promise.all([sbGetAll('buildings?status=eq.approved&select=id,admin_hidden&order=id.asc'), sbGetAll('units?select=building_id&order=id.asc')]);
+      const has = new Set(u.map((x) => x.building_id));
+      return b.filter((x) => !x.admin_hidden && !has.has(x.id)).length;
+    } catch (e) { return null; }
+  })();
+  const [pendingListingsOver48h, batchRowsAwaiting, revealOver24h, membershipOpen, buildingsNoUnits, unitsMissingRent] = await Promise.all([
+    sbCount(`client_requests?request_type=eq.list-building&status=in.(pending,new)&created_at=lt.${hrs(48)}`),
+    sbCount('listing_batch_rows?status=eq.pending_review'),
+    sbCount(`listing_access_grants?status=eq.requested&created_at=lt.${hrs(24)}`),
+    sbCount('client_requests?request_type=in.(membership,membership-change)&status=in.(pending,contacted,paid)'),
+    noUnits,
+    sbCount('units?status=eq.approved&or=(asking_rent.is.null,asking_rent.eq.0)'),
+  ]);
+  return { pendingListingsOver48h, batchRowsAwaiting, revealOver24h, membershipOpen, buildingsNoUnits, unitsMissingRent };
+}
+// Weekly operator digest (JSON + email HTML/text). Pure read; sending is the caller's job.
+async function buildWeeklyDigest(days = 7) {
+  const since = new Date(Date.now() - days * 864e5).toISOString();
+  const [newListings, listingsApproved, listingsRejected, buildingsPublished, grants, memReqs, views, bAll, uAll, attention] = await Promise.all([
+    sbCount(`client_requests?request_type=eq.list-building&created_at=gte.${since}`),
+    sbCount(`client_requests?request_type=eq.list-building&status=eq.approved&reviewed_at=gte.${since}`),
+    sbCount(`client_requests?request_type=eq.list-building&status=eq.rejected&reviewed_at=gte.${since}`),
+    sbCount(`buildings?status=eq.approved&approved_at=gte.${since}`),
+    sbGetAll(`listing_access_grants?created_at=gte.${since}&select=status&order=created_at.desc`).catch(() => []),
+    sbGetAll(`client_requests?request_type=in.(membership,membership-change)&created_at=gte.${since}&select=status&order=created_at.desc`).catch(() => []),
+    sbGetAll(`building_views?created_at=gte.${since}&select=building_id,session_hash,created_at&order=created_at.desc`).catch(() => []),
+    sbGetAll('buildings?status=eq.approved&select=id,name,market,image_url,google_maps_url,amenities&order=id.asc').catch(() => []),
+    sbGetAll('units?status=eq.approved&select=building_id,asking_rent,service_charge&order=id.asc').catch(() => []),
+    computeAttention(),
+  ]);
+  const bById = {}; bAll.forEach((b) => { bById[b.id] = b; });
+  const viewsByB = groupCount(views, (v) => v.building_id);
+  const topViewed = Object.entries(viewsByB).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', views: n }));
+  const hasUnit = new Set(uAll.map((u) => u.building_id));
+  const dataQuality = {
+    buildingsMissingPhoto: bAll.filter((b) => !b.image_url).length,
+    buildingsMissingMaps: bAll.filter((b) => !b.google_maps_url).length,
+    buildingsMissingAmenities: bAll.filter((b) => !Array.isArray(b.amenities) || !b.amenities.length).length,
+    buildingsNoUnits: bAll.filter((b) => !hasUnit.has(b.id)).length,
+    unitsMissingRent: uAll.filter((u) => !u.asking_rent).length,
+    unitsMissingServiceCharge: uAll.filter((u) => u.service_charge == null).length,
+  };
+  return {
+    days, since,
+    activity: {
+      newListingSubmissions: newListings, listingsApproved, listingsRejected, buildingsPublished,
+      revealRequests: grants.length, revealByStatus: groupCount(grants, (g) => g.status),
+      membershipRequests: memReqs.length, buildingViews: views.length,
+      uniqueViewSessions: new Set(views.map((v) => v.session_hash || v.created_at)).size,
+    },
+    attention, topViewed, dataQuality,
+  };
+}
+function renderWeeklyDigest(d) {
+  const n = (v) => (v == null ? 'n/a' : v);
+  const a = d.activity, t = d.attention, q = d.dataQuality;
+  const adminUrl = (tab) => 'https://urbnoffices.com/admin?tab=' + tab;
+  const link = (label, tab) => `<a href="${escapeHtml(adminUrl(tab))}" style="color:#243A5E;">${escapeHtml(label)}</a>`;
+  const top = d.topViewed.length ? d.topViewed.map((x) => `${escapeHtml(x.building)}${x.market ? ' (' + escapeHtml(x.market) + ')' : ''} - ${x.views}`).join('<br>') : '-';
+  const inner =
+    emailSection(`Last ${d.days} days`,
+      emailRow('New listing submissions', n(a.newListingSubmissions)) + emailRow('Listings approved', n(a.listingsApproved)) +
+      emailRow('Listings rejected', n(a.listingsRejected)) + emailRow('Buildings published', n(a.buildingsPublished)) +
+      emailRow('Reveal requests', a.revealRequests + (a.revealRequests ? ' (' + Object.entries(a.revealByStatus).map(([k, v]) => k + ': ' + v).join(', ') + ')' : '')) +
+      emailRow('Membership requests', a.membershipRequests) + emailRow('Building views', a.buildingViews + ' (' + a.uniqueViewSessions + ' unique sessions)')) +
+    emailSection('Needs attention now',
+      emailRow('Pending listings older than 48h', link(String(n(t.pendingListingsOver48h)), 'pending'), true) +
+      emailRow('Batch rows awaiting review', link(String(n(t.batchRowsAwaiting)), 'batches'), true) +
+      emailRow('Reveal requests pending over 24h', link(String(n(t.revealOver24h)), 'reveal'), true) +
+      emailRow('Membership requests open', link(String(n(t.membershipOpen)), 'membership'), true) +
+      emailRow('Buildings with no units', link(String(n(t.buildingsNoUnits)), 'buildings'), true) +
+      emailRow('Units missing rent', link(String(n(t.unitsMissingRent)), 'units'), true)) +
+    emailSection('Top viewed buildings', `<tr><td style="padding:6px 0;color:#111418;font-size:13px;">${top}</td></tr>`) +
+    emailSection('Data quality (approved inventory)',
+      emailRow('Buildings missing photo', q.buildingsMissingPhoto) + emailRow('Buildings missing map pin', q.buildingsMissingMaps) +
+      emailRow('Buildings missing amenities', q.buildingsMissingAmenities) + emailRow('Buildings with no units', q.buildingsNoUnits) +
+      emailRow('Units missing rent', q.unitsMissingRent) + emailRow('Units missing service charge', q.unitsMissingServiceCharge));
+  const text = [`URBN weekly digest (last ${d.days} days)`,
+    `New listing submissions: ${n(a.newListingSubmissions)}; approved: ${n(a.listingsApproved)}; rejected: ${n(a.listingsRejected)}; buildings published: ${n(a.buildingsPublished)}`,
+    `Reveal requests: ${a.revealRequests}; membership requests: ${a.membershipRequests}; building views: ${a.buildingViews}`,
+    `Needs attention: listings>48h ${n(t.pendingListingsOver48h)}, batch rows ${n(t.batchRowsAwaiting)}, reveals>24h ${n(t.revealOver24h)}, membership open ${n(t.membershipOpen)}, buildings no units ${n(t.buildingsNoUnits)}, units missing rent ${n(t.unitsMissingRent)}`,
+    `Admin console: ${adminUrl('overview')}`].join('\n');
+  return { html: emailShell('URBN weekly digest', 'Weekly digest', `<tr><td style="padding:8px 0 2px;"></td></tr>` + inner, true), text };
+}
+// Cron-triggered weekly digest. NOT an admin route (no user session): protected by a
+// shared secret (URBN_CRON_SECRET) in the `x-cron-secret` header or `Authorization: Bearer`.
+// Fail-closed: unset/short secret => nothing runs. The secret is never accepted in the URL.
+function handleCronDigest(req, res, urlObj) {
+  (async () => {
+    req.resume();
+    const secret = envVal('URBN_CRON_SECRET');
+    if (secret.length < 16) { console.warn('[cron] URBN_CRON_SECRET not set (or < 16 chars) - weekly digest route is disabled'); return sendJson(res, 503, { ok: false, error: 'cron_not_configured' }); }
+    const presented = String(req.headers['x-cron-secret'] || '') || String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+    if (!presented || !safeEqual(presented, secret)) return sendJson(res, 401, { ok: false, error: 'unauthorized' });
+    try {
+      const digest = await buildWeeklyDigest(7);
+      if (urlObj.searchParams.get('dry') === '1') return sendJson(res, 200, { ok: true, dryRun: true, digest });
+      const { html, text } = renderWeeklyDigest(digest);
+      try {
+        await sendResendEmail({ subject: 'URBN weekly digest - ' + new Date().toISOString().slice(0, 10), html, text, from: process.env.REQUESTS_FROM || process.env.LEAD_FROM, to: ownerRecipient() });
+      } catch (e) {
+        console.error('[cron] digest email failed:', e.message);
+        await writeAudit(req, null, 'digest.weekly', { targetType: 'system', success: false, metadata: { error: 'email_failed' } });
+        return sendJson(res, 502, { ok: false, error: 'email_failed' });
+      }
+      await writeAudit(req, null, 'digest.weekly', { targetType: 'system', metadata: { activity: digest.activity } });
+      return sendJson(res, 200, { ok: true, sent: true });
+    } catch (e) {
+      console.error('[cron] digest error:', (e && e.stack) || e);
+      return sendJson(res, 500, { ok: false, error: 'digest_error' });
+    }
+  })();
+}
+
 function handleAdmin(req, res, urlPath) {
   (async () => {
     const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
@@ -1059,8 +1219,33 @@ function handleAdmin(req, res, urlPath) {
       if (req.method === 'GET' && urlPath === '/api/admin/listing-batches') {
         return sendJson(res, 200, { ok: true, batches: await sbGet(`listing_batches?order=created_at.desc`), rows: await sbGet(`listing_batch_rows?order=row_index.asc`) });
       }
+      if (req.method === 'GET' && urlPath === '/api/admin/audit-logs') {
+        // Read-only viewer for admin_audit_logs. Filters: action (contains), actor (email
+        // contains), target_type, success, from/to (YYYY-MM-DD, UTC). limit/offset paging;
+        // export=1 returns up to 5000 matching rows (for CSV). ip_hash/user_agent are not returned.
+        const qs = new URL(req.url, 'http://localhost').searchParams;
+        const clean = (v) => String(v || '').trim().slice(0, 100).replace(/[*%\\,()]/g, '');
+        const f = [];
+        const action = clean(qs.get('action')); if (action) f.push(`action=ilike.*${encodeURIComponent(action)}*`);
+        const actor = clean(qs.get('actor')); if (actor) f.push(`actor_email=ilike.*${encodeURIComponent(actor)}*`);
+        const tt = String(qs.get('target_type') || ''); if (/^[a-z_]{1,30}$/.test(tt)) f.push(`target_type=eq.${tt}`);
+        const succ = qs.get('success'); if (succ === 'true' || succ === 'false') f.push(`success=eq.${succ}`);
+        const from = dateOrNull(qs.get('from')), to = dateOrNull(qs.get('to'));
+        if (from && !isNaN(Date.parse(from))) f.push(`created_at=gte.${from}T00:00:00.000Z`);
+        if (to && !isNaN(Date.parse(to))) f.push(`created_at=lt.${new Date(Date.parse(to) + 864e5).toISOString()}`);
+        const base = 'admin_audit_logs?select=created_at,action,actor_id,actor_email,target_type,target_ids,count,success,metadata&order=created_at.desc' + (f.length ? '&' + f.join('&') : '');
+        if (qs.get('export') === '1') {
+          const rows = await sbGetAll(base, 1000, 5000);
+          return sendJson(res, 200, { ok: true, logs: rows, truncated: rows.length >= 5000 });
+        }
+        const limit = Math.min(200, Math.max(1, parseInt(qs.get('limit'), 10) || 50));
+        const offset = Math.max(0, parseInt(qs.get('offset'), 10) || 0);
+        const rows = await sbGet(`${base}&limit=${limit + 1}&offset=${offset}`);
+        return sendJson(res, 200, { ok: true, logs: rows.slice(0, limit), hasMore: rows.length > limit, limit, offset });
+      }
       if (req.method === 'GET' && urlPath === '/api/admin/overview') {
         const len = async (q) => (await sbGet(q + (q.includes('?') ? '&' : '?') + 'select=id')).length;
+        const attentionP = computeAttention();
         const [pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership, latest] = await Promise.all([
           len('client_requests?request_type=eq.list-building&status=in.(pending,new)'),
           len('listing_batch_rows?status=eq.pending_review'),
@@ -1070,7 +1255,7 @@ function handleAdmin(req, res, urlPath) {
           len('client_requests?request_type=in.(membership,membership-change)&status=eq.pending'),
           sbGet('client_requests?order=created_at.desc&limit=8'),
         ]);
-        return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, latest });
+        return sendJson(res, 200, { ok: true, counts: { pendingListings, pendingBatchRows, approved, rejected, users, companies, pendingMembership }, attention: await attentionP, latest });
       }
       if (req.method === 'GET' && urlPath === '/api/admin/users') {
         const [profiles, companies, saved, reqs, authUsers, subs, admins, buildings, units] = await Promise.all([
@@ -1162,7 +1347,23 @@ function handleAdmin(req, res, urlPath) {
         ]);
         // Building view/click tracking (raw opens + unique sessions). Separate query
         // so an empty/absent table never breaks the rest of analytics.
-        const views = await sbGet('building_views?select=building_id,session_hash,created_at&order=created_at.desc&limit=50000').catch(() => []);
+        // ?range=7d|30d|90d|all (default all) scopes the engagement views + the daily series.
+        const rangeKey = ['7d', '30d', '90d'].includes(new URL(req.url, 'http://localhost').searchParams.get('range')) ? new URL(req.url, 'http://localhost').searchParams.get('range') : 'all';
+        const rangeDays = { '7d': 7, '30d': 30, '90d': 90 }[rangeKey] || null;
+        const nowMs = Date.now(), DAYMS = 864e5;
+        const rangeStartMs = rangeDays ? Math.floor(nowMs / DAYMS) * DAYMS - (rangeDays - 1) * DAYMS : null;
+        const sinceQ = rangeStartMs != null ? `&created_at=gte.${new Date(rangeStartMs).toISOString()}` : '';
+        const weekAgoIso = new Date(nowMs - 7 * DAYMS).toISOString();
+        const [views, totalViewsAll, viewsLast7Cnt, reqDates] = await Promise.all([
+          sbGetAll(`building_views?select=building_id,session_hash,created_at${sinceQ}&order=created_at.desc`).catch(() => []),
+          sbCount('building_views'),
+          sbCount(`building_views?created_at=gte.${weekAgoIso}`),
+          sbGetAll(`client_requests?select=created_at${sinceQ}&order=created_at.desc`, 1000, 20000).catch(() => []),
+        ]);
+        const earliest = (arr) => arr.reduce((m, r) => { const t = Date.parse(r.created_at); return (!isNaN(t) && t < m) ? t : m; }, nowMs);
+        const seriesStart = (rows) => rangeStartMs != null ? rangeStartMs : Math.min(earliest(rows), nowMs - 29 * DAYMS);
+        const viewsSeries = bucketSeries(views.map((v) => v.created_at), seriesStart(views), nowMs);
+        const requestsSeries = bucketSeries(reqDates.map((r) => r.created_at), seriesStart(reqDates), nowMs);
         const bById = {}; buildings.forEach((b) => { bById[b.id] = b; });
         const capexByMarket = {}; capexRows.forEach((c) => { if (!capexByMarket[c.market]) capexByMarket[c.market] = c.updated_at || c.effective_date; });
         const access = reqs.filter((r) => r.request_type === 'access'), scan = reqs.filter((r) => r.request_type === 'market-scan');
@@ -1176,16 +1377,17 @@ function handleAdmin(req, res, urlPath) {
         const savedByBuilding = groupCount(saved, (s) => s.building_id);
         const mostSaved = Object.entries(savedByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', saves: n }));
         // Building clicks/views: total opens, unique sessions per building, last 7 days.
-        const weekAgoIso = new Date(Date.now() - 7 * 864e5).toISOString();
         const viewsByBuilding = groupCount(views, (v) => v.building_id);
         const uniqSets = {}; views.forEach((v) => { (uniqSets[v.building_id] = uniqSets[v.building_id] || new Set()).add(v.session_hash || v.created_at); });
         const mostViewed = Object.entries(viewsByBuilding).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([id, n]) => ({ building: (bById[id] || {}).name || id, market: (bById[id] || {}).market || '', views: n, uniqueViews: (uniqSets[id] || new Set()).size }));
-        const viewsLast7 = views.filter((v) => v.created_at && v.created_at >= weekAgoIso).length;
+        const viewsLast7 = viewsLast7Cnt != null ? viewsLast7Cnt : views.filter((v) => v.created_at && v.created_at >= weekAgoIso).length;
         return sendJson(res, 200, { ok: true, analytics: {
           supply: { approvedBuildings: buildings.length, approvedUnits: units.length, totalSqm: sum(units.map((u) => Number(u.size_sqm) || 0)), totalDesks: sum(units.map((u) => Number(u.desks) || 0)), listingsByMarket: groupCount(buildings, (b) => b.market), listingsBySubmarket: groupCount(buildings, (b) => b.submarket), listingsByOffering: groupCount(units, (u) => u.offering_type), avgRentByMarket, rentRangeByMarket, pendingBySource: groupCount(listReqs.filter((r) => r.status === 'pending' || r.status === 'new'), (r) => r.source_page) },
           demand: { accessByMarket: groupCount(access, (r) => r.market), scanByMarket: groupCount(scan, (r) => r.market), requestsByCompany: groupCount(reqs, (r) => r.company), latest: reqs.slice(0, 8).map((r) => ({ type: r.request_type, market: r.market, company: r.company, email: r.email, created_at: r.created_at })) },
           engagement: { mostSaved, totalSaves: saved.length, savedByMarket: groupCount(saved, (s) => (bById[s.building_id] || {}).market),
-            mostViewed, totalViews: views.length, viewsLast7 },
+            mostViewed, totalViews: totalViewsAll != null ? totalViewsAll : views.length, viewsLast7,
+            range: rangeKey, viewsInRange: views.length, uniqueSessionsInRange: new Set(views.map((v) => v.session_hash || v.created_at)).size,
+            viewsSeries, requestsInRange: reqDates.length, requestsSeries },
           membership: { companiesByTier, pendingMembership: memReqs.filter((r) => r.status === 'pending').length, totalCompanies: companies.length, totalUsers: profiles.length },
           dataQuality: { buildingsMissingPhoto: buildings.filter((b) => !b.image_url).length, buildingsMissingMaps: buildings.filter((b) => !b.google_maps_url).length, unitsMissingRent: units.filter((u) => !u.asking_rent).length, unitsMissingServiceCharge: units.filter((u) => u.service_charge == null).length, buildingsNoUnits: buildings.filter((b) => !units.some((u) => u.building_id === b.id)).length, buildingsMissingAmenities: buildings.filter((b) => !Array.isArray(b.amenities) || !b.amenities.length).length, buildingsMissingParking: buildings.filter((b) => b.parking_spaces_available == null && !b.parking_arrangement).length },
           requests: {
@@ -1250,6 +1452,14 @@ function handleAdmin(req, res, urlPath) {
         await writeAudit(req, user, 'listing.approve', { targetType: 'request', targetIds: [String(body.requestId)], metadata: { buildingId: body.buildingId || null } });
         return sendJson(res, 200, { ok: true });
       }
+      if (urlPath === '/api/admin/log-export') {
+        // CSV exports are built in the browser; this records that one happened (PII export trail).
+        const kind = String(body.kind || '');
+        if (!['users', 'companies', 'audit_logs'].includes(kind)) return sendJson(res, 400, { ok: false, error: 'bad_request' });
+        const count = Math.max(0, Math.min(1e6, parseInt(body.count, 10) || 0));
+        await writeAudit(req, user, 'export.' + kind, { targetType: kind, count, metadata: { filtered: body.filtered === true } });
+        return sendJson(res, 200, { ok: true });
+      }
       if (urlPath === '/api/admin/create-building') {
         const f = body.fields || {};
         if (!f.name || !f.market) return sendJson(res, 400, { ok: false, error: 'name_and_market_required' });
@@ -1276,6 +1486,7 @@ function handleAdmin(req, res, urlPath) {
         const status = body.restore ? 'approved' : 'archived';
         await sbPatch('buildings', `id=eq.${encodeURIComponent(body.buildingId)}`, { status });
         await sbPatch('units', `building_id=eq.${encodeURIComponent(body.buildingId)}`, { status });
+        await writeAudit(req, user, body.restore ? 'building.restore' : 'building.archive', { targetType: 'building', targetIds: [String(body.buildingId)] });
         return sendJson(res, 200, { ok: true, status });
       }
       if (urlPath === '/api/admin/set-building-hidden') {
@@ -1595,7 +1806,7 @@ function handleAdmin(req, res, urlPath) {
         const NUM = ['size_sqm', 'desks', 'meeting_rooms', 'asking_rent', 'service_charge', 'allocated_parking_spaces', 'unit_parking_price'];
         const TEXT = ['unit_floor', 'fit_out', 'pricing_basis', 'service_charge_basis', 'min_term', 'notes'];
         const OFFERINGS = ['Whole building', 'Full floor', 'Partial floor', 'Private office', 'Coworking desks', 'Serviced office suite', 'Coworking / Flexible workspace'];
-        const STATUSES = ['draft', 'pending_review', 'approved', 'rejected'];
+        const STATUSES = ['draft', 'pending_review', 'approved', 'rejected', 'archived'];
         for (const k of NUM) if (k in fields) {
           if (fields[k] === '' || fields[k] == null) { patch[k] = null; continue; }
           const v = Number(fields[k]); if (isNaN(v)) return sendJson(res, 400, { ok: false, error: 'invalid_number' }); patch[k] = v;
@@ -2319,6 +2530,14 @@ const server = http.createServer((req, res) => {
     if (/^\/api\/admin\/(delete-buildings|delete-user)$/.test(urlPath) && rateLimited('admindel:' + ip, 12, 60000)) {
       return sendJson(res, 429, { ok: false, error: 'rate_limited' });
     }
+  }
+
+  // Cron-triggered weekly digest (secret-protected; see handleCronDigest). Rate-limited
+  // per IP (10/min) BEFORE the secret check so the secret cannot be brute-forced.
+  if (urlPath === '/api/cron/weekly-digest') {
+    if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+    if (rateLimited('cron:' + clientIp(req), 10, 60000)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+    return handleCronDigest(req, res, new URL(req.url, 'http://localhost'));
   }
 
   if (urlPath === '/api/request') {

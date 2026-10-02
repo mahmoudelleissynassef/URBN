@@ -41,6 +41,7 @@
           <button class="admin-navbtn" id="tab-companies" onclick="showTab('companies')">Companies</button>
           <button class="admin-navbtn" id="tab-capex" onclick="showTab('capex')">Construction costs</button>
           <button class="admin-navbtn" id="tab-analytics" onclick="showTab('analytics')">Analytics</button>
+          <button class="admin-navbtn" id="tab-audit" onclick="showTab('audit')">Audit log</button>
         </aside>
         <div class="admin-main">
           <div id="panel-overview"></div>
@@ -56,6 +57,7 @@
           <div id="panel-companies" class="hidden"></div>
           <div id="panel-capex" class="hidden"></div>
           <div id="panel-analytics" class="hidden"></div>
+          <div id="panel-audit" class="hidden"></div>
         </div>
       </div>
     </div>
@@ -72,11 +74,25 @@
   </div>
 </div>
 <div id="footer-placeholder"></div>
+    <!-- Generic in-page confirm / text-prompt dialog (replaces window.confirm / window.prompt). Same modal pattern as reject-modal. -->
+    <div class="mbg" id="dlg-modal" style="z-index:1200;">
+      <div class="modal" style="max-width:480px;" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+        <div class="mh"><div><div class="label mb12" id="dlg-label">Confirm</div><h3 id="dlg-title"></h3></div><div class="mx" onclick="closeModal('dlg-modal')">&#10005;</div></div>
+        <div class="mb">
+          <div id="dlg-msg" style="font-size:13.5px;line-height:1.65;white-space:pre-line;"></div>
+          <div class="fg" id="dlg-input-wrap" style="margin-top:14px;display:none;"><label class="fl" id="dlg-input-label" for="dlg-input"></label><textarea class="fi" id="dlg-input" rows="3"></textarea></div>
+        </div>
+        <div class="mf"><button class="btn btn-ghost" id="dlg-cancel" type="button">Cancel</button><button class="btn btn-navy" id="dlg-ok" type="button">Confirm</button></div>
+      </div>
+    </div>
 <script src="../../data/data.js"></script>
 <script src="/js/i18n.js"></script><script src="/js/i18n-pages.js"></script><script src="../../js/urbn.js"></script>
 <script>
-const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'reveal', 'buildings', 'units', 'membership', 'users', 'companies', 'capex', 'analytics'];
-const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, reveal: loadReveal, buildings: loadBuildings, units: loadUnits, membership: loadMembership, users: loadUsers, companies: loadCompanies, capex: loadCapex, analytics: loadAnalytics };
+const TABS = ['overview', 'pending', 'batches', 'approved', 'rejected', 'reveal', 'buildings', 'units', 'membership', 'users', 'companies', 'capex', 'analytics', 'audit'];
+const LOADERS = { overview: loadOverview, pending: loadPending, batches: loadBatches, approved: loadApproved, rejected: loadRejected, reveal: loadReveal, buildings: loadBuildings, units: loadUnits, membership: loadMembership, users: loadUsers, companies: loadCompanies, capex: loadCapex, analytics: loadAnalytics, audit: loadAudit };
+// Per-tab quick filters, deep-linkable as ?tab=<tab>&filter=<value> (used by Overview "Needs attention").
+const TAB_FILTERS = { pending: ['older48'], reveal: ['awaiting', 'stale24'], membership: ['open'], buildings: ['nounits'], units: ['norent'] };
+const TAB_FILTER = {};
 let REJECTION_REASONS = ['Duplicate listing', 'Insufficient building information', 'Missing or unclear photos', 'Floorplan required', 'Rent or service charge missing', 'Unable to verify ownership/operator authority', 'Building does not meet URBN quality criteria', 'Location or map pin unclear', 'Suspicious or inconsistent information', 'Outside current market coverage', 'Other'];
 fetch('/api/config').then(r => r.json()).then(c => { if (c && Array.isArray(c.rejectionReasons) && c.rejectionReasons.length) REJECTION_REASONS = c.rejectionReasons; }).catch(() => {});
 
@@ -91,8 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   document.getElementById('admin-gate').classList.add('hidden');
   document.getElementById('admin-app').classList.remove('hidden');
-  const tab = new URLSearchParams(location.search).get('tab');
-  showTab(TABS.includes(tab) ? tab : 'overview');
+  const qp = new URLSearchParams(location.search), tab = qp.get('tab');
+  const startTab = TABS.includes(tab) ? tab : 'overview';
+  if (startTab === 'buildings' && qp.get('filter') === 'nounits') { BLD_STATUS = 'approved'; BLD_VIS = 'visible'; }
+  showTab(startTab, qp.get('filter') || '');
   checkEmailConfig();
 });
 
@@ -130,16 +148,101 @@ async function adminFetch(path, method, body) {
   } catch (e) { return { ok: false, error: 'network' }; }
 }
 
-function showTab(t) {
+function showTab(t, f) {
+  TAB_FILTER[t] = (TAB_FILTERS[t] || []).includes(f) ? f : '';
   TABS.forEach(x => {
     document.getElementById('panel-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tab-' + x).className = 'admin-navbtn' + (x === t ? ' on' : '');
   });
-  try { history.replaceState(null, '', location.pathname + '?tab=' + t); } catch (e) {}
+  try { history.replaceState(null, '', location.pathname + '?tab=' + t + (TAB_FILTER[t] ? '&filter=' + encodeURIComponent(TAB_FILTER[t]) : '')); } catch (e) {}
   (LOADERS[t] || function () {})();
 }
+// Chip bar for a tab's quick filter. `opts` = [[value,label],...]; value '' = no filter.
+function chipBar(tab, opts) {
+  return `<div class="chips" style="margin-bottom:14px;">${opts.map(([v, l]) => `<button class="chip ${(TAB_FILTER[tab] || '') === v ? 'on' : ''}" onclick="showTab('${tab}','${v}')">${esc(l)}</button>`).join('')}</div>`;
+}
+
+// ── In-page confirm / prompt dialogs (replace window.confirm / window.prompt) ─
+// askConfirm(opts) -> Promise<boolean>;  askText(opts) -> Promise<string|null> (null = cancelled).
+// opts: { title, message, confirmLabel, danger, label (askText), placeholder, required, typeToConfirm }
+// Text is set via textContent, so callers may pass raw strings (no HTML injection).
+let DLG = null;
+(function initDlg() {
+  const m = document.getElementById('dlg-modal');
+  // The shared backdrop/✕ handler in urbn.js only removes `.open`; treat that as Cancel.
+  new MutationObserver(() => { if (DLG && !m.classList.contains('open')) dlgFinish(DLG.cancelValue); }).observe(m, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('keydown', (e) => {
+    if (!DLG) return;
+    if (e.key === 'Escape') { e.preventDefault(); dlgFinish(DLG.cancelValue); }
+    else if (e.key === 'Enter' && e.target && e.target.id === 'dlg-input' && DLG.single && !document.getElementById('dlg-ok').disabled) { e.preventDefault(); document.getElementById('dlg-ok').click(); }
+  });
+  document.getElementById('dlg-cancel').addEventListener('click', () => { if (DLG) dlgFinish(DLG.cancelValue); });
+})();
+function dlgFinish(val) {
+  if (!DLG) return;
+  const r = DLG.resolve; DLG = null;
+  document.getElementById('dlg-modal').classList.remove('open');
+  r(val);
+}
+function openDlg(o, mode) {
+  return new Promise((resolve) => {
+    if (DLG) dlgFinish(DLG.cancelValue);
+    const typed = !!o.typeToConfirm, hasInput = mode === 'text' || typed;
+    DLG = { resolve, cancelValue: mode === 'text' ? null : false, single: typed };
+    document.getElementById('dlg-label').textContent = o.danger ? 'Warning' : (mode === 'text' ? 'Input' : 'Confirm');
+    document.getElementById('dlg-title').textContent = o.title || 'Are you sure?';
+    document.getElementById('dlg-msg').textContent = o.message || '';
+    const wrap = document.getElementById('dlg-input-wrap'), inp = document.getElementById('dlg-input'), ok = document.getElementById('dlg-ok');
+    wrap.style.display = hasInput ? '' : 'none';
+    document.getElementById('dlg-input-label').textContent = typed ? ('Type ' + o.typeToConfirm + ' to confirm') : (o.label || '');
+    inp.value = ''; inp.placeholder = o.placeholder || ''; inp.rows = typed ? 1 : 3;
+    ok.textContent = o.confirmLabel || 'Confirm';
+    ok.className = 'btn ' + (o.danger ? '' : 'btn-navy');
+    ok.style.cssText = o.danger ? 'color:#fff;background:#B42318;' : '';
+    const valid = () => typed ? inp.value === o.typeToConfirm : (o.required ? inp.value.trim() !== '' : true);
+    ok.disabled = !valid();
+    inp.oninput = () => { ok.disabled = !valid(); };
+    ok.onclick = () => { if (ok.disabled) return; dlgFinish(mode === 'text' ? inp.value.trim() : true); };
+    document.getElementById('dlg-modal').classList.add('open');
+    setTimeout(() => { (hasInput ? inp : ok).focus(); }, 30);
+  });
+}
+const askConfirm = (o) => openDlg(o, 'confirm');
+const askText = (o) => openDlg(o, 'text');
+
+// ── CSV helpers (client-side exports) ────────────────────────────────────────
+// Cells that start with = + - @ (or tab/CR) are prefixed with ' so Excel/Sheets never evaluates
+// user-supplied text as a formula (CSV injection). Real numbers are left untouched.
+function csvCell(v) {
+  if (v == null) return '';
+  let t = typeof v === 'number' ? String(v) : (Array.isArray(v) ? v.join(';') : (typeof v === 'object' ? JSON.stringify(v) : String(v)));
+  if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function downloadCsv(filename, headers, rows) {
+  const csv = '\ufeff' + [headers.map(csvCell).join(',')].concat(rows.map(r => r.map(csvCell).join(','))).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+// Record (audit trail) that a PII export happened. Fire-and-forget.
+function logExport(kind, count, filtered) { adminFetch('/api/admin/log-export', 'POST', { kind, count, filtered: !!filtered }); }
 
 // ── Overview ─────────────────────────────────────────────────────────────────
+// "Needs attention" tiles: [server key, label, tab, tab filter]. Counts come from /api/admin/overview.
+const ATTN = [
+  ['pendingListingsOver48h', 'Pending listings older than 48h', 'pending', 'older48'],
+  ['batchRowsAwaiting', 'Batch rows awaiting review', 'batches', ''],
+  ['revealOver24h', 'Reveal requests pending over 24h', 'reveal', 'stale24'],
+  ['membershipOpen', 'Membership requests open', 'membership', 'open'],
+  ['buildingsNoUnits', 'Approved buildings with no units', 'buildings', 'nounits'],
+  ['unitsMissingRent', 'Approved units missing rent', 'units', 'norent'],
+];
+function attnGo(i) {
+  const a = ATTN[i]; if (!a) return;
+  if (a[2] === 'buildings') { BLD_STATUS = 'approved'; BLD_VIS = 'visible'; }
+  showTab(a[2], a[3]);
+}
 async function loadOverview() {
   const panel = document.getElementById('panel-overview');
   panel.innerHTML = loadingBox();
@@ -156,7 +259,19 @@ async function loadOverview() {
       <div style="font-family:var(--fd);font-size:34px;line-height:1;">${Number(n || 0)}</div>
       <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${esc(label)}</div></button>`).join('');
   const latest = (j.latest || []).map(r => `<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.request_type || '')}</td><td>${esc(niceMarket(r.market) || '')}</td><td>${esc(r.company || '')}</td><td>${esc(r.email || '')}</td><td><span class="badge ${r.status === 'approved' ? 'badge-available' : 'badge-gated'}">${esc(r.status || '')}</span></td></tr>`).join('');
+  const at = j.attention || {};
+  const attnTiles = ATTN.map(([key, label], i) => {
+    const n = at[key], hot = n != null && n > 0;
+    const color = n == null ? '#6B7280' : (hot ? '#B54708' : '#067647');
+    return `<button class="card" onclick="attnGo(${i})" style="padding:16px;text-align:left;cursor:pointer;background:${hot ? '#FFFAEB' : 'var(--surface,#fff)'};border:1px solid ${hot ? '#FEDF89' : 'var(--border)'};">
+      <div style="font-family:var(--fd);font-size:28px;line-height:1;color:${color};">${n == null ? '&mdash;' : Number(n)}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:6px;">${esc(label)}</div>
+      <div style="font-size:11px;color:${color};margin-top:6px;">${n == null ? 'Could not load' : (hot ? 'Review &rarr;' : 'All clear')}</div></button>`;
+  }).join('');
   panel.innerHTML = `
+    <h3 style="font-size:16px;margin:0 0 12px;">Needs attention</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:28px;">${attnTiles}</div>
+    <h3 style="font-size:16px;margin:0 0 12px;">At a glance</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:26px;">${tiles}</div>
     <h3 style="font-size:16px;margin:0 0 12px;">Latest submissions</h3>
     ${latest ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Market</th><th>Company</th><th>Email</th><th>Status</th></tr></thead><tbody>${latest}</tbody></table></div>` : emptyBox('No submissions yet.')}`;
@@ -169,13 +284,17 @@ async function loadPending() {
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/pending-listings', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
-  if (!j.listings.length) { panel.innerHTML = emptyBox('No pending listing submissions.'); return; }
+  const bar = chipBar('pending', [['', 'All pending'], ['older48', 'Older than 48h']]);
+  if (!j.listings.length) { panel.innerHTML = bar + emptyBox('No pending listing submissions.'); return; }
+  const cutoff48 = Date.now() - 48 * 36e5;
+  const shown = TAB_FILTER.pending === 'older48' ? j.listings.filter(L => Date.parse(L.created_at) < cutoff48) : j.listings;
+  if (!shown.length) { panel.innerHTML = bar + emptyBox('No pending listings older than 48 hours.'); return; }
   // Fetch the approved-building inventory once so each card can offer "assign to existing".
   try {
     const bj = await adminFetch('/api/admin/buildings?status=approved', 'GET');
     if (bj.ok && bj.buildings) PENDING_BLD_OPTS = '<option value="">— Create a new building from this submission —</option>' + bj.buildings.map(b => `<option value="${esc(b.id)}">${esc(b.name)}${b.submarket ? ' — ' + esc(b.submarket) : ''}</option>`).join('');
   } catch (e) {}
-  panel.innerHTML = j.listings.map(L => {
+  panel.innerHTML = bar + shown.map(L => {
     const p = L.payload || {};
     const photoCount = Array.isArray(p.photoPaths) ? p.photoPaths.length : 0;
     const mediaPaths = (Array.isArray(p.photoPaths) ? p.photoPaths : []).concat(p.floorplanPath ? [p.floorplanPath] : []);
@@ -224,7 +343,7 @@ async function approveListing(id, btn) {
   const sel = document.getElementById('assign-' + id);
   const buildingId = sel ? sel.value : '';
   const msg = buildingId ? 'Approve and attach this unit to the selected existing building?' : 'Approve this listing? A new building will be created and it will go live publicly.';
-  if (!confirm(msg)) return;
+  if (!(await askConfirm({ title: 'Approve listing', message: msg, confirmLabel: 'Approve' }))) return;
   setBtnBusy(btn, true, 'Approving…');
   const j = await adminFetch('/api/admin/approve-listing', 'POST', { requestId: id, buildingId: buildingId || null });
   setBtnBusy(btn, false);
@@ -280,7 +399,7 @@ async function loadBatches() {
 }
 async function approveRow(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-batch-row', 'POST', { rowId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Row approved'); loadBatches(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }
 function rejectRow(id) { openReject('batch-row', id); }
-async function approveValidBatch(id, btn) { if (!confirm('Approve all valid (pending) rows in this batch? They go live.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-valid-batch', 'POST', { batchId: id }); setBtnBusy(btn, false); if (j.ok) { showToast(j.approved + ' rows approved'); loadBatches(); } else showToast('Failed', 'error'); }
+async function approveValidBatch(id, btn) { if (!(await askConfirm({ title: 'Approve all valid rows', message: 'Approve all valid (pending) rows in this batch? They go live.', confirmLabel: 'Approve all' }))) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-valid-batch', 'POST', { batchId: id }); setBtnBusy(btn, false); if (j.ok) { showToast(j.approved + ' rows approved'); loadBatches(); } else showToast('Failed', 'error'); }
 
 // ── Approved ─────────────────────────────────────────────────────────────────
 async function loadApproved() {
@@ -293,7 +412,7 @@ async function loadApproved() {
     <div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>District</th><th>Approved</th><th></th></tr></thead><tbody>${j.buildings.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.market)}</td><td>${esc(b.submarket || '')}</td><td>${fmtDate(b.approved_at)}</td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="manageBuilding('${esc(b.id)}')">Manage</button> <button class="btn btn-ghost btn-sm" onclick="unpublishBuilding('${b.id}',this)">Unpublish</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 async function unpublishBuilding(id, btn) {
-  if (!confirm('Unpublish this building? It will be removed from public results until re-approved.')) return;
+  if (!(await askConfirm({ title: 'Unpublish building', message: 'Unpublish this building? It will be removed from public results until re-approved.', confirmLabel: 'Unpublish' }))) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/unpublish-building', 'POST', { buildingId: id, status: 'draft' });
   setBtnBusy(btn, false);
@@ -322,8 +441,11 @@ async function loadMembership() {
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/membership-requests', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
-  if (!j.requests || !j.requests.length) { panel.innerHTML = emptyBox('No membership requests yet.'); return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Email</th><th>Requested tier</th><th>Market</th><th>Status</th><th></th></tr></thead><tbody>${j.requests.map(r => {
+  const bar = chipBar('membership', [['', 'All'], ['open', 'Open (not approved / rejected)']]);
+  if (!j.requests || !j.requests.length) { panel.innerHTML = bar + emptyBox('No membership requests yet.'); return; }
+  const mreqs = TAB_FILTER.membership === 'open' ? j.requests.filter(r => r.status !== 'approved' && r.status !== 'rejected') : j.requests;
+  if (!mreqs.length) { panel.innerHTML = bar + emptyBox('No open membership requests.'); return; }
+  panel.innerHTML = bar + `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Email</th><th>Requested tier</th><th>Market</th><th>Status</th><th></th></tr></thead><tbody>${mreqs.map(r => {
     const p = r.payload || {};
     const tier = p.requestedTier || '';
     const market = (tier === 'starter') ? (p.assignedMarket || '—') : 'all';
@@ -340,7 +462,7 @@ async function loadMembership() {
   }).join('')}</tbody></table></div>`;
 }
 async function approveMembership(id, btn) {
-  if (!confirm('Approve this membership request and activate the tier for the company?\n\nThis takes effect immediately (no payment is processed here).')) return;
+  if (!(await askConfirm({ title: 'Approve membership', message: 'Approve this membership request and activate the tier for the company?\n\nThis takes effect immediately (no payment is processed here).', confirmLabel: 'Approve' }))) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/approve-membership', 'POST', { requestId: id });
   setBtnBusy(btn, false);
@@ -353,7 +475,7 @@ async function setMembershipStatus(id, status, btn) {
   if (j.ok) { showToast('Marked ' + status); loadMembership(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function rejectMembership(id, btn) {
-  const reason = prompt('Reason (emailed to requester):'); if (reason === null) return;
+  const reason = await askText({ title: 'Reject membership request', message: 'The requester is emailed this reason.', label: 'Reason (emailed to requester)', confirmLabel: 'Reject', danger: true }); if (reason === null) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/reject-membership', 'POST', { requestId: id, reason });
   setBtnBusy(btn, false);
@@ -371,8 +493,52 @@ async function loadUsers() {
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   ADMIN_USERS = j.users || [];
   if (!ADMIN_USERS.length) { panel.innerHTML = emptyBox('No users yet.'); return; }
-  panel.innerHTML = `<div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><input id="user-search" class="fi" placeholder="Search by name, email or company…" oninput="renderUsers()" style="max-width:360px;"><button class="btn btn-navy btn-sm" onclick="openInvite()">+ Invite user</button></div><div id="users-table"></div>`;
+  const types = [...new Set(ADMIN_USERS.map(u => u.user_type).filter(Boolean))].sort();
+  const sel = (id, label, opts) => `<select id="${id}" class="fi fi-sel" onchange="renderUsers()" style="max-width:150px;" aria-label="${esc(label)}"><option value="">${esc(label)}</option>${opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>`;
+  panel.innerHTML = `<div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <input id="user-search" class="fi" placeholder="Search name, email or company…" oninput="renderUsers()" style="max-width:280px;">
+    ${sel('user-f-role', 'All roles', [['admin', 'Admins'], ['member', 'Non-admins']])}${sel('user-f-tier', 'All tiers', ['free', 'starter', 'membership', 'enterprise'].map(t => [t, t]))}${sel('user-f-type', 'All types', types.map(t => [t, t]))}
+    <button class="btn btn-ghost btn-sm" onclick="resetUserFilters()">Reset</button>
+    <span style="flex:1;"></span><span id="user-count" style="font-size:12px;color:var(--text-2);"></span>
+    <button class="btn btn-ghost btn-sm" onclick="exportUsers()">&#11015; Export CSV</button><button class="btn btn-navy btn-sm" onclick="openInvite()">+ Invite user</button></div><div id="users-table"></div>`;
   renderUsers();
+}
+const USER_COLS = [
+  { key: 'full_name', label: 'Name', type: 'text' }, { key: 'email', label: 'Email', type: 'text' }, { key: 'company', label: 'Company', type: 'text' },
+  { key: 'user_type', label: 'Type', type: 'text' }, { key: 'tier', label: 'Tier', type: 'text' }, { key: 'is_admin', label: 'Admin', type: 'num' },
+  { key: 'buildings_added', label: 'Listings', type: 'num' }, { key: 'saves', label: 'Saves', type: 'num' },
+  { key: 'last_sign_in_at', label: 'Last active', type: 'date' }, { key: 'created_at', label: 'Joined', type: 'date' },
+];
+let USER_SORT = { key: 'created_at', dir: 'desc' };
+function sortUsers(key) {
+  if (USER_SORT.key === key) USER_SORT.dir = USER_SORT.dir === 'asc' ? 'desc' : 'asc';
+  else { USER_SORT.key = key; USER_SORT.dir = (key === 'full_name' || key === 'email' || key === 'company' || key === 'user_type' || key === 'tier') ? 'asc' : 'desc'; }
+  renderUsers();
+}
+function resetUserFilters() {
+  ['user-search', 'user-f-role', 'user-f-tier', 'user-f-type'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderUsers();
+}
+// Filtered + sorted set; shared by the table and the CSV export so they always match.
+function getFilteredUsers() {
+  const v = id => ((document.getElementById(id) || {}).value || '');
+  const q = v('user-search').trim().toLowerCase(), role = v('user-f-role'), tier = v('user-f-tier'), type = v('user-f-type');
+  const col = USER_COLS.find(c => c.key === USER_SORT.key) || { type: 'text' };
+  return ADMIN_USERS.filter(u =>
+    (!q || [u.full_name, u.email, u.company].some(x => String(x || '').toLowerCase().includes(q)))
+    && (!role || (role === 'admin') === !!u.is_admin)
+    && (!tier || (u.tier || 'free') === tier)
+    && (!type || u.user_type === type)
+  ).sort((a, b) => cmpRows(a, b, USER_SORT.key, col.type, USER_SORT.dir));
+}
+function exportUsers() {
+  const rows = getFilteredUsers();
+  if (!rows.length) { showToast('No users to export', 'info'); return; }
+  downloadCsv('urbn-users-' + new Date().toISOString().slice(0, 10) + '.csv',
+    ['name', 'email', 'phone', 'company', 'user_type', 'tier', 'tier_status', 'assigned_market', 'is_admin', 'buildings_added', 'units_added', 'saves', 'requests', 'last_sign_in', 'joined'],
+    rows.map(u => [u.full_name, u.email, u.phone, u.company, u.user_type, u.tier || 'free', u.tier_status, u.assigned_market, u.is_admin ? 'yes' : 'no', Number(u.buildings_added || 0), Number(u.units_added || 0), Number(u.saves || 0), Number(u.requests || 0), u.last_sign_in_at || '', u.created_at || '']));
+  logExport('users', rows.length, rows.length !== ADMIN_USERS.length);
+  showToast(rows.length + ' user(s) exported');
 }
 function openInvite() {
   const marketOpts = (typeof URBN_DATA !== 'undefined' ? URBN_DATA.markets : []).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
@@ -418,15 +584,17 @@ async function submitInvite() {
   }
 }
 function renderUsers() {
-  const q = (document.getElementById('user-search')?.value || '').trim().toLowerCase();
-  const rows = ADMIN_USERS.filter(u => !q || [u.full_name, u.email, u.company].some(v => String(v || '').toLowerCase().includes(q)));
-  const box = document.getElementById('users-table');
+  const rows = getFilteredUsers();
+  const cnt = document.getElementById('user-count'); if (cnt) cnt.textContent = `${rows.length} of ${ADMIN_USERS.length} user(s)`;
+  const box = document.getElementById('users-table'); if (!box) return;
   if (!rows.length) { box.innerHTML = emptyBox('No matching users.'); return; }
-  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Type</th><th>Tier</th><th>Admin</th><th>Listings</th><th>Saves</th><th>Last active</th><th>Joined</th><th></th></tr></thead><tbody>${rows.map(u => {
+  const arrow = k => USER_SORT.key === k ? (USER_SORT.dir === 'asc' ? ' &uarr;' : ' &darr;') : '';
+  const ths = USER_COLS.map(c => `<th style="cursor:pointer;white-space:nowrap;" onclick="sortUsers('${c.key}')">${esc(c.label)}${arrow(c.key)}</th>`).join('') + '<th></th>';
+  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${rows.map(u => {
     const tier = u.tier || 'free';
-    const adminBadge = u.is_admin ? '<span class="badge" style="background:#243A5E;color:#fff;">admin</span>' : '<span style="color:var(--text-2);">—</span>';
+    const adminBadge = u.is_admin ? '<span class="badge" style="background:#243A5E;color:#fff;">admin</span>' : '<span style="color:var(--text-2);">&mdash;</span>';
     const bAdded = Number(u.buildings_added || 0), uAdded = Number(u.units_added || 0);
-    const listings = (bAdded || uAdded) ? `${bAdded} bldg / ${uAdded} unit` : '—';
+    const listings = (bAdded || uAdded) ? `${bAdded} bldg / ${uAdded} unit` : '&mdash;';
     const last = u.last_sign_in_at ? fmtDate(u.last_sign_in_at) : 'never';
     return `<tr><td>${esc(u.full_name || '')}</td><td>${esc(u.email || '')}</td><td>${esc(u.company || '')}</td><td>${esc(u.user_type || '')}</td><td><span class="badge ${TIER_BADGE[tier] || 'badge-gated'}">${esc(tier)}</span></td><td>${adminBadge}</td><td style="white-space:nowrap;">${listings}</td><td>${Number(u.saves || 0)}</td><td style="white-space:nowrap;">${esc(last)}</td><td>${fmtDate(u.created_at)}</td><td><button class="btn btn-ghost btn-sm" onclick="openUserPanel('${u.id}')">Manage</button></td></tr>`;
   }).join('')}</tbody></table></div>`;
@@ -459,20 +627,20 @@ function openUserPanel(userId) {
 }
 function bLabel(u) { return `${Number(u.buildings_added || 0)} building(s), ${Number(u.units_added || 0)} unit(s)`; }
 async function setUserAdmin(userId, makeAdmin) {
-  if (!confirm(makeAdmin ? 'Grant FULL admin rights to this user? They will be able to manage all users, listings and settings.' : 'Remove admin rights from this user?')) return;
+  if (!(await askConfirm({ title: makeAdmin ? 'Grant admin rights' : 'Remove admin rights', message: makeAdmin ? 'Grant FULL admin rights to this user? They will be able to manage all users, listings and settings.' : 'Remove admin rights from this user?', confirmLabel: makeAdmin ? 'Grant admin' : 'Remove admin', danger: makeAdmin }))) return;
   const j = await adminFetch('/api/admin/set-admin', 'POST', { userId, makeAdmin });
   if (j.ok) { showToast(makeAdmin ? 'Admin granted' : 'Admin removed'); document.getElementById('user-modal')?.remove(); loadUsers(); }
   else showToast('Failed: ' + (j.error === 'cannot_self_demote' ? 'you cannot remove your own admin rights' : (j.error || 'error')), 'error');
 }
 async function sendPasswordReset(userId) {
-  if (!confirm('Email this user a link to set a new password?')) return;
+  if (!(await askConfirm({ title: 'Send password reset', message: 'Email this user a link to set a new password?', confirmLabel: 'Send link' }))) return;
   const j = await adminFetch('/api/admin/send-password-reset', 'POST', { userId });
   if (j.ok) showToast('Password-reset email sent');
   else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function deleteUser(userId) {
   const u = ADMIN_USERS.find(x => x.id === userId);
-  if (!confirm(`Permanently delete ${u ? (u.email || u.full_name) : 'this user'}? This removes their account and cannot be undone.`)) return;
+  if (!(await askConfirm({ title: 'Delete user', message: `Permanently delete ${u ? (u.email || u.full_name) : 'this user'}? This removes their account and cannot be undone.`, confirmLabel: 'Delete user', danger: true }))) return;
   const j = await adminFetch('/api/admin/delete-user', 'POST', { userId });
   if (j.ok) { showToast('User deleted'); document.getElementById('user-modal')?.remove(); loadUsers(); }
   else showToast('Failed: ' + (j.error === 'cannot_delete_self' ? 'you cannot delete your own account' : (j.error || 'error')), 'error');
@@ -535,13 +703,23 @@ async function saveTier(companyId) {
 }
 
 // ── Companies ────────────────────────────────────────────────────────────────
+let ADMIN_COMPANIES = [];
+function exportCompanies() {
+  if (!ADMIN_COMPANIES.length) { showToast('No companies to export', 'info'); return; }
+  downloadCsv('urbn-companies-' + new Date().toISOString().slice(0, 10) + '.csv',
+    ['company', 'members', 'tier', 'status', 'requests', 'listings', 'batches', 'created'],
+    ADMIN_COMPANIES.map(c => [c.name, Number(c.members || 0), c.tier, c.status, Number(c.requests || 0), Number(c.listings || 0), Number(c.batches || 0), c.created_at || '']));
+  logExport('companies', ADMIN_COMPANIES.length, false);
+  showToast(ADMIN_COMPANIES.length + ' company(ies) exported');
+}
 async function loadCompanies() {
   const panel = document.getElementById('panel-companies');
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/companies', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   if (!j.companies || !j.companies.length) { panel.innerHTML = emptyBox('No companies yet.'); return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Company</th><th>Members</th><th>Tier</th><th>Status</th><th>Requests</th><th>Listings</th><th>Batches</th><th>Created</th></tr></thead><tbody>${j.companies.map(c => `<tr><td>${esc(c.name || '')}</td><td>${Number(c.members || 0)}</td><td>${esc(c.tier)}</td><td>${esc(c.status)}</td><td>${Number(c.requests || 0)}</td><td>${Number(c.listings || 0)}</td><td>${Number(c.batches || 0)}</td><td>${fmtDate(c.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
+  ADMIN_COMPANIES = j.companies;
+  panel.innerHTML = `<div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:12px;"><span style="font-size:12px;color:var(--text-2);">${ADMIN_COMPANIES.length} company(ies)</span><button class="btn btn-ghost btn-sm" onclick="exportCompanies()">&#11015; Export CSV</button></div><div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Company</th><th>Members</th><th>Tier</th><th>Status</th><th>Requests</th><th>Listings</th><th>Batches</th><th>Created</th></tr></thead><tbody>${j.companies.map(c => `<tr><td>${esc(c.name || '')}</td><td>${Number(c.members || 0)}</td><td>${esc(c.tier)}</td><td>${esc(c.status)}</td><td>${Number(c.requests || 0)}</td><td>${Number(c.listings || 0)}</td><td>${Number(c.batches || 0)}</td><td>${fmtDate(c.created_at)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 // ── Analytics ────────────────────────────────────────────────────────────────
@@ -553,10 +731,56 @@ function kvTable(obj, headers) {
 function statTiles(pairs) {
   return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:8px;">${pairs.map(([label, n]) => `<div class="card" style="padding:16px;"><div style="font-family:var(--fd);font-size:26px;line-height:1;">${Number(n || 0)}</div><div style="font-size:11.5px;color:var(--text-2);margin-top:5px;">${esc(label)}</div></div>`).join('')}</div>`;
 }
+// Inline-SVG line/area chart (no dependencies). `series` = { bucket:'day'|'week', points:[{d:'YYYY-MM-DD', n}] }.
+function lineChart(series, color, noun) {
+  const pts = (series && series.points) || [];
+  if (!pts.length || pts.every(p => !p.n)) return `<p style="font-size:12.5px;color:var(--text-2);">No ${esc(noun)} in this range.</p>`;
+  const W = 640, H = 180, pl = 40, pr = 12, pt = 12, pb = 26, iw = W - pl - pr, ih = H - pt - pb;
+  const max = Math.max(1, ...pts.map(p => p.n)), total = pts.reduce((a, p) => a + p.n, 0);
+  const x = i => pl + (pts.length === 1 ? iw / 2 : i * iw / (pts.length - 1));
+  const y = v => pt + ih * (1 - v / max);
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.n).toFixed(1)).join(' ');
+  const area = line + ` L${x(pts.length - 1).toFixed(1)} ${(pt + ih).toFixed(1)} L${x(0).toFixed(1)} ${(pt + ih).toFixed(1)} Z`;
+  const grid = [0, 0.5, 1].filter((f, i, a) => a.findIndex(g => Math.round(max * g) === Math.round(max * f)) === i).map(f => { const v = Math.round(max * f), yy = y(v).toFixed(1); return `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="#E6E8EB" stroke-width="1"/><text x="${pl - 6}" y="${(+yy + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#6B7280">${v}</text>`; }).join('');
+  const lbl = [0, Math.floor((pts.length - 1) / 2), pts.length - 1].filter((v, i, a) => a.indexOf(v) === i)
+    .map(i => `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : (i === pts.length - 1 ? 'end' : 'middle')}" font-size="10" fill="#6B7280">${esc(pts[i].d)}</text>`).join('');
+  const dots = pts.length <= 60 ? pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.n).toFixed(1)}" r="${p.n ? 3 : 1.5}" fill="${color}"><title>${esc(p.d)}${series.bucket === 'week' ? ' (week)' : ''}: ${p.n}</title></circle>`).join('') : '';
+  return `<div style="font-size:11.5px;color:var(--text-2);margin-bottom:4px;">${total} ${esc(noun)} &middot; ${series.bucket === 'week' ? 'weekly' : 'daily'} totals</div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(noun)} over time" style="width:100%;height:auto;max-width:760px;display:block;">${grid}<path d="${area}" fill="${color}" fill-opacity="0.12"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>${dots}${lbl}</svg>`;
+}
+let AN_RANGE = '30d';
+const AN_RANGES = [['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['90d', 'Last 90 days'], ['all', 'All time']];
+function engagementInner(e) {
+  const rangeLbl = (AN_RANGES.find(r => r[0] === (e.range || AN_RANGE)) || [0, ''])[1].toLowerCase();
+  const mostSaved = (e.mostSaved || []).length
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
+  const mostViewed = (e.mostViewed || []).length
+    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Views</th><th>Unique</th></tr></thead><tbody>${e.mostViewed.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.views)}</td><td>${Number(x.uniqueViews)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p style="font-size:12.5px;color:var(--text-2);">No building views recorded in this range.</p>`;
+  const chips = `<div class="chips" style="margin-bottom:14px;">${AN_RANGES.map(([v, l]) => `<button class="chip ${(e.range || AN_RANGE) === v ? 'on' : ''}" onclick="setAnalyticsRange('${v}')">${esc(l)}</button>`).join('')}</div>`;
+  return chips
+    + statTiles([['Total saves (all-time)', e.totalSaves], ['Building views (all-time)', e.totalViews], ['Building views (7d)', e.viewsLast7], ['Views in range (UTC days)', e.viewsInRange], ['Unique sessions in range', e.uniqueSessionsInRange], ['Requests in range', e.requestsInRange]])
+    + `<div style="margin-top:14px;"><strong style="font-size:12.5px;">Building views over time</strong> <span style="font-size:11.5px;color:var(--text-2);">(${esc(rangeLbl)})</span><div class="card" style="padding:14px;margin-top:6px;">${lineChart(e.viewsSeries, '#243A5E', 'views')}</div></div>`
+    + `<div style="margin-top:14px;"><strong style="font-size:12.5px;">Requests over time</strong> <span style="font-size:11.5px;color:var(--text-2);">(${esc(rangeLbl)}, all request types)</span><div class="card" style="padding:14px;margin-top:6px;">${lineChart(e.requestsSeries, '#B8893A', 'requests')}</div></div>`
+    + `<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-viewed buildings</strong> <span style="font-size:11.5px;color:var(--text-2);">(${esc(rangeLbl)})</span>${mostViewed}</div>`
+    + `<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong> <span style="font-size:11.5px;color:var(--text-2);">(all-time)</span>${mostSaved}</div>`;
+}
+// Range change only re-fetches + re-renders the Engagement block (keeps scroll position).
+async function setAnalyticsRange(r) {
+  AN_RANGE = r;
+  const box = document.getElementById('an-engagement'); if (box) box.style.opacity = '.5';
+  const j = await adminFetch('/api/admin/analytics?range=' + encodeURIComponent(r), 'GET');
+  const cur = document.getElementById('an-engagement');
+  if (!cur) return;
+  cur.style.opacity = '';
+  if (!j.ok) { showToast('Could not load that range: ' + (j.error || 'error'), 'error'); return; }
+  cur.innerHTML = engagementInner(j.analytics.engagement || {});
+}
 async function loadAnalytics() {
   const panel = document.getElementById('panel-analytics');
   panel.innerHTML = loadingBox();
-  const j = await adminFetch('/api/admin/analytics', 'GET');
+  const j = await adminFetch('/api/admin/analytics?range=' + encodeURIComponent(AN_RANGE), 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
   const a = j.analytics || {};
   const s = a.supply || {}, d = a.demand || {}, e = a.engagement || {}, m = a.membership || {}, q = a.dataQuality || {};
@@ -565,12 +789,6 @@ async function loadAnalytics() {
   const avgRentTbl = avgRent.length
     ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Market</th><th>Avg rent</th><th>Range</th></tr></thead><tbody>${avgRent.map(([k, v]) => { const rg = (s.rentRangeByMarket || {})[k] || []; return `<tr><td>${esc(k)}</td><td>${v}</td><td>${rg.length ? esc(rg[0] + ' – ' + rg[1]) : '—'}</td></tr>`; }).join('')}</tbody></table></div>`
     : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
-  const mostSaved = (e.mostSaved || []).length
-    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Saves</th></tr></thead><tbody>${e.mostSaved.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.saves)}</td></tr>`).join('')}</tbody></table></div>`
-    : `<p style="font-size:12.5px;color:var(--text-2);">Not enough data yet.</p>`;
-  const mostViewed = (e.mostViewed || []).length
-    ? `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Building</th><th>Market</th><th>Views</th><th>Unique</th></tr></thead><tbody>${e.mostViewed.map(x => `<tr><td>${esc(x.building)}</td><td>${esc(niceMarket(x.market))}</td><td>${Number(x.views)}</td><td>${Number(x.uniqueViews)}</td></tr>`).join('')}</tbody></table></div>`
-    : `<p style="font-size:12.5px;color:var(--text-2);">No building views recorded yet.</p>`;
   panel.innerHTML =
     sec('Supply', statTiles([['Approved buildings', s.approvedBuildings], ['Approved units', s.approvedUnits], ['Total sqm', s.totalSqm], ['Total desks', s.totalDesks]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Listings by market</strong>' + kvTable(s.listingsByMarket, ['Market', 'Listings']) + '</div>'
@@ -579,9 +797,7 @@ async function loadAnalytics() {
     + sec('Demand', statTiles([['Access requests by market', Object.keys(d.accessByMarket || {}).length], ['Market scans', Object.keys(d.scanByMarket || {}).length]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Access requests by market</strong>' + kvTable(d.accessByMarket, ['Market', 'Requests']) + '</div>'
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Market scans by market</strong>' + kvTable(d.scanByMarket, ['Market', 'Scans']) + '</div>')
-    + sec('Engagement', statTiles([['Total saves', e.totalSaves], ['Building views (all-time)', e.totalViews], ['Building views (7d)', e.viewsLast7]])
-      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-viewed buildings</strong>' + mostViewed + '</div>'
-      + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Most-saved buildings</strong>' + mostSaved + '</div>')
+    + sec('Engagement', '<div id="an-engagement">' + engagementInner(e) + '</div>')
     + sec('Membership', statTiles([['Total companies', m.totalCompanies], ['Total users', m.totalUsers], ['Pending membership', m.pendingMembership]]) + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Active companies by tier</strong>' + kvTable(m.companiesByTier, ['Tier', 'Companies']) + '</div>')
     + sec('Requests', statTiles([['Reveal requests', Object.values((a.requests||{}).revealByBuilding||{}).reduce((x,y)=>x+y,0)], ['Site visits', Object.values((a.requests||{}).siteVisitsByMarket||{}).reduce((x,y)=>x+y,0)], ['Offers', Object.values((a.requests||{}).offersByMarket||{}).reduce((x,y)=>x+y,0)], ['Introductions', (a.requests||{}).introductions], ['Listings approved', (a.requests||{}).listingsApproved], ['Listings rejected', (a.requests||{}).listingsRejected]])
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Pending by type</strong>' + kvTable((a.requests||{}).pendingByType, ['Type', 'Pending']) + '</div>'
@@ -593,14 +809,107 @@ async function loadAnalytics() {
       + '<div style="margin-top:14px;"><strong style="font-size:12.5px;">Construction costs last updated by market</strong>' + kvTable(a.constructionCostsByMarket, ['Market', 'Updated']) + '</div>');
 }
 
+// ── Audit log (read-only viewer of admin_audit_logs) ─────────────────────────
+const AUDIT = { offset: 0, limit: 50, f: { action: '', actor: '', target_type: '', success: '', from: '', to: '' } };
+const AUDIT_ACTIONS = ['building.hide', 'building.unhide', 'building.delete', 'building.archive', 'building.restore', 'unit.update', 'unit.delete', 'units.import', 'listing.approve', 'listing.reject', 'batch.approve_row', 'batch.reject_row', 'batch.approve_all', 'reveal.approve', 'reveal.reject', 'membership.approve', 'membership.reject', 'membership.status', 'membership.set_tier', 'user.invite', 'user.set_admin', 'user.delete', 'user.email', 'user.password_reset', 'export.users', 'export.companies', 'export.audit_logs', 'digest.weekly'];
+const AUDIT_TARGETS = ['building', 'unit', 'request', 'batch', 'batch_row', 'grant', 'company', 'user', 'users', 'companies', 'audit_logs', 'system'];
+function auditQS(extra) {
+  const p = new URLSearchParams();
+  Object.entries(AUDIT.f).forEach(([k, v]) => { if (v) p.set(k, v); });
+  Object.entries(extra || {}).forEach(([k, v]) => p.set(k, String(v)));
+  return p.toString();
+}
+function fmtTs(s) { try { return new Date(s).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'; } catch (e) { return s || ''; } }
+async function loadAudit() {
+  const panel = document.getElementById('panel-audit');
+  const f = AUDIT.f;
+  const input = (id, label, val, extra) => `<div class="fg" style="margin:0;"><label class="fl" for="${id}">${esc(label)}</label><input class="fi" id="${id}" value="${esc(val)}" ${extra || ''} onkeydown="if(event.key==='Enter')applyAuditFilters()"></div>`;
+  panel.innerHTML = `
+    <datalist id="audit-actions">${AUDIT_ACTIONS.map(a => `<option value="${esc(a)}">`).join('')}</datalist>
+    <div class="card" style="padding:16px;margin-bottom:14px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;">
+        ${input('au-action', 'Action contains', f.action, 'list="audit-actions" placeholder="e.g. building.delete"')}
+        ${input('au-actor', 'Actor email contains', f.actor, 'placeholder="name@company.com"')}
+        <div class="fg" style="margin:0;"><label class="fl" for="au-target">Target type</label><select class="fi fi-sel" id="au-target"><option value="">All</option>${AUDIT_TARGETS.map(t => `<option value="${esc(t)}"${f.target_type === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+        <div class="fg" style="margin:0;"><label class="fl" for="au-success">Result</label><select class="fi fi-sel" id="au-success"><option value="">All</option><option value="true"${f.success === 'true' ? ' selected' : ''}>Success</option><option value="false"${f.success === 'false' ? ' selected' : ''}>Failed</option></select></div>
+        ${input('au-from', 'From (UTC date)', f.from, 'type="date"')}
+        ${input('au-to', 'To (UTC date, inclusive)', f.to, 'type="date"')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+        <button class="btn btn-navy btn-sm" onclick="applyAuditFilters()">Apply filters</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetAuditFilters()">Reset</button>
+        <span style="flex:1;"></span>
+        <button class="btn btn-ghost btn-sm" onclick="exportAudit(this)">&#11015; Export CSV (filtered, max 5,000)</button>
+      </div>
+    </div>
+    <div id="audit-results">${loadingBox()}</div>`;
+  fetchAudit();
+}
+function applyAuditFilters() {
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  AUDIT.f = { action: v('au-action'), actor: v('au-actor'), target_type: v('au-target'), success: v('au-success'), from: v('au-from'), to: v('au-to') };
+  AUDIT.offset = 0;
+  fetchAudit();
+}
+function resetAuditFilters() { AUDIT.f = { action: '', actor: '', target_type: '', success: '', from: '', to: '' }; AUDIT.offset = 0; loadAudit(); }
+function auditPage(dir) { AUDIT.offset = Math.max(0, AUDIT.offset + dir * AUDIT.limit); fetchAudit(); }
+function auditTarget(r) {
+  const ids = Array.isArray(r.target_ids) ? r.target_ids : [];
+  const shown = ids.slice(0, 2).map(i => esc(String(i).length > 26 ? String(i).slice(0, 24) + '…' : i)).join(', ');
+  return `${esc(r.target_type || '—')}${shown ? ' <span style="color:var(--text-2);font-size:11.5px;">' + shown + (ids.length > 2 ? ' +' + (ids.length - 2) + ' more' : '') + '</span>' : ''}`;
+}
+async function fetchAudit() {
+  const box = document.getElementById('audit-results'); if (!box) return;
+  box.style.opacity = '.5';
+  const j = await adminFetch('/api/admin/audit-logs?' + auditQS({ limit: AUDIT.limit, offset: AUDIT.offset }), 'GET');
+  box.style.opacity = '';
+  if (!j.ok) { box.innerHTML = errBox(j); return; }
+  const rows = j.logs || [];
+  if (!rows.length) { box.innerHTML = emptyBox(AUDIT.offset ? 'No more entries.' : 'No audit entries match these filters.') + (AUDIT.offset ? '<button class="btn btn-ghost btn-sm" onclick="auditPage(-1)">&larr; Previous</button>' : ''); return; }
+  const trs = rows.map(r => {
+    const meta = r.metadata && Object.keys(r.metadata).length ? JSON.stringify(r.metadata, null, 1).slice(0, 2000) : '';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:12px;">${esc(fmtTs(r.created_at))}</td>
+      <td><code style="font-size:12px;">${esc(r.action || '')}</code></td>
+      <td style="font-size:12.5px;">${esc(r.actor_email || (r.actor_id ? String(r.actor_id).slice(0, 8) + '…' : 'system'))}</td>
+      <td>${auditTarget(r)}</td>
+      <td>${r.count != null ? Number(r.count) : '—'}</td>
+      <td><span class="badge ${r.success === false ? '' : 'badge-available'}"${r.success === false ? ' style="background:#FEF3F2;color:#B42318;"' : ''}>${r.success === false ? 'failed' : 'ok'}</span></td>
+      <td>${meta ? `<details><summary style="cursor:pointer;font-size:12px;">view</summary><pre style="font-size:11px;white-space:pre-wrap;word-break:break-word;max-width:340px;margin:6px 0 0;">${esc(meta)}</pre></details>` : '—'}</td></tr>`;
+  }).join('');
+  box.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>When</th><th>Action</th><th>Actor</th><th>Target</th><th>Count</th><th>Result</th><th>Details</th></tr></thead><tbody>${trs}</tbody></table></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+      <button class="btn btn-ghost btn-sm" onclick="auditPage(-1)"${AUDIT.offset ? '' : ' disabled'}>&larr; Newer</button>
+      <span style="font-size:12px;color:var(--text-2);">Showing ${AUDIT.offset + 1}&ndash;${AUDIT.offset + rows.length}, newest first</span>
+      <button class="btn btn-ghost btn-sm" onclick="auditPage(1)"${j.hasMore ? '' : ' disabled'}>Older &rarr;</button>
+    </div>`;
+}
+async function exportAudit(btn) {
+  setBtnBusy(btn, true, 'Exporting…');
+  const j = await adminFetch('/api/admin/audit-logs?' + auditQS({ export: 1 }), 'GET');
+  setBtnBusy(btn, false);
+  if (!j.ok) { showToast('Export failed: ' + (j.error || 'error'), 'error'); return; }
+  const rows = j.logs || [];
+  if (!rows.length) { showToast('Nothing to export for these filters', 'info'); return; }
+  downloadCsv('urbn-audit-log-' + new Date().toISOString().slice(0, 10) + '.csv',
+    ['timestamp_utc', 'action', 'actor_email', 'actor_id', 'target_type', 'target_ids', 'count', 'success', 'metadata'],
+    rows.map(r => [r.created_at, r.action, r.actor_email, r.actor_id, r.target_type, r.target_ids, r.count, r.success === false ? 'false' : 'true', r.metadata ? JSON.stringify(r.metadata) : '']));
+  logExport('audit_logs', rows.length, Object.values(AUDIT.f).some(Boolean));
+  showToast(rows.length + ' entries exported' + (j.truncated ? ' (truncated at 5,000, narrow the filters)' : ''), j.truncated ? 'info' : 'success');
+}
+
 // ── Reveal requests ──────────────────────────────────────────────────────────
 async function loadReveal() {
   const panel = document.getElementById('panel-reveal');
   panel.innerHTML = loadingBox();
   const j = await adminFetch('/api/admin/reveal-requests', 'GET');
   if (!j.ok) { panel.innerHTML = errBox(j); return; }
-  if (!j.grants || !j.grants.length) { panel.innerHTML = emptyBox('No reveal requests yet.'); return; }
-  panel.innerHTML = `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>User</th><th>Building</th><th>Market</th><th>Status</th><th>Actions</th></tr></thead><tbody>${j.grants.map(g => {
+  const bar = chipBar('reveal', [['', 'All'], ['awaiting', 'Awaiting decision'], ['stale24', 'Waiting over 24h']]);
+  if (!j.grants || !j.grants.length) { panel.innerHTML = bar + emptyBox('No reveal requests yet.'); return; }
+  const cutoff24 = Date.now() - 24 * 36e5, rf = TAB_FILTER.reveal;
+  const grants = rf === 'awaiting' ? j.grants.filter(g => g.status === 'requested') : (rf === 'stale24' ? j.grants.filter(g => g.status === 'requested' && Date.parse(g.created_at) < cutoff24) : j.grants);
+  if (!grants.length) { panel.innerHTML = bar + emptyBox('No reveal requests match this filter.'); return; }
+  panel.innerHTML = bar + `<div class="card" style="padding:0;overflow:auto;"><table class="data-table"><thead><tr><th>Date</th><th>User</th><th>Building</th><th>Market</th><th>Status</th><th>Actions</th></tr></thead><tbody>${grants.map(g => {
     const actions = g.status === 'requested'
       ? `<button class="btn btn-navy btn-sm" onclick="approveReveal('${g.id}',this)">Approve</button> <button class="btn btn-ghost btn-sm" onclick="rejectReveal('${g.id}',this)">Reject</button>`
       : (g.status === 'approved' ? `<button class="btn btn-ghost btn-sm" onclick="revokeGrant('${g.id}',this)">Revoke</button>` : '');
@@ -608,8 +917,8 @@ async function loadReveal() {
   }).join('')}</tbody></table></div>`;
 }
 async function approveReveal(id, btn) { setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/approve-reveal', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal approved — user notified'); loadReveal(); } else showToast('Failed: ' + (j.error || 'error'), 'error'); }
-async function rejectReveal(id, btn) { const reason = prompt('Reason (emailed to requester):'); if (reason === null) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-reveal', 'POST', { grantId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal rejected'); loadReveal(); } else showToast('Failed', 'error'); }
-async function revokeGrant(id, btn) { if (!confirm('Revoke this access grant? The user will no longer see full details.')) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/revoke-grant', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Access revoked'); loadReveal(); } else showToast('Failed', 'error'); }
+async function rejectReveal(id, btn) { const reason = await askText({ title: 'Reject reveal request', message: 'The requester is emailed this reason.', label: 'Reason (emailed to requester)', confirmLabel: 'Reject', danger: true }); if (reason === null) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/reject-reveal', 'POST', { grantId: id, reason }); setBtnBusy(btn, false); if (j.ok) { showToast('Reveal rejected'); loadReveal(); } else showToast('Failed', 'error'); }
+async function revokeGrant(id, btn) { if (!(await askConfirm({ title: 'Revoke access', message: 'Revoke this access grant? The user will no longer see full details.', confirmLabel: 'Revoke', danger: true }))) return; setBtnBusy(btn, true, '…'); const j = await adminFetch('/api/admin/revoke-grant', 'POST', { grantId: id }); setBtnBusy(btn, false); if (j.ok) { showToast('Access revoked'); loadReveal(); } else showToast('Failed', 'error'); }
 
 // ── Buildings management ─────────────────────────────────────────────────────
 let BLD_STATUS = 'approved';
@@ -670,7 +979,7 @@ async function loadUnits() {
   ADMIN_UNITS = j.units || [];
   ADMIN_BLDS = j.buildings || [];
   if (!ADMIN_UNITS.length) { panel.innerHTML = emptyBox('No units yet. Import units from the Buildings tab (⬆ Import units), or wait for submissions.'); return; }
-  panel.innerHTML = `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+  panel.innerHTML = chipBar('units', [['', 'All units'], ['norent', 'Missing rent (approved)']]) + `<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
     <input id="unit-search" class="fi" placeholder="Search building, market, district, status…" oninput="UNIT_Q=this.value;renderUnitsTable()" style="max-width:360px;">
     <div style="display:flex;gap:8px;align-items:center;"><span style="font-size:12px;color:var(--text-2);" id="unit-count"></span><button class="btn btn-sm" id="unit-delsel" onclick="deleteSelectedUnits()" style="display:none;color:#fff;background:#B42318;">Delete selected</button></div></div>
   <div id="units-table"></div>`;
@@ -684,6 +993,7 @@ function sortUnits(key) {
 function renderUnitsTable() {
   const q = UNIT_Q.trim().toLowerCase();
   let rows = ADMIN_UNITS.filter(u => !q || [u.building, u.market, u.submarket, u.status, u.offeringType, u.fitOut].some(v => String(v || '').toLowerCase().includes(q)));
+  if (TAB_FILTER.units === 'norent') rows = rows.filter(u => u.status === 'approved' && !u.rent);
   const col = UNIT_COLS.find(c => c.key === UNIT_SORT.key) || { type: 'text' };
   rows = rows.slice().sort((a, b) => cmpRows(a, b, UNIT_SORT.key, col.type, UNIT_SORT.dir));
   const arrow = k => UNIT_SORT.key === k ? (UNIT_SORT.dir === 'asc' ? ' ↑' : ' ↓') : '';
@@ -708,15 +1018,14 @@ function renderUnitsTable() {
 function toggleAllUnits(cb) { document.querySelectorAll('.unit-chk').forEach(c => { c.checked = cb.checked; }); updateUnitSel(); }
 function updateUnitSel() { const n = document.querySelectorAll('.unit-chk:checked').length; const b = document.getElementById('unit-delsel'); if (b) b.style.display = n ? '' : 'none'; }
 async function deleteUnit(id) {
-  if (!confirm('Permanently delete this unit?\n\nThe building is NOT affected.')) return;
+  if (!(await askConfirm({ title: 'Delete unit', message: 'Permanently delete this unit?\n\nThe building is NOT affected.', confirmLabel: 'Delete unit', danger: true }))) return;
   const j = await adminFetch('/api/admin/delete-units', 'POST', { unitIds: [id] });
   if (j.ok) { showToast('Unit deleted'); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function deleteSelectedUnits() {
   const ids = [...document.querySelectorAll('.unit-chk:checked')].map(c => c.value);
   if (!ids.length) { showToast('Select units first', 'info'); return; }
-  const typed = prompt(`Permanently delete ${ids.length} unit(s)? Buildings are NOT affected.\n\nType DELETE to confirm:`);
-  if (typed === null) return; if (typed !== 'DELETE') { showToast('Cancelled — text did not match', 'info'); return; }
+  if (!(await askConfirm({ title: 'Delete units', message: `Permanently delete ${ids.length} unit(s)? Buildings are NOT affected. This cannot be undone.`, confirmLabel: 'Delete ' + ids.length + ' unit(s)', danger: true, typeToConfirm: 'DELETE' }))) return;
   const j = await adminFetch('/api/admin/delete-units', 'POST', { unitIds: ids, confirm: 'DELETE' });
   if (j.ok) { showToast(`${j.deleted} unit(s) deleted`); loadUnits(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
@@ -792,7 +1101,7 @@ async function saveUnitEdit(id, btn) {
 async function loadBuildings() {
   const panel = document.getElementById('panel-buildings');
   panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-    <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}</div>
+    <div class="chips">${['approved', 'pending', 'rejected', 'draft', 'archived', ''].map(s => `<button class="chip ${BLD_STATUS === s ? 'on' : ''}" onclick="BLD_STATUS='${s}';loadBuildings()">${s || 'All'}</button>`).join('')}<button class="chip ${TAB_FILTER.buildings === 'nounits' ? 'on' : ''}" onclick="showTab('buildings', TAB_FILTER.buildings === 'nounits' ? '' : 'nounits')" title="Buildings with no units attached">No units</button></div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="exportListings(this)">⬇ Export all (CSV)</button>
       <button class="btn btn-ghost btn-sm" onclick="openImportUnits()">⬆ Import units (CSV)</button>
@@ -817,6 +1126,7 @@ async function loadBuildings() {
   let rows = j.buildings || [];
   if (BLD_VIS === 'visible') rows = rows.filter(b => !b.admin_hidden);
   else if (BLD_VIS === 'hidden') rows = rows.filter(b => !!b.admin_hidden);
+  if (TAB_FILTER.buildings === 'nounits') rows = rows.filter(b => !Number(b.unitCount));
   BLD_SHOWN = rows.map(b => b.id);
   BLD_ROWS = rows;
   renderBuildingsList();
@@ -834,9 +1144,9 @@ function hideSelected(hidden) {
   if (!ids.length) { showToast('Select buildings first', 'info'); return; }
   setBuildingHidden(ids, hidden);
 }
-function hideAllVisible() {
+async function hideAllVisible() {
   if (!BLD_SHOWN.length) { showToast('Nothing to hide', 'info'); return; }
-  if (!confirm(`Hide all ${BLD_SHOWN.length} building(s) currently shown?\n\nHidden buildings are removed from the public site (offices list, map, building pages). This is reversible — unhide them any time from the Hidden filter.`)) return;
+  if (!(await askConfirm({ title: 'Hide buildings', message: `Hide all ${BLD_SHOWN.length} building(s) currently shown?\n\nHidden buildings are removed from the public site (offices list, map, building pages). This is reversible: unhide them any time from the Hidden filter.`, confirmLabel: 'Hide all shown' }))) return;
   setBuildingHidden(BLD_SHOWN.slice(), true);
 }
 // ── Permanent delete (irreversible; cascades to units, photos, reveal grants) ──
@@ -845,12 +1155,10 @@ async function deleteBuildings(ids, allShown) {
   if (!ids.length) { showToast('Select buildings first', 'info'); return; }
   let confirmToken = null;
   if (ids.length === 1 && !allShown) {
-    if (!confirm('Permanently DELETE this building and all of its units, photos and reveal grants?\n\nThis cannot be undone.')) return;
+    if (!(await askConfirm({ title: 'Delete building', message: 'Permanently DELETE this building and all of its units, photos and reveal grants?\n\nThis cannot be undone.', confirmLabel: 'Delete building', danger: true }))) return;
   } else {
     const scope = allShown ? `all ${ids.length} building(s) currently shown` : `${ids.length} selected building(s)`;
-    const typed = prompt(`This will PERMANENTLY DELETE ${scope}, including every unit, photo and reveal grant. This cannot be undone.\n\nType DELETE to confirm:`);
-    if (typed === null) return;
-    if (typed !== 'DELETE') { showToast('Deletion cancelled — confirmation text did not match.', 'info'); return; }
+    if (!(await askConfirm({ title: 'Delete buildings', message: `This will PERMANENTLY DELETE ${scope}, including every unit, photo and reveal grant. This cannot be undone.`, confirmLabel: 'Delete ' + ids.length + ' building(s)', danger: true, typeToConfirm: 'DELETE' }))) return;
     confirmToken = 'DELETE';
   }
   const j = await adminFetch('/api/admin/delete-buildings', 'POST', { buildingIds: ids, confirm: confirmToken });
@@ -1003,11 +1311,11 @@ async function createBuilding(btn) {
   if (j.ok) { showToast('Building added to inventory'); loadBuildings(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function archiveBuilding(id, restore, btn) {
-  if (!confirm(restore ? 'Restore this building (set back to approved)?' : 'Archive this building? It will be hidden from public listings and pickers but kept and restorable.')) return;
+  if (!(await askConfirm({ title: restore ? 'Restore building' : 'Archive building', message: restore ? 'Restore this building (set back to approved)? All of its units are also set to approved, including any you had hidden individually.' : 'Archive this building? It and its units are hidden from public listings and pickers, but kept and restorable.', confirmLabel: restore ? 'Restore' : 'Archive' }))) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/archive-building', 'POST', { buildingId: id, restore: !!restore });
   setBtnBusy(btn, false);
-  if (j.ok) { showToast(restore ? 'Building restored' : 'Building archived'); loadBuildings(); } else showToast('Failed: ' + (j.error || 'error'), 'error');
+  if (j.ok) { showToast(restore ? 'Building restored' : 'Building archived'); openBuilding(id); } else showToast('Failed: ' + (j.error || 'error'), 'error');
 }
 async function openBuilding(id) {
   const panel = document.getElementById('panel-buildings');
@@ -1041,6 +1349,7 @@ async function openBuilding(id) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${b.status !== 'approved' ? `<button class="btn btn-navy btn-sm" onclick="setBuildingStatus('${esc(b.id)}','approved',this)">Publish (approve)</button>` : `<button class="btn btn-outline btn-sm" onclick="setBuildingStatus('${esc(b.id)}','draft',this)">Unpublish</button>`}
         <button class="btn btn-ghost btn-sm" onclick="setBuildingStatus('${esc(b.id)}','rejected',this)">Mark rejected</button>
+        ${b.status === 'archived' ? `<button class="btn btn-navy btn-sm" onclick="archiveBuilding('${esc(b.id)}',true,this)">Restore from archive</button>` : `<button class="btn btn-ghost btn-sm" onclick="archiveBuilding('${esc(b.id)}',false,this)">Archive</button>`}
       </div>
     </div>
     <div class="card" style="padding:22px;margin-bottom:18px;">
@@ -1073,7 +1382,7 @@ async function openBuilding(id) {
 }
 async function setUnitStatus(id, buildingId, status, btn) {
   const verb = status === 'archived' ? 'Archive' : status === 'draft' ? 'Hide' : 'Publish';
-  if (!confirm(verb + ' this unit/listing?')) return;
+  if (!(await askConfirm({ title: verb + ' unit', message: verb + ' this unit/listing?', confirmLabel: verb }))) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/update-unit', 'POST', { id, fields: { status } });
   setBtnBusy(btn, false);
@@ -1106,7 +1415,7 @@ async function saveUnit(id, btn) {
   showToast(j.ok ? 'Unit saved' : 'Failed: ' + (j.error || 'error'), j.ok ? 'success' : 'error');
 }
 async function setBuildingStatus(id, status, btn) {
-  if (!confirm('Set building status to "' + status + '"?')) return;
+  if (!(await askConfirm({ title: 'Change building status', message: 'Set building status to "' + status + '"?', confirmLabel: 'Set ' + status }))) return;
   setBtnBusy(btn, true, '…');
   const j = await adminFetch('/api/admin/unpublish-building', 'POST', { buildingId: id, status });
   setBtnBusy(btn, false);
