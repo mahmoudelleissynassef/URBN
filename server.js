@@ -963,13 +963,18 @@ function buildingKeyId(r) {
   for (let i = 0; i < key.length; i++) h = (((h * 33) ^ key.charCodeAt(i)) >>> 0);
   return 'b_' + h.toString(36);
 }
+// Record ids come from user-uploaded CSV rows (batch `raw`). They become primary keys AND are
+// rendered inside admin-console onclick="...('<id>')" handlers, so only accept a boring charset;
+// anything else falls back to a server-generated id.
+const SAFE_ID = /^[A-Za-z0-9_.:-]{1,100}$/;
+const cleanId = (v) => { const t = v == null ? '' : String(v).trim(); return SAFE_ID.test(t) ? t : ''; };
 async function approveBatchRowRec(row, adminId) {
   const r = row.raw || {}, now = new Date().toISOString();
   // If the row carries an existing building_id / unit_id (e.g. from an exported
   // inventory CSV that was edited in Excel), upsert THOSE records — so a re-upload
   // updates in place instead of creating duplicates. Otherwise create new.
-  const bId = (r.building_id && String(r.building_id).trim()) || buildingKeyId(r);
-  const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_' + row.id);
+  const bId = cleanId(r.building_id) || buildingKeyId(r);
+  const uId = cleanId(r.unit_id) || ('u_' + row.id);
   await sbUpsert('buildings', [{
     id: bId, name: r.building_name || 'Untitled', market: normalizeMarket(r.market) || null, submarket: r.submarket || null, address: r.address || null,
     google_maps_url: r.google_maps_url || null, grade: r.grade || null, year_built: numOrNull(r.year_built), floors: numOrNull(r.floors),
@@ -1734,7 +1739,7 @@ function handleAdmin(req, res, urlPath) {
           if (!b) { if (reason.indexOf('multiple') === 0) { ambiguous++; results.push({ row: idx, status: 'ambiguous', building: r.building_name || bid || '', reason }); } else { unmatched++; results.push({ row: idx, status: 'unmatched', building: r.building_name || bid || '', reason }); } return; }
           if (!rowHasUnit(r)) { invalid++; results.push({ row: idx, status: 'invalid', building: b.name, reason: 'no unit data (size / rent / floor / offering)' }); return; }
           matched++;
-          const uId = (r.unit_id && String(r.unit_id).trim()) || ('u_imp_' + hash(b.id + '|' + (r.unit_floor || '') + '|' + (r.size_sqm || '') + '|' + (r.offering_type || '')));
+          const uId = cleanId(r.unit_id) || ('u_imp_' + hash(b.id + '|' + (r.unit_floor || '') + '|' + (r.size_sqm || '') + '|' + (r.offering_type || '')));
           let unitAmen = null;
           if (r.unit_amenities && String(r.unit_amenities).trim()) { try { const parsed = JSON.parse(r.unit_amenities); if (parsed && typeof parsed === 'object') unitAmen = parsed; } catch (e) {} }
           toInsert.push({ id: uId, building_id: b.id, unit_floor: r.unit_floor || null, size_sqm: numOrNull(r.size_sqm), offering_type: r.offering_type || null, fit_out: r.fit_out || null, desks: numOrNull(r.desks), meeting_rooms: numOrNull(r.meeting_rooms), asking_rent: numOrNull(r.asking_rent), currency: r.currency || null, pricing_basis: r.pricing_basis || null, service_charge: numOrNull(r.service_charge), service_charge_basis: r.service_charge_basis || null, availability_date: dateOrNull(r.availability_date), min_term: r.minimum_term || null, notes: r.notes || null, unit_amenities: unitAmen, status: 'approved' });
