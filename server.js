@@ -2476,6 +2476,24 @@ function clientIp(req) {
   return String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
 }
 
+// ── Public static allow-list ────────────────────────────────────────────────
+// The static fallback will serve ANY file that exists under the project root,
+// which would hand out server.js, package.json, db/, docs/, collectors/,
+// data/staging/, *.md, config, etc. Only genuinely public assets are servable;
+// everything else 404s. `rel` is the POSIX path relative to __dirname.
+const PUBLIC_ROOT_FILES = new Set(['favicon.svg', 'favicon.ico', 'robots.txt', 'sitemap.xml', 'site.webmanifest', 'apple-touch-icon.png']);
+const WEB_ASSET_EXT = /\.(css|js|mjs|map|json|svg|png|jpg|jpeg|webp|gif|ico|avif|woff2?|ttf|otf|eot|mp4|webm|ogg|mp3|wav|pdf|txt|xml)$/i;
+function isPublicStatic(rel) {
+  if (!rel || rel.includes('\0')) return false;
+  const seg = rel.split('/')[0];
+  if (seg === 'assets' || seg === 'css' || seg === 'js' || seg === 'images') return WEB_ASSET_EXT.test(rel); // asset dirs: web files only (blocks stray .md/source)
+  if (seg === 'pages') return rel.endsWith('.html');                                       // pages: HTML only
+  if (seg === 'templates') return /\.(csv|xlsx|xls|txt)$/i.test(rel);                       // public downloads only
+  if (seg === 'data') return rel === 'data/data.js';                                        // the one public data file; never data/staging
+  if (!rel.includes('/')) return PUBLIC_ROOT_FILES.has(rel) || rel.endsWith('.html');       // root: allow-listed files + html (index.html)
+  return false;
+}
+
 const server = http.createServer((req, res) => {
   res._acceptsGzip = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''));
   // Baseline security headers.
@@ -2632,6 +2650,15 @@ const server = http.createServer((req, res) => {
 
   let filePath = path.join(__dirname, reqPath);
   if (!path.extname(filePath)) filePath += '.html';
+
+  // Only serve genuinely public assets, and never anything outside the project
+  // root (path traversal). Blocks server.js, package.json, db/, docs/,
+  // collectors/, data/staging/, *.md, config, etc.
+  const rel = path.relative(__dirname, filePath).split(path.sep).join('/');
+  if (rel.startsWith('..') || path.isAbsolute(rel) || !isPublicStatic(rel)) {
+    res.writeHead(404, { 'Content-Type': 'text/html' });
+    return res.end('<h1>404 — Not Found</h1>');
+  }
 
   fs.stat(filePath, (err, stat) => {
     if (err || !stat.isFile()) {
