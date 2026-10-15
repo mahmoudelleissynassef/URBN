@@ -59,7 +59,7 @@
     'nav.signOut':   { en: 'Sign Out', fr: 'Se déconnecter', de: 'Abmelden', es: 'Cerrar sesión', it: 'Esci', nl: 'Uitloggen' },
     'nav.menu':      { en: 'Menu', fr: 'Menu', de: 'Menü', es: 'Menú', it: 'Menu', nl: 'Menu' },
     'a11y.skip':     { en: 'Skip to main content', fr: 'Aller au contenu principal', de: 'Zum Hauptinhalt springen', es: 'Saltar al contenido principal', it: 'Vai al contenuto principale', nl: 'Naar hoofdinhoud' },
-    'brand.subsidiary': { en: 'a Heirstone Consulting company', fr: 'une société Heirstone Consulting', de: 'ein Unternehmen von Heirstone Consulting', es: 'una empresa de Heirstone Consulting', it: 'una società di Heirstone Consulting', nl: 'een Heirstone Consulting-bedrijf' },
+    'brand.subsidiary': { en: 'a Heirstone Ventures company', fr: 'une société Heirstone Ventures', de: 'ein Unternehmen von Heirstone Ventures', es: 'una empresa de Heirstone Ventures', it: 'una società di Heirstone Ventures', nl: 'een Heirstone Ventures-bedrijf' },
 
     // Footer
     'footer.platform':      { en: 'Platform', fr: 'Plateforme', de: 'Plattform', es: 'Plataforma', it: 'Piattaforma', nl: 'Platform' },

@@ -142,7 +142,7 @@ function injectNav(base='') {
         <div class="logo-mark">U</div>
         <div>
           <span class="logo-text">URBN</span>
-          <span class="logo-sub" style="text-transform:none;letter-spacing:.02em;" data-i18n="brand.subsidiary">a Heirstone Consulting company</span>
+          <span class="logo-sub" style="text-transform:none;letter-spacing:.02em;" data-i18n="brand.subsidiary">a Heirstone Ventures company</span>
         </div>
       </a>
       <div class="nav-links">
@@ -230,7 +230,7 @@ function injectFooter(base='') {
       <div class="footer-grid">
         <div>
           <div class="footer-brand-name">URBN</div>
-          <div class="footer-brand-sub" data-i18n="brand.subsidiary">a Heirstone Consulting company</div>
+          <div class="footer-brand-sub"><a href="https://www.heirstoneventures.com" target="_blank" rel="noopener" data-i18n="brand.subsidiary">a Heirstone Ventures company</a></div>
           <p class="footer-brand-desc" data-i18n="footer.brandDesc">Premium office discovery for corporate occupiers entering Africa & MENA. Verified listings. Protected introductions.</p>
         </div>
         <div class="fc">
